@@ -152,7 +152,6 @@ public:
 public:
 			Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept;
 			Msg (const Link& l, methodid_t mid, memblock&& body, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept;
-			~Msg (void) noexcept;
     inline auto&	GetLink (void) const	{ return _link; }
     inline auto		Src (void) const	{ return GetLink().src; }
     inline auto		Dest (void) const	{ return GetLink().dest; }

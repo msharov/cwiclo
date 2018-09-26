@@ -102,11 +102,6 @@ Msg::Msg (const Link& l, methodid_t mid, memblock&& body, mrid_t extid, fdoffset
 {
 }
 
-Msg::~Msg (void) noexcept
-{
-    *reinterpret_cast<simd16_t*>(this) = simd16_t::zero();
-}
-
 static streamsize SigelementSize (char c) noexcept
 {
     static const struct { char sym; uint8_t sz; } syms[] =
