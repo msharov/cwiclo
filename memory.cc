@@ -185,7 +185,7 @@ int sd_listen_fd_by_name (const char* name) noexcept
 	return -1;
     auto namelen = strlen(name);
     for (auto fdi = 0u; *na; ++fdi) {
-	auto ee = strchr(na,':');
+	const char *ee = strchr(na,':');
 	if (!ee)
 	    ee = na+strlen(na);
 	if (size_t(ee-na) == namelen && 0 == memcmp (na, name, namelen))
