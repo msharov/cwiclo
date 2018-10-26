@@ -68,7 +68,7 @@ auto PExtern::ConnectLocal (const char* path) noexcept -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    if (int(ArraySize(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), "%s", path)) {
+    if (int(size(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), "%s", path)) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
@@ -81,7 +81,7 @@ auto PExtern::ConnectSystemLocal (const char* sockname) noexcept -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    if (int(ArraySize(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), _PATH_VARRUN "%s", sockname)) {
+    if (int(size(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), _PATH_VARRUN "%s", sockname)) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
@@ -97,7 +97,7 @@ auto PExtern::ConnectUserLocal (const char* sockname) noexcept -> fd_t
     const char* runtimeDir = getenv ("XDG_RUNTIME_DIR");
     if (!runtimeDir)
 	runtimeDir = _PATH_TMP;
-    if (int(ArraySize(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), "%s/%s", runtimeDir, sockname)) {
+    if (int(size(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), "%s/%s", runtimeDir, sockname)) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
@@ -857,7 +857,7 @@ auto PExternServer::BindLocal (const char* path, const iid_t* eifaces) noexcept 
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    if (int(ArraySize(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), "%s", path)) {
+    if (int(size(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), "%s", path)) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
@@ -873,7 +873,7 @@ auto PExternServer::BindSystemLocal (const char* sockname, const iid_t* eifaces)
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    if (int(ArraySize(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), _PATH_VARRUN "%s", sockname)) {
+    if (int(size(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), _PATH_VARRUN "%s", sockname)) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
@@ -892,7 +892,7 @@ auto PExternServer::BindUserLocal (const char* sockname, const iid_t* eifaces) n
     const char* runtimeDir = getenv ("XDG_RUNTIME_DIR");
     if (!runtimeDir)
 	runtimeDir = _PATH_TMP;
-    if (int(ArraySize(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), "%s/%s", runtimeDir, sockname)) {
+    if (int(size(addr.sun_path)) <= snprintf (ArrayBlock(addr.sun_path), "%s/%s", runtimeDir, sockname)) {
 	errno = ENAMETOOLONG;
 	return -1;
     }

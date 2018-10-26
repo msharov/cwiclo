@@ -105,7 +105,8 @@ static void TestUtility (void)
     printf ("unique_ptr(24) = %d\n", *up1);
 
     const int32_t c_Numbers[] = { 1, 2, 3, 4, 5 };
-    printf ("ArraySize(c_Numbers[5]) = %zd\n", ArraySize(c_Numbers));
+    printf ("size(c_Numbers[5]) = %zd\n", size(c_Numbers));
+    printf ("size({1,2,3,4,5}) = %zd\n", size({1,2,3,4,5}));
 
     TestBswap (uint16_t (0x1234));
     TestBswap (uint32_t (0x12345678));
@@ -143,11 +144,11 @@ void LibTestApp::TestML (void) // static
     a.static_link (str);
     if (a.begin() + 5 != &str[5])
 	printf ("begin() + 5 failed on memlink\n");
-    if (0 != memcmp (a.begin(), str, ArraySize(str)))
+    if (0 != memcmp (a.begin(), ArrayBlock(str)))
 	printf ("memcmp failed on memlink\n");
     WriteML (a);
     memlink cb;
-    cb.link (cstr, ArraySize(str));
+    cb.link (cstr, size(str));
     if (cb.data() != cstr)
 	printf ("begin() of const failed on memlink\n");
     if (cb.begin() != cstr)
@@ -155,12 +156,12 @@ void LibTestApp::TestML (void) // static
     WriteML (cb);
     if (!(a == cb))
 	printf ("operator== failed on memlink\n");
-    memlink b (str, ArraySize(str));
-    b.resize (ArraySize(str) - 2);
+    memlink b (ArrayBlock(str));
+    b.resize (size(str)-2);
     a = b;
     if (a.data() != b.data())
 	printf ("begin() after assignment failed on memlink\n");
-    a.link (str, ArraySize(str) - 1);
+    a.link (ArrayBlock(str)-1);
     WriteML (a);
     a.insert (a.begin() + 5, 9);
     fill_n (a.begin() + 5, 9, '-');
@@ -641,9 +642,9 @@ int LibTestApp::Run (void)
 	TestStringVector,
 	TestStreams
     };
-    for (auto i = 0u; i < ArraySize(c_Tests); ++i) {
-	printf ("######################################################################\n");
-	c_Tests[i]();
+    for (auto& i : c_Tests) {
+	puts ("######################################################################");
+	i();
     }
     return EXIT_SUCCESS;
 }

@@ -106,9 +106,9 @@ static streamsize SigelementSize (char c) noexcept
 {
     static const struct { char sym; uint8_t sz; } syms[] =
 	{{'y',1},{'b',1},{'n',2},{'q',2},{'i',4},{'u',4},{'h',4},{'x',8},{'t',8}};
-    for (auto i = 0u; i < ArraySize(syms); ++i)
-	if (syms[i].sym == c)
-	    return syms[i].sz;
+    for (auto& i : syms)
+	if (i.sym == c)
+	    return i.sz;
     return 0;
 }
 

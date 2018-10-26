@@ -100,28 +100,6 @@ public:
 //}}}-------------------------------------------------------------------
 //{{{ Array macros
 
-/// Returns the number of elements in a static vector
-template <typename T, size_t N>
-inline constexpr auto ArraySize (T(&)[N]) { return N; }
-/// Returns the begin() for a static vector
-template <typename T, size_t N>
-inline constexpr auto ArrayBegin (T(&a)[N]) { return &a[0]; }
-/// Returns the end() for a static vector
-template <typename T, size_t N>
-inline constexpr auto ArrayEnd (T(&a)[N]) { return &a[ArraySize(a)]; }
-/// Expands into a ptr,ArraySize expression for the given static vector; useful as link arguments.
-#define ArrayBlock(v)	ArrayBegin(v), ArraySize(v)
-/// Expands into a begin,end expression for the given static vector; useful for algorithm arguments.
-#define ArrayRange(v)	ArrayBegin(v), ArrayEnd(v)
-
-/// Expands into a ptr,sizeof expression for the given static data block
-#define DataBlock(v)	ArrayBegin(v), sizeof(v)
-
-/// Shorthand for container iteration.
-#define foreach(i,ctr)	for (auto i = (ctr).begin(); i < (ctr).end(); ++i)
-/// Shorthand for container reverse iteration.
-#define eachfor(i,ctr)	for (auto i = (ctr).end(); i-- > (ctr).begin();)
-
 /// Returns s+strlen(s)+1
 inline static NONNULL() auto strnext_r (const char* s, unsigned& n)
 {
@@ -140,13 +118,40 @@ inline static NONNULL() auto strnext (const char* s)
 inline static NONNULL() auto strnext (char* s)
     { unsigned n = UINT_MAX; return strnext_r(s,n); }
 
-template <typename T> inline constexpr auto advance (T* p, ptrdiff_t n) { return p + n; }
+template <typename T> inline constexpr auto advance (T* p, ptrdiff_t n) { return p+n; }
 template <> inline auto advance (void* p, ptrdiff_t n) { return advance (static_cast<char*>(p), n); }
 template <> inline auto advance (const void* p, ptrdiff_t n) { return advance (static_cast<const char*>(p), n); }
 
 template <typename T> inline constexpr auto distance (T* f, T* l) { return l-f; }
 template <> inline auto distance (void* f, void* l) { return distance (static_cast<char*>(f), static_cast<char*>(l)); }
 template <> inline auto distance (const void* f, const void* l) { return distance (static_cast<const char*>(f), static_cast<const char*>(l)); }
+
+template <typename T> inline constexpr decltype(auto) begin (T& c) { return c.begin(); }
+template <typename T> inline constexpr decltype(auto) begin (const T& c) { return c.begin(); }
+template <typename T, size_t N> inline constexpr auto begin (T (&a)[N]) noexcept { return &a[0]; }
+template <typename T> inline constexpr decltype(auto) cbegin (const T& c) { return begin(c); }
+template <typename T> inline constexpr decltype(auto) end (T& c) { return c.end(); }
+template <typename T> inline constexpr decltype(auto) end (const T& c) { return c.end(); }
+template <typename T, size_t N> inline constexpr auto end (T (&c)[N]) noexcept { return &c[N]; }
+template <typename T> inline constexpr decltype(auto) cend (const T& c) { return end(c); }
+template <typename T> inline constexpr auto size (const T& c) { return c.size(); }
+template <typename T, size_t N> inline constexpr auto size (const T (&)[N]) noexcept { return N; }
+template <typename T> inline constexpr bool empty (const T& c) { return !c.size(); }
+template <typename T> inline constexpr decltype(auto) data (T& c) { return c.data(); }
+template <typename T> inline constexpr decltype(auto) data (const T& c) { return c.data(); }
+template <typename T, size_t N> inline constexpr auto data(T (&c)[N]) noexcept { return &c[0]; }
+
+/// Expands into a ptr,size expression for the given static vector; useful as link arguments.
+#define ArrayBlock(v)	::cwiclo::data(v), ::cwiclo::size(v)
+/// Expands into a begin,end expression for the given static vector; useful for algorithm arguments.
+#define ArrayRange(v)	::cwiclo::begin(v), ::cwiclo::end(v)
+/// Expands into a ptr,sizeof expression for the given static data block
+#define DataBlock(v)	::cwiclo::data(v), sizeof(v)
+
+/// Shorthand for container iteration.
+#define foreach(i,ctr)	for (auto i = ::cwiclo::begin(ctr); i < ::cwiclo::end(ctr); ++i)
+/// Shorthand for container reverse iteration.
+#define eachfor(i,ctr)	for (auto i = ::cwiclo::end(ctr); i-- > ::cwiclo::begin(ctr);)
 
 //}}}----------------------------------------------------------------------
 //{{{ bswap
