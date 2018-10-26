@@ -103,16 +103,19 @@ public:
 /// Returns the number of elements in a static vector
 template <typename T, size_t N>
 inline constexpr auto ArraySize (T(&)[N]) { return N; }
+/// Returns the begin() for a static vector
+template <typename T, size_t N>
+inline constexpr auto ArrayBegin (T(&a)[N]) { return &a[0]; }
 /// Returns the end() for a static vector
 template <typename T, size_t N>
 inline constexpr auto ArrayEnd (T(&a)[N]) { return &a[ArraySize(a)]; }
 /// Expands into a ptr,ArraySize expression for the given static vector; useful as link arguments.
-#define ArrayBlock(v)	&(v)[0], ArraySize(v)
+#define ArrayBlock(v)	ArrayBegin(v), ArraySize(v)
 /// Expands into a begin,end expression for the given static vector; useful for algorithm arguments.
-#define ArrayRange(v)	&(v)[0], ArrayEnd(v)
+#define ArrayRange(v)	ArrayBegin(v), ArrayEnd(v)
 
 /// Expands into a ptr,sizeof expression for the given static data block
-#define DataBlock(v)	&(v)[0], sizeof(v)
+#define DataBlock(v)	ArrayBegin(v), sizeof(v)
 
 /// Shorthand for container iteration.
 #define foreach(i,ctr)	for (auto i = (ctr).begin(); i < (ctr).end(); ++i)
