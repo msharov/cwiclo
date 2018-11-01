@@ -308,7 +308,7 @@ uint8_t Extern::ExtMsg::WriteHeaderStrings (methodid_t method) noexcept
     os.write (iface, InterfaceNameSize(iface));
     os.write (method, MethodNextOffset(method)-2);
     os.align (Msg::Alignment::Header);
-    return sizeof(_h) + distance (_hbuf, os.ptr());
+    return sizeof(_h) + os.ptr()-begin(_hbuf);
 }
 
 void Extern::ExtMsg::WriteIOVecs (iovec* iov, streamsize bw) noexcept
@@ -352,7 +352,7 @@ methodid_t Extern::ExtMsg::ParseMethod (void) const noexcept
 	return nullptr;
     auto methodend = strnext_r (signame, ssz);
     auto methodnamesz = methodend - methodname;
-    auto iface = App::InterfaceByName (ifacename, distance(ifacename,methodname));
+    auto iface = App::InterfaceByName (ifacename, methodname-ifacename);
     if (!iface)
 	return nullptr;
     return LookupInterfaceMethod (iface, methodname, methodnamesz);

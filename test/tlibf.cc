@@ -96,9 +96,6 @@ static void TestUtility (void)
     auto vp = reinterpret_cast<void*>(0x4321);
     printf ("cvp = %lX\n", (uintptr_t) cvp);
     printf ("vp = %lX\n", (uintptr_t) vp);
-    printf ("advance(cvp,5) = %lX\n", (uintptr_t) advance(cvp,5));
-    printf ("advance(vp,4) = %lX\n", (uintptr_t) advance(vp,4));
-    printf ("distance(cvp,vp) = %zX\n", distance(cvp,(const void*)vp));
 
     auto up1 = make_unique<int> (42);
     up1.swap (make_unique<int> (24));
@@ -321,13 +318,13 @@ void LibTestApp::TestMultiset (void) // static
     PrintVector (v);
     auto f = v.find (7);
     if (f)
-	printf ("7 found at %ld\n", distance(v.begin(),f));
+	printf ("7 found at %ld\n", f-v.begin());
     f = v.find (6);
     if (f)
-	printf ("6 found at %ld\n", distance(v.begin(),f));
-    printf ("lower_bound(4) at %ld\n", distance(v.begin(),v.lower_bound (4)));
-    printf ("upper_bound(4) at %ld\n", distance(v.begin(),v.upper_bound (4)));
-    printf ("lower_bound(5) at %ld\n", distance(v.begin(),v.lower_bound (5)));
+	printf ("6 found at %ld\n", f-v.begin());
+    printf ("lower_bound(4) at %ld\n", v.lower_bound (4)-v.begin());
+    printf ("upper_bound(4) at %ld\n", v.upper_bound (4)-v.begin());
+    printf ("lower_bound(5) at %ld\n", v.lower_bound (5)-v.begin());
     v.insert (v.lower_bound(5), 5);
     PrintVector (v);
 }

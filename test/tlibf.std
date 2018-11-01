@@ -40,9 +40,6 @@ NextPow2(0xFFFFFFF0) = 1
 
 cvp = 1234
 vp = 4321
-advance(cvp,5) = 1239
-advance(vp,4) = 4325
-distance(cvp,vp) = 30ED
 unique_ptr(24) = 24
 size(c_Numbers[5]) = 5
 size({1,2,3,4,5}) = 5
