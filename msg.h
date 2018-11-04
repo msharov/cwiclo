@@ -48,7 +48,7 @@ inline static constexpr auto InterfaceNameSize (iid_t iid)
 
 // Signatures immediately follow the method in the pack
 inline static const char* SignatureOfMethod (methodid_t __restrict__ mid)
-    { return strnext(mid); }
+    { return zstri::next(mid); }
 
 // When unmarshalling a message, convert method name to local pointer in the interface
 methodid_t LookupInterfaceMethod (iid_t iid, const char* __restrict__ mname, size_t mnamesz) noexcept;

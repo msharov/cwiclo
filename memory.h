@@ -610,6 +610,75 @@ void sort (Ctr& c)
     { sort (c.begin(), c.end()); }
 
 //}}}-------------------------------------------------------------------
+//{{{ zstri
+
+class zstri {
+public:
+    using value_type		= char;
+    using pointer		= char*;
+    using const_pointer		= const char*;
+    using reference		= char&;
+    using const_reference	= const char&;
+    using difference_type	= unsigned;
+public:
+    inline explicit	zstri (pointer s, difference_type n = UINT_MAX) NONNULL()
+			    :_s(s),_n(n) {}
+    template <difference_type N>
+    inline explicit	zstri (value_type (&a)[N]) :_s(begin(a)),_n(N) {}
+			zstri (const zstri& i) = default;
+    inline static auto	next (pointer s, difference_type& n) NONNULL() {
+			    #if __x86__
+			    if (!compile_constant(strlen(s)) || !compile_constant(n))
+				__asm__("repnz\tscasb":"+D"(s),"+c"(n):"a"(0):"cc","memory");
+			    else
+			    #endif
+			    { auto l = strnlen(s, n); l += !!l; s += l; n -= l; }
+			    return s;
+			}
+    inline static auto	next (const_pointer s, difference_type& n) NONNULL()
+			    { return zstri::next (const_cast<pointer>(s),n); }
+    inline static auto	next (pointer s) NONNULL()
+			    { difference_type n = UINT_MAX; return next(s,n); }
+    inline static auto	next (const_pointer s) NONNULL()
+			    { difference_type n = UINT_MAX; return next(s,n); }
+    inline auto		remaining (void) const	{ return _n; }
+    inline auto&	operator* (void) const	{ return _s; }
+    inline auto&	operator++ (void)	{ _s = next(_s,_n); return *this; }
+    inline auto		operator++ (int)	{ auto o(*this); ++*this; return o; }
+    inline auto&	operator+= (unsigned n)	{ while (n--) ++*this;  return *this; }
+private:
+    pointer		_s;
+    difference_type	_n;
+};
+
+class czstri {
+public:
+    using value_type		= zstri::value_type;
+    using const_pointer		= zstri::const_pointer;
+    using pointer		= const_pointer;
+    using const_reference	= zstri::const_reference;
+    using reference		= const_reference;
+    using difference_type	= zstri::difference_type;
+public:
+    inline explicit	czstri (pointer s, difference_type n = UINT_MAX) NONNULL()
+			    :_s(s),_n(n) {}
+    template <difference_type N>
+    inline explicit	czstri (const value_type (&a)[N]) :_s(begin(a)),_n(N) {}
+    inline explicit	czstri (const zstri& i) :_s(*i),_n(i.remaining()) {}
+			czstri (const czstri& i) = default;
+    inline static auto	next (pointer s, difference_type& n) NONNULL()
+			    { return zstri::next (s,n); }
+    inline auto		remaining (void) const	{ return _n; }
+    inline auto&	operator* (void) const	{ return _s; }
+    inline auto&	operator++ (void)	{ _s = next(_s,_n); return *this; }
+    inline auto		operator++ (int)	{ auto o(*this); ++*this; return o; }
+    inline auto&	operator+= (unsigned n)	{ while (n--) ++*this; return *this; }
+private:
+    pointer		_s;
+    difference_type	_n;
+};
+
+//}}}-------------------------------------------------------------------
 //{{{ Other algorithms
 
 template <typename Ctr, typename Discriminator>

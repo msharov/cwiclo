@@ -342,15 +342,14 @@ auto Extern::ExtMsg::PassedFd (void) const noexcept -> fd_t
 
 methodid_t Extern::ExtMsg::ParseMethod (void) const noexcept
 {
-    streamsize ssz = _h.hsz-sizeof(_h);
-    auto ifacename = _hbuf;
-    auto methodname = strnext_r (ifacename, ssz);
-    if (!ssz)
+    czstri mi (_hbuf, _h.hsz-sizeof(_h));
+    auto ifacename = *mi;
+    auto methodname = *++mi;
+    if (!mi.remaining())
 	return nullptr;
-    auto signame = strnext_r (methodname, ssz);
-    if (!ssz)
+    if (!(++mi).remaining())
 	return nullptr;
-    auto methodend = strnext_r (signame, ssz);
+    auto methodend = *++mi;
     auto methodnamesz = methodend - methodname;
     auto iface = App::InterfaceByName (ifacename, methodname-ifacename);
     if (!iface)

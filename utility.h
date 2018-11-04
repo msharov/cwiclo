@@ -100,24 +100,6 @@ public:
 //}}}-------------------------------------------------------------------
 //{{{ Array macros
 
-/// Returns s+strlen(s)+1
-inline static NONNULL() auto strnext_r (const char* s, unsigned& n)
-{
-#if __x86__
-    if (!compile_constant(strlen(s)))
-	__asm__("repnz\tscasb":"+D"(s),"+c"(n):"a"(0):"cc","memory");
-    else
-#endif
-    { auto l = strnlen(s, n); l += !!l; s += l; n -= l; }
-    return s;
-}
-inline static NONNULL() auto strnext_r (char* s, unsigned& n)
-    { return const_cast<char*>(strnext_r (const_cast<const char*>(s), n)); }
-inline static NONNULL() auto strnext (const char* s)
-    { unsigned n = UINT_MAX; return strnext_r(s,n); }
-inline static NONNULL() auto strnext (char* s)
-    { unsigned n = UINT_MAX; return strnext_r(s,n); }
-
 template <typename T> inline constexpr decltype(auto) begin (T& c) { return c.begin(); }
 template <typename T> inline constexpr decltype(auto) begin (const T& c) { return c.begin(); }
 template <typename T, size_t N> inline constexpr auto begin (T (&a)[N]) noexcept { return &a[0]; }
