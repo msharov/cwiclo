@@ -624,7 +624,7 @@ public:
     inline explicit	zstri (pointer s, difference_type n = UINT_MAX) NONNULL()
 			    :_s(s),_n(n) {}
     template <difference_type N>
-    inline explicit	zstri (value_type (&a)[N]) :_s(begin(a)),_n(N) {}
+    inline explicit	zstri (value_type (&a)[N]) :zstri(begin(a),N) {}
 			zstri (const zstri& i) = default;
     inline static auto	next (pointer s, difference_type& n) NONNULL() {
 			    #if __x86__
@@ -636,16 +636,21 @@ public:
 			    return s;
 			}
     inline static auto	next (const_pointer s, difference_type& n) NONNULL()
-			    { return zstri::next (const_cast<pointer>(s),n); }
+			    { return const_cast<const_pointer> (zstri::next (const_cast<pointer>(s),n)); }
     inline static auto	next (pointer s) NONNULL()
 			    { difference_type n = UINT_MAX; return next(s,n); }
     inline static auto	next (const_pointer s) NONNULL()
 			    { difference_type n = UINT_MAX; return next(s,n); }
     inline auto		remaining (void) const	{ return _n; }
+    inline auto		base (void) const	{ return _s; }
     inline auto&	operator* (void) const	{ return _s; }
     inline auto&	operator++ (void)	{ _s = next(_s,_n); return *this; }
     inline auto		operator++ (int)	{ auto o(*this); ++*this; return o; }
     inline auto&	operator+= (unsigned n)	{ while (n--) ++*this;  return *this; }
+    inline auto		operator+ (unsigned n) const	{ auto r(*this); r += n; return r; }
+    inline		operator bool (void) const	{ return remaining(); }
+    inline bool		operator== (const zstri& i) const	{ return base() == i.base(); }
+    inline bool		operator< (const zstri& i) const	{ return base() < i.base(); }
 private:
     pointer		_s;
     difference_type	_n;
@@ -663,16 +668,21 @@ public:
     inline explicit	czstri (pointer s, difference_type n = UINT_MAX) NONNULL()
 			    :_s(s),_n(n) {}
     template <difference_type N>
-    inline explicit	czstri (const value_type (&a)[N]) :_s(begin(a)),_n(N) {}
-    inline explicit	czstri (const zstri& i) :_s(*i),_n(i.remaining()) {}
+    inline explicit	czstri (const value_type (&a)[N]) : czstri (begin(a),N) {}
+    inline explicit	czstri (const zstri& i) : czstri (i.base(),i.remaining()) {}
 			czstri (const czstri& i) = default;
     inline static auto	next (pointer s, difference_type& n) NONNULL()
 			    { return zstri::next (s,n); }
     inline auto		remaining (void) const	{ return _n; }
+    inline auto		base (void) const	{ return _s; }
     inline auto&	operator* (void) const	{ return _s; }
     inline auto&	operator++ (void)	{ _s = next(_s,_n); return *this; }
     inline auto		operator++ (int)	{ auto o(*this); ++*this; return o; }
     inline auto&	operator+= (unsigned n)	{ while (n--) ++*this; return *this; }
+    inline auto		operator+ (unsigned n) const	{ auto r(*this); r += n; return r; }
+    inline		operator bool (void) const	{ return remaining(); }
+    inline bool		operator== (const czstri& i) const	{ return base() == i.base(); }
+    inline bool		operator< (const czstri& i) const	{ return base() < i.base(); }
 private:
     pointer		_s;
     difference_type	_n;
