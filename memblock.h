@@ -30,7 +30,7 @@ public:
     inline constexpr		cmemlink (void)				: _sblk (simd16_t::zero()) {}
     inline constexpr		cmemlink (const cmemlink& v)		: _sblk (v._sblk) {}
     inline constexpr		cmemlink (cmemlink&& v)			: _sblk (exchange (v._sblk, simd16_t::zero())) {}
-    void			swap (cmemlink&& v)			{ ::cwiclo::swap (_sblk, v._sblk); }
+    inline void			swap (cmemlink&& v)			{ ::cwiclo::swap (_sblk, v._sblk); }
     inline void			unlink (void)				{ auto zt = _zerot; _sblk = simd16_t::zero(); _capz = zt; }
 #else
     inline constexpr		cmemlink (void)				: cmemlink (nullptr, 0, false) {}
@@ -46,8 +46,8 @@ public:
     inline constexpr auto	empty (void) const			{ return !size(); }
     inline constexpr auto	capacity (void) const			{ return _capacity; }
     constexpr const_pointer	data (void) const			{ return _data; }
-    constexpr const_pointer	cdata (void) const			{ return _data; }
-    constexpr const_iterator	begin (void) const			{ return data(); }
+    inline constexpr auto	cdata (void) const			{ return data(); }
+    inline constexpr auto	begin (void) const			{ return data(); }
     inline constexpr auto	cbegin (void) const			{ return begin(); }
     inline constexpr auto	end (void) const			{ return begin()+size(); }
     inline constexpr auto	cend (void) const			{ return end(); }
@@ -140,9 +140,9 @@ public:
     void			assign (const_pointer p, size_type n) noexcept;
     inline void			assign (const cmemlink& v) noexcept	{ assign (v.data(), v.size()); }
     inline void			assign (memblock&& v) noexcept		{ swap (move(v)); }
-    inline memblock&		operator= (const cmemlink& v) noexcept	{ assign (v); return *this; }
-    inline memblock&		operator= (const memblock& v) noexcept	{ assign (v); return *this; }
-    inline memblock&		operator= (memblock&& v) noexcept	{ assign (move(v)); return *this; }
+    inline auto&		operator= (const cmemlink& v) noexcept	{ assign (v); return *this; }
+    inline auto&		operator= (const memblock& v) noexcept	{ assign (v); return *this; }
+    inline auto&		operator= (memblock&& v) noexcept	{ assign (move(v)); return *this; }
     void			reserve (size_type sz) noexcept;
     void			resize (size_type sz) noexcept;
     inline void			clear (void)				{ resize(0); }

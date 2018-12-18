@@ -64,7 +64,7 @@ public:
 				    #endif
 				}
     template <typename T>
-    inline istream&		operator>> (T& v) {
+    inline auto&		operator>> (T& v) {
 				    if constexpr (is_trivial<T>::value)
 					read_trivial (v);
 				    else
@@ -101,7 +101,7 @@ public:
     inline constexpr auto	end (void) const __restrict__		{ return _e; }
     inline constexpr streamsize	remaining (void) const __restrict__	{ return end()-_p; }
     template <typename T = char>
-    inline T*			ptr (void) __restrict__	{ return reinterpret_cast<T*>(_p); }
+    inline auto			ptr (void) __restrict__	{ return reinterpret_cast<T*>(_p); }
     inline void			skip (streamsize sz) __restrict__ {
 				    pointer __restrict__ p = _p;
 				    assert (p+sz <= end());
@@ -140,7 +140,7 @@ public:
 				    #endif
 				}
     template <typename T>
-    inline ostream&		operator<< (const T& v) {
+    inline auto&		operator<< (const T& v) {
 				    if constexpr (is_trivial<T>::value)
 					write_trivial (v);
 				    else
@@ -184,7 +184,7 @@ public:
     template <typename T>
     inline void			write_trivial_unaligned (const T& v)	{ write (&v, sizeof(v)); }
     template <typename T>
-    inline sstream&		operator<< (const T& v) {
+    inline auto&		operator<< (const T& v) {
 				    if constexpr (is_trivial<T>::value)
 					write_trivial (v);
 				    else

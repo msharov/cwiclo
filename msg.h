@@ -135,6 +135,7 @@ public:
 	mrid_t	src;
 	mrid_t	dest;
     };
+    //{{{2 Body
     class Body : protected memblock {
     public:
 	using memblock::size;
@@ -143,14 +144,16 @@ public:
 	using memblock::begin;
 	using memblock::end;
 	using memblock::iat;
-		Body (void)		: memblock() {}
+	constexpr Body (void)		: memblock() {}
 		Body (size_type sz)	: memblock(sz) {}
-		Body (Body&& v)		: memblock(move(v)) {}
-		Body (memblock&& v)	: memblock(move(v)) {}
+	constexpr Body (Body&& v)	: memblock(move(v)) {}
+	constexpr Body (memblock&& v)	: memblock(move(v)) {}
 		~Body (void) noexcept;
 	void	allocate (size_type sz)	{ assert (!capacity()); memblock::resize(sz); }
 	void	shrink (size_type sz)	{ assert (sz <= capacity()); memlink::resize(sz); }
+	void	wipe (void)		{ fill_n (data(), capacity(), value_type(0)); }
     };
+    //}}}2
     using fdoffset_t = uint8_t;
     static constexpr fdoffset_t NoFdIncluded = numeric_limits<fdoffset_t>::max();
     struct Alignment {
@@ -175,7 +178,7 @@ public:
     inline auto		Read (void) const	{ return istream (_body.data(),_body.size()); }
     inline auto		Write (void)		{ return ostream (_body.data(),_body.size()); }
     static streamsize	ValidateSignature (istream& is, const char* sig) noexcept;
-    streamsize		Verify (void) const noexcept	{ auto is = Read(); return ValidateSignature (is, Signature()); }
+    auto		Verify (void) const noexcept	{ auto is = Read(); return ValidateSignature (is, Signature()); }
 			Msg (Msg&& msg) : Msg(msg.GetLink(),msg.Method(),msg.MoveBody(),msg.Extid(),msg.FdOffset()) {}
 			Msg (Msg&& msg, const Link& l) : Msg(l,msg.Method(),msg.MoveBody(),msg.Extid(),msg.FdOffset()) {}
 			Msg (const Msg&) = delete;

@@ -75,7 +75,7 @@ void Msger::ErrorLibc (const char* f) noexcept // static
 
 //----------------------------------------------------------------------
 
-Msg::Body::~Body (void) noexcept { fill_n (begin(), size(), value_type(0)); }
+Msg::Body::~Body (void) noexcept { wipe(); }
 
 //----------------------------------------------------------------------
 

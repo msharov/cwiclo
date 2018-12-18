@@ -23,9 +23,9 @@ public:
   static string	StringFromInterfaceList (const iid_t* elist) noexcept;
     static Msg	ErrorMsg (mrid_t extid, const string& errmsg) noexcept;
     static Msg	ExportMsg (mrid_t extid, const string& elstr) noexcept;
-    static Msg	ExportMsg (mrid_t extid, const iid_t* elist) noexcept
+    static auto	ExportMsg (mrid_t extid, const iid_t* elist) noexcept
 							{ return ExportMsg (extid, StringFromInterfaceList (elist)); }
-    static Msg	DeleteMsg (mrid_t extid) noexcept	{ return Msg (Msg::Link{}, PCOM::M_Delete(), 0, extid); }
+    static auto	DeleteMsg (mrid_t extid) noexcept	{ return Msg (Msg::Link{}, PCOM::M_Delete(), 0, extid); }
     template <typename O>
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() == M_Error())
