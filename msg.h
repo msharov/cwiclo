@@ -135,12 +135,21 @@ public:
 	mrid_t	src;
 	mrid_t	dest;
     };
-    class Body : public memblock {
+    class Body : protected memblock {
     public:
-	using memblock::memblock;
-	Body (Body&& v) : memblock(move(v)) {}
-	Body (memblock&& v) : memblock(move(v)) {}
-	~Body (void) noexcept;
+	using memblock::size;
+	using memblock::capacity;
+	using memblock::data;
+	using memblock::begin;
+	using memblock::end;
+	using memblock::iat;
+		Body (void)		: memblock() {}
+		Body (size_type sz)	: memblock(sz) {}
+		Body (Body&& v)		: memblock(move(v)) {}
+		Body (memblock&& v)	: memblock(move(v)) {}
+		~Body (void) noexcept;
+	void	allocate (size_type sz)	{ assert (!capacity()); memblock::resize(sz); }
+	void	shrink (size_type sz)	{ assert (sz <= capacity()); memlink::resize(sz); }
     };
     using fdoffset_t = uint8_t;
     static constexpr fdoffset_t NoFdIncluded = numeric_limits<fdoffset_t>::max();
@@ -151,7 +160,7 @@ public:
     };
 public:
 			Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept;
-			Msg (const Link& l, methodid_t mid, memblock&& body, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept;
+			Msg (const Link& l, methodid_t mid, Body&& body, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept;
     inline auto&	GetLink (void) const	{ return _link; }
     inline auto		Src (void) const	{ return GetLink().src; }
     inline auto		Dest (void) const	{ return GetLink().dest; }
@@ -163,8 +172,8 @@ public:
     inline void		SetExtid (mrid_t eid)	{ _extid = eid; }
     inline auto		FdOffset (void) const	{ return _fdoffset; }
     inline auto&&	MoveBody (void)		{ return move(_body); }
-    inline istream	Read (void) const	{ return istream (_body); }
-    inline ostream	Write (void)		{ return ostream (_body); }
+    inline auto		Read (void) const	{ return istream (_body.data(),_body.size()); }
+    inline auto		Write (void)		{ return ostream (_body.data(),_body.size()); }
     static streamsize	ValidateSignature (istream& is, const char* sig) noexcept;
     streamsize		Verify (void) const noexcept	{ auto is = Read(); return ValidateSignature (is, Signature()); }
 			Msg (Msg&& msg) : Msg(msg.GetLink(),msg.Method(),msg.MoveBody(),msg.Extid(),msg.FdOffset()) {}

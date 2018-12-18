@@ -86,14 +86,12 @@ Msg::Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid, fdoffset
 ,_fdoffset (fdo)
 ,_body (Align (size, Alignment::Body))
 {
-    // Message body is padded to Alignment::Body
     auto ppade = _body.end();
-    _body.memlink::resize (size);
-    for (auto p = _body.end(); p < ppade; ++p)
-	*p = 0;
+    _body.shrink (size);
+    fill (_body.end(), ppade, 0);	// zero out the alignment padding
 }
 
-Msg::Msg (const Link& l, methodid_t mid, memblock&& body, mrid_t extid, fdoffset_t fdo) noexcept
+Msg::Msg (const Link& l, methodid_t mid, Body&& body, mrid_t extid, fdoffset_t fdo) noexcept
 :_method (mid)
 ,_link (l)
 ,_extid (extid)
@@ -170,7 +168,7 @@ static streamsize ValidateSigelement (istream& is, const char*& sig) noexcept
 	if (is.remaining() < 4 || !is.aligned(4))
 	    return 0;
 	uint32_t nel; is >> nel;	// number of elements in the array
-	sz += 4;
+	sz += sizeof(nel);
 	size_t elsz = 1, elal = 4;	// strings are equivalent to "ac"
 	if (*sig++ == 'a') {		// arrays are followed by an element sig "a(uqq)"
 	    elsz = SigelementSize (*sig);

@@ -211,8 +211,8 @@ private:
 	streamsize	Size (void) const	{ return BodySize() + HeaderSize(); }
 	bool		HasFd (void) const	{ return FdOffset() != Msg::NoFdIncluded; }
 	void		SetHeader (const Header& h)	{ _h = h; }
-	void		ResizeBody (streamsize sz)	{ _body.resize (sz); }
-	void		TrimBody (streamsize sz)	{ _body.memlink::resize (sz); }
+	void		AllocateBody (streamsize sz)	{ _body.allocate (sz); }
+	void		TrimBody (streamsize sz)	{ _body.shrink (sz); }
 	auto&&		MoveBody (void)			{ return move(_body); }
 	void		SetPassedFd (fd_t fd)	{ assert (HasFd()); ostream os (_body.iat(_h.fdoffset), sizeof(fd)); os << fd; }
 	fd_t		PassedFd (void) const noexcept;

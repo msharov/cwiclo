@@ -296,7 +296,7 @@ Extern::ExtMsg::ExtMsg (Msg&& msg) noexcept
     , WriteHeaderStrings (msg.Method()) }
 {
     assert (_body.capacity() >= _h.sz && "message body must be created aligned to Msg::Alignment::Body");
-    _body.memlink::resize (_h.sz);
+    _body.shrink (_h.sz);
 }
 
 uint8_t Extern::ExtMsg::WriteHeaderStrings (methodid_t method) noexcept
@@ -637,7 +637,7 @@ void Extern::ReadIncoming (void) noexcept
 		Error ("invalid message");
 		return Extern_Close();
 	    }
-	    _inmsg.ResizeBody (h.sz);
+	    _inmsg.AllocateBody (h.sz);
 	}
     }
 }
