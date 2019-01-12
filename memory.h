@@ -435,6 +435,22 @@ auto fill (I f, I l, const T& v)
     return f;
 }
 
+template <typename I>
+auto shift_left (I f, I l, size_t n)
+{
+    auto m = f+n;
+    assert (m >= f && m <= l);
+    return copy_n (m, l-m, f);
+}
+
+template <typename I>
+auto shift_right (I f, I l, size_t n)
+{
+    auto m = f+n;
+    assert (m >= f && m <= l);
+    return copy_backward_n (f, l-m, m);
+}
+
 extern "C" void brotate (void* vf, void* vm, void* vl) noexcept;
 
 template <typename T>
