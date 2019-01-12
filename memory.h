@@ -621,10 +621,10 @@ public:
     using const_reference	= const char&;
     using difference_type	= unsigned;
 public:
-    inline explicit	zstri (pointer s, difference_type n = UINT_MAX) NONNULL()
+    inline		zstri (pointer s, difference_type n = UINT_MAX) NONNULL()
 			    :_s(s),_n(n) {}
     template <difference_type N>
-    inline explicit	zstri (value_type (&a)[N]) :zstri(begin(a),N) {}
+    inline		zstri (value_type (&a)[N]) :zstri(begin(a),N) {}
 			zstri (const zstri& i) = default;
     inline static auto	next (pointer s, difference_type& n) NONNULL() {
 			    #if __x86__
@@ -665,11 +665,11 @@ public:
     using reference		= const_reference;
     using difference_type	= zstri::difference_type;
 public:
-    inline explicit	czstri (pointer s, difference_type n = UINT_MAX) NONNULL()
+    inline		czstri (pointer s, difference_type n = UINT_MAX) NONNULL()
 			    :_s(s),_n(n) {}
     template <difference_type N>
-    inline explicit	czstri (const value_type (&a)[N]) : czstri (begin(a),N) {}
-    inline explicit	czstri (const zstri& i) : czstri (i.base(),i.remaining()) {}
+    inline		czstri (const value_type (&a)[N]) : czstri (begin(a),N) {}
+    inline		czstri (const zstri& i) : czstri (i.base(),i.remaining()) {}
 			czstri (const czstri& i) = default;
     inline static auto	next (pointer s, difference_type& n) NONNULL()
 			    { return zstri::next (s,n); }

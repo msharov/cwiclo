@@ -227,14 +227,14 @@ private:
 
 class Proxy : public ProxyB {
 public:
-    constexpr explicit	Proxy (mrid_t from, mrid_t to=mrid_New)	: ProxyB (from,to) {}
+    constexpr		Proxy (mrid_t from, mrid_t to=mrid_New)	: ProxyB (from,to) {}
     void		CreateDestAs (iid_t iid) noexcept;
     void		CreateDestWith (iid_t iid, pfn_factory_t fac) noexcept;
     void		FreeId (void) noexcept;
 };
 class ProxyR : public ProxyB {
 public:
-    constexpr explicit	ProxyR (const Msg::Link& l) : ProxyB (l.dest, l.src) {}
+    constexpr		ProxyR (const Msg::Link& l) : ProxyB (l.dest, l.src) {}
 };
 
 //}}}-------------------------------------------------------------------

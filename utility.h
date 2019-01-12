@@ -63,8 +63,6 @@ template <typename T> struct is_signed : public integral_constant<bool, !is_same
 
 template <typename T> struct bits_in_type	{ static constexpr const size_t value = sizeof(T)*8; };
 
-// The weakest possible cast to an already convertible type
-template <typename T> constexpr decltype(auto) implicit_cast (remove_reference_t<T>& v) { return v; }
 template <typename T, typename F> constexpr decltype(auto) union_cast (F& v)
     { union FTU { F f; T t; }; return reinterpret_cast<FTU&>(v).t; }
 template <typename T, typename F> constexpr decltype(auto) union_cast (const F& v)

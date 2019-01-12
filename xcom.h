@@ -49,7 +49,7 @@ public:
     using fd_t = PTimer::fd_t;
     enum class SocketSide : bool { Client, Server };
 public:
-    explicit	PExtern (mrid_t caller)	: Proxy(caller) {}
+		PExtern (mrid_t caller)	: Proxy(caller) {}
 		~PExtern (void)		{ FreeId(); }
     void	Close (void)		{ Send (M_Close()); }
     void	Open (fd_t fd, const iid_t* eifaces, SocketSide side = SocketSide::Server)
@@ -108,7 +108,7 @@ public:
 class PExternR : public ProxyR {
     DECLARE_INTERFACE (ExternR, (Connected,"x"))
 public:
-    explicit	PExternR (const Msg::Link& l)		: ProxyR(l) {}
+		PExternR (const Msg::Link& l)		: ProxyR(l) {}
     void	Connected (const ExternInfo* einfo)	{ Send (M_Connected(), einfo); }
     template <typename O>
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
@@ -284,7 +284,7 @@ public:
     using fd_t = PExtern::fd_t;
     enum class WhenEmpty : bool { Remain, Close };
 public:
-    explicit	PExternServer (mrid_t caller)	: Proxy(caller),_sockname() {}
+		PExternServer (mrid_t caller)	: Proxy(caller),_sockname() {}
 		~PExternServer (void) noexcept;
     void	Close (void)			{ Send (M_Close()); }
     void	Open (fd_t fd, const iid_t* eifaces, WhenEmpty closeWhenEmpty = WhenEmpty::Close)
