@@ -249,7 +249,7 @@ inline auto FirstBit (T v, remove_reference_t<T> nbv = 0)
 }
 
 template <typename T>
-inline T NextPow2 (T v)
+inline T ceil2 (T v)
 {
     T r = v-1;
 #if __x86__
@@ -260,7 +260,7 @@ inline T NextPow2 (T v)
 }
 
 template <typename T>
-inline constexpr bool IsPow2 (T v)
+inline constexpr bool ispow2 (T v)
     { return !(v&(v-1)); }
 
 //}}}----------------------------------------------------------------------

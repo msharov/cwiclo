@@ -86,11 +86,11 @@ static void TestUtility (void)
     printf ("FirstBit(3827) = %d\n", FirstBit(3827));
     printf ("FirstBit(0xFFFFFFF0) = %d\n\n", FirstBit(0xFFFFFFF0));
 
-    printf ("NextPow2(0) = %d\n", NextPow2(0));
-    printf ("NextPow2(1) = %d\n", NextPow2(1));
-    printf ("NextPow2(4) = %d\n", NextPow2(4));
-    printf ("NextPow2(3827) = %d\n", NextPow2(3827));
-    printf ("NextPow2(0xFFFFFFF0) = %d\n\n", NextPow2(0xFFFFFFF0));
+    printf ("ceil2(0) = %d\n", ceil2(0));
+    printf ("ceil2(1) = %d\n", ceil2(1));
+    printf ("ceil2(4) = %d\n", ceil2(4));
+    printf ("ceil2(3827) = %d\n", ceil2(3827));
+    printf ("ceil2(0xFFFFFFF0) = %d\n\n", ceil2(0xFFFFFFF0));
 
     auto cvp = reinterpret_cast<const void*>(0x1234);
     auto vp = reinterpret_cast<void*>(0x4321);

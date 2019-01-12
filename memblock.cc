@@ -101,7 +101,7 @@ void memblock::reserve (size_type cap) noexcept
 {
     if ((cap += zero_terminated()) <= capacity())
 	return;
-    cap = NextPow2 (cap);
+    cap = ceil2 (cap);
     auto oldBlock (capacity() ? data() : nullptr);
     auto newBlock = reinterpret_cast<pointer> (_realloc (oldBlock, cap));
     if (!oldBlock && data())

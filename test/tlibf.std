@@ -32,11 +32,11 @@ FirstBit(4) = 2
 FirstBit(3827) = 11
 FirstBit(0xFFFFFFF0) = 31
 
-NextPow2(0) = 1
-NextPow2(1) = 2
-NextPow2(4) = 4
-NextPow2(3827) = 4096
-NextPow2(0xFFFFFFF0) = 1
+ceil2(0) = 1
+ceil2(1) = 2
+ceil2(4) = 4
+ceil2(3827) = 4096
+ceil2(0xFFFFFFF0) = 1
 
 cvp = 1234
 vp = 4321
