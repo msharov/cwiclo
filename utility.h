@@ -266,13 +266,13 @@ inline constexpr bool IsPow2 (T v)
 //}}}----------------------------------------------------------------------
 //{{{ atomic_flag
 
-enum memory_order {
-    memory_order_relaxed = __ATOMIC_RELAXED,
-    memory_order_consume = __ATOMIC_CONSUME,
-    memory_order_acquire = __ATOMIC_ACQUIRE,
-    memory_order_release = __ATOMIC_RELEASE,
-    memory_order_acq_rel = __ATOMIC_ACQ_REL,
-    memory_order_seq_cst = __ATOMIC_SEQ_CST
+enum class memory_order : int {
+    relaxed = __ATOMIC_RELAXED,
+    consume = __ATOMIC_CONSUME,
+    acquire = __ATOMIC_ACQUIRE,
+    release = __ATOMIC_RELEASE,
+    acq_rel = __ATOMIC_ACQ_REL,
+    seq_cst = __ATOMIC_SEQ_CST
 };
 
 namespace {
@@ -295,9 +295,9 @@ template <typename T>
 inline static T kill_dependency (T v) noexcept
     { return T(v); }
 inline static void atomic_thread_fence (memory_order order) noexcept
-    { __atomic_thread_fence (order); }
+    { __atomic_thread_fence (int(order)); }
 inline static void atomic_signal_fence (memory_order order) noexcept
-    { __atomic_signal_fence (order); }
+    { __atomic_signal_fence (int(order)); }
 
 } // namespace
 
@@ -308,10 +308,10 @@ public:
     inline constexpr	atomic_flag (bool v)	: _v(v) {}
 			atomic_flag (const atomic_flag&) = delete;
     atomic_flag&	operator= (const atomic_flag&) = delete;
-    void		clear (memory_order order = memory_order_release)
-			    { __atomic_clear (&_v, order); }
-    bool		test_and_set (memory_order order = memory_order_acq_rel)
-			    { return __atomic_test_and_set (&_v, order); }
+    void		clear (memory_order order = memory_order::release)
+			    { __atomic_clear (&_v, int(order)); }
+    bool		test_and_set (memory_order order = memory_order::acq_rel)
+			    { return __atomic_test_and_set (&_v, int(order)); }
 };
 #define ATOMIC_FLAG_INIT	{false}
 

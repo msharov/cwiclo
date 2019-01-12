@@ -71,7 +71,7 @@ void App::InstallSignalHandlers (void) noexcept // static
 void App::FatalSignalHandler (int sig) noexcept // static
 {
     static atomic_flag doubleSignal = ATOMIC_FLAG_INIT;
-    if (!doubleSignal.test_and_set (memory_order_relaxed)) {
+    if (!doubleSignal.test_and_set (memory_order::relaxed)) {
 	alarm (1);
 	fprintf (stderr, "[S] Error: %s\n", strsignal(sig));
 	#ifndef NDEBUG
