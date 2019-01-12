@@ -131,20 +131,36 @@ template <typename T, size_t N> inline constexpr auto data(T (&c)[N]) noexcept {
 //{{{ bswap
 
 template <typename T>
-inline T bswap (T v) { assert (!"Only integer types are swappable"); return v; }
-template <> inline uint8_t bswap (uint8_t v)	{ return v; }
-template <> inline uint16_t bswap (uint16_t v)	{ return __builtin_bswap16 (v); }
-template <> inline uint32_t bswap (uint32_t v)	{ return __builtin_bswap32 (v); }
-template <> inline uint64_t bswap (uint64_t v)	{ return __builtin_bswap64 (v); }
-template <> inline int8_t bswap (int8_t v)	{ return v; }
-template <> inline int16_t bswap (int16_t v)	{ return __builtin_bswap16 (v); }
-template <> inline int32_t bswap (int32_t v)	{ return __builtin_bswap32 (v); }
-template <> inline int64_t bswap (int64_t v)	{ return __builtin_bswap64 (v); }
+inline constexpr T bswap (T v) { assert (!"Only integer types are swappable"); return v; }
+template <> inline constexpr uint8_t bswap (uint8_t v)	{ return v; }
+template <> inline constexpr uint16_t bswap (uint16_t v){ return __builtin_bswap16 (v); }
+template <> inline constexpr uint32_t bswap (uint32_t v){ return __builtin_bswap32 (v); }
+template <> inline constexpr uint64_t bswap (uint64_t v){ return __builtin_bswap64 (v); }
+template <> inline constexpr int8_t bswap (int8_t v)	{ return v; }
+template <> inline constexpr int16_t bswap (int16_t v)	{ return __builtin_bswap16 (v); }
+template <> inline constexpr int32_t bswap (int32_t v)	{ return __builtin_bswap32 (v); }
+template <> inline constexpr int64_t bswap (int64_t v)	{ return __builtin_bswap64 (v); }
 
-template <typename T> inline T le_to_native (const T& v) { return v; }
-template <typename T> inline T be_to_native (const T& v) { return bswap (v); }
-template <typename T> inline T native_to_le (const T& v) { return v; }
-template <typename T> inline T native_to_be (const T& v) { return bswap (v); }
+enum class endian {
+    little	= __ORDER_LITTLE_ENDIAN__,
+    big		= __ORDER_BIG_ENDIAN__,
+    native	= __BYTE_ORDER__
+};
+
+template <typename T> inline constexpr T le_to_native (const T& v) {
+    if constexpr (endian::native == endian::big)
+	return bswap(v);
+    else
+	return v;
+}
+template <typename T> inline constexpr T be_to_native (const T& v) {
+    if constexpr (endian::native == endian::little)
+	return bswap(v);
+    else
+	return v;
+}
+template <typename T> inline constexpr T native_to_le (const T& v) { return le_to_native(v); }
+template <typename T> inline constexpr T native_to_be (const T& v) { return be_to_native(v); }
 
 //}}}----------------------------------------------------------------------
 //{{{ min and max
