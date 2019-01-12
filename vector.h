@@ -45,7 +45,7 @@ public:
     constexpr size_type		size (void) const		{ return _data.size() / sizeof(T);	}
     constexpr auto		bsize (void) const		{ return _data.size();			}
     constexpr size_type		max_size (void) const		{ return _data.max_size() / sizeof(T);	}
-    constexpr bool		empty (void) const		{ return _data.empty();			}
+    [[nodiscard]] constexpr bool	empty (void) const	{ return _data.empty();			}
     constexpr auto		data (void)			{ return pointer (_data.data());	}
     constexpr auto		data (void) const		{ return const_pointer (_data.data());	}
     constexpr auto		begin (void)			{ return iterator (_data.begin());	}

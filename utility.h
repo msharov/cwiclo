@@ -110,7 +110,7 @@ template <typename T, size_t N> inline constexpr auto end (T (&c)[N]) noexcept {
 template <typename T> inline constexpr decltype(auto) cend (const T& c) { return end(c); }
 template <typename T> inline constexpr auto size (const T& c) { return c.size(); }
 template <typename T, size_t N> inline constexpr auto size (const T (&)[N]) noexcept { return N; }
-template <typename T> inline constexpr bool empty (const T& c) { return !c.size(); }
+template <typename T> [[nodiscard]] inline constexpr bool empty (const T& c) { return !c.size(); }
 template <typename T> inline constexpr decltype(auto) data (T& c) { return c.data(); }
 template <typename T> inline constexpr decltype(auto) data (const T& c) { return c.data(); }
 template <typename T, size_t N> inline constexpr auto data(T (&c)[N]) noexcept { return &c[0]; }
@@ -131,15 +131,15 @@ template <typename T, size_t N> inline constexpr auto data(T (&c)[N]) noexcept {
 //{{{ bswap
 
 template <typename T>
-inline constexpr T bswap (T v) { assert (!"Only integer types are swappable"); return v; }
-template <> inline constexpr uint8_t bswap (uint8_t v)	{ return v; }
-template <> inline constexpr uint16_t bswap (uint16_t v){ return __builtin_bswap16 (v); }
-template <> inline constexpr uint32_t bswap (uint32_t v){ return __builtin_bswap32 (v); }
-template <> inline constexpr uint64_t bswap (uint64_t v){ return __builtin_bswap64 (v); }
-template <> inline constexpr int8_t bswap (int8_t v)	{ return v; }
-template <> inline constexpr int16_t bswap (int16_t v)	{ return __builtin_bswap16 (v); }
-template <> inline constexpr int32_t bswap (int32_t v)	{ return __builtin_bswap32 (v); }
-template <> inline constexpr int64_t bswap (int64_t v)	{ return __builtin_bswap64 (v); }
+[[nodiscard]] inline constexpr T bswap (T v) { assert (!"Only integer types are swappable"); return v; }
+template <> [[nodiscard]] inline constexpr uint8_t bswap (uint8_t v)	{ return v; }
+template <> [[nodiscard]] inline constexpr uint16_t bswap (uint16_t v){ return __builtin_bswap16 (v); }
+template <> [[nodiscard]] inline constexpr uint32_t bswap (uint32_t v){ return __builtin_bswap32 (v); }
+template <> [[nodiscard]] inline constexpr uint64_t bswap (uint64_t v){ return __builtin_bswap64 (v); }
+template <> [[nodiscard]] inline constexpr int8_t bswap (int8_t v)	{ return v; }
+template <> [[nodiscard]] inline constexpr int16_t bswap (int16_t v)	{ return __builtin_bswap16 (v); }
+template <> [[nodiscard]] inline constexpr int32_t bswap (int32_t v)	{ return __builtin_bswap32 (v); }
+template <> [[nodiscard]] inline constexpr int64_t bswap (int64_t v)	{ return __builtin_bswap64 (v); }
 
 enum class endian {
     little	= __ORDER_LITTLE_ENDIAN__,
@@ -147,20 +147,20 @@ enum class endian {
     native	= __BYTE_ORDER__
 };
 
-template <typename T> inline constexpr T le_to_native (const T& v) {
+template <typename T> [[nodiscard]] inline constexpr T le_to_native (const T& v) {
     if constexpr (endian::native == endian::big)
 	return bswap(v);
     else
 	return v;
 }
-template <typename T> inline constexpr T be_to_native (const T& v) {
+template <typename T> [[nodiscard]] inline constexpr T be_to_native (const T& v) {
     if constexpr (endian::native == endian::little)
 	return bswap(v);
     else
 	return v;
 }
-template <typename T> inline constexpr T native_to_le (const T& v) { return le_to_native(v); }
-template <typename T> inline constexpr T native_to_be (const T& v) { return be_to_native(v); }
+template <typename T> [[nodiscard]] inline constexpr T native_to_le (const T& v) { return le_to_native(v); }
+template <typename T> [[nodiscard]] inline constexpr T native_to_be (const T& v) { return be_to_native(v); }
 
 //}}}----------------------------------------------------------------------
 //{{{ min and max
@@ -197,25 +197,25 @@ inline constexpr T MultBySign (T a, remove_reference_t<T> b)
 enum { c_DefaultAlignment = alignof(void*) };
 
 template <typename T>
-inline constexpr T Floor (T n, remove_reference_t<T> grain = c_DefaultAlignment)
+[[nodiscard]] inline constexpr T Floor (T n, remove_reference_t<T> grain = c_DefaultAlignment)
     { return n - n % grain; }
 template <typename T>
-inline constexpr auto Align (T n, remove_reference_t<T> grain = c_DefaultAlignment)
+[[nodiscard]] inline constexpr auto Align (T n, remove_reference_t<T> grain = c_DefaultAlignment)
     { return Floor<T> (n + MultBySign<T> (grain-1, n), grain); }
 template <typename T>
 inline constexpr bool IsAligned (T n, remove_reference_t<T> grain = c_DefaultAlignment)
     { return !(n % grain); }
 template <typename T>
-inline constexpr auto Round (T n, remove_reference_t<T> grain)
+[[nodiscard]] inline constexpr auto Round (T n, remove_reference_t<T> grain)
     { return Floor<T> (n + MultBySign<T> (grain/2, n), grain); }
 template <typename T>
-inline constexpr auto DivRU (T n1, remove_reference_t<T> n2)
+[[nodiscard]] inline constexpr auto DivRU (T n1, remove_reference_t<T> n2)
     { return (n1 + MultBySign<T> (n2-1, n1)) / n2; }
 template <typename T>
-inline constexpr auto DivRound (T n1, remove_reference_t<T> n2)
+[[nodiscard]] inline constexpr auto DivRound (T n1, remove_reference_t<T> n2)
     { return (n1 + MultBySign<T> (n2/2, n1)) / n2; }
 template <typename T>
-inline constexpr make_unsigned_t<T> Square (T n)
+[[nodiscard]] inline constexpr make_unsigned_t<T> Square (T n)
     { return n*n; }
 
 //}}}----------------------------------------------------------------------
@@ -231,10 +231,10 @@ template <typename T>
 inline constexpr void SetBit (T& v, unsigned i, bool b=true)
     { auto m = BitMask<T>(i); v=b?(v|m):(v&~m); }
 template <typename T>
-inline constexpr auto Rol (T v, remove_reference_t<T> n)
+[[nodiscard]] inline constexpr auto Rol (T v, remove_reference_t<T> n)
     { return (v << n) | (v >> (bits_in_type<T>::value-n)); }
 template <typename T>
-inline constexpr auto Ror (T v, remove_reference_t<T> n)
+[[nodiscard]] inline constexpr auto Ror (T v, remove_reference_t<T> n)
     { return (v >> n) | (v << (bits_in_type<T>::value-n)); }
 
 template <typename T>
@@ -292,7 +292,7 @@ inline static void tight_loop_pause (void)
 }
 
 template <typename T>
-inline static T kill_dependency (T v) noexcept
+[[nodiscard]] inline static T kill_dependency (T v) noexcept
     { return T(v); }
 inline static void atomic_thread_fence (memory_order order) noexcept
     { __atomic_thread_fence (int(order)); }
@@ -356,7 +356,7 @@ union alignas(16) simd16_t {
     float	asf [4];
     double	asd [2];
 
-    inline static CONST constexpr auto zero (void) noexcept
+    [[nodiscard]] inline static CONST constexpr auto zero (void) noexcept
 	{ return simd16_t {0,0,0,0}; }
 };
 

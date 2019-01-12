@@ -185,8 +185,8 @@ private:
 			    return mii->factory;
 			}
     inline void		SwapQueues (void) noexcept;
-   inline static Msger*	CreateMsgerWith (const Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept;
-    inline static auto	CreateMsger (const Msg::Link& l, iid_t iid) noexcept;
+    [[nodiscard]] inline static Msger*	CreateMsgerWith (const Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept;
+    [[nodiscard]] inline static auto	CreateMsger (const Msg::Link& l, iid_t iid) noexcept;
     inline void		ProcessInputQueue (void) noexcept;
     inline void		DeleteUnusedMsgers (void) noexcept;
     inline void		ForwardReceivedSignals (void) noexcept;

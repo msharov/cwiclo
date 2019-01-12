@@ -259,7 +259,7 @@ public:
     enum { f_Unused, f_Static, f_Last };
     //{{{2 Msger factory template --------------------------------------
     template <typename M>
-    static Msger* Factory (const Msg::Link& l) {
+    [[nodiscard]] static Msger* Factory (const Msg::Link& l) {
 	if constexpr (has_msger_named_create<M>::value)
 	    return M::Create(l);	// this variant is used for singleton Msgers
 	else

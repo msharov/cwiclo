@@ -38,8 +38,8 @@ private:
 //}}}-------------------------------------------------------------------
 //{{{ new and delete
 
-extern "C" void* _realloc (void* p, size_t n) noexcept MALLOCLIKE MALLOCLIKE_ARG(2);
-extern "C" void* _alloc (size_t n) noexcept MALLOCLIKE MALLOCLIKE_ARG(1);
+extern "C" [[nodiscard]] void* _realloc (void* p, size_t n) noexcept MALLOCLIKE MALLOCLIKE_ARG(2);
+extern "C" [[nodiscard]] void* _alloc (size_t n) noexcept MALLOCLIKE MALLOCLIKE_ARG(1);
 
 #if __clang__
 // clang may have reasons to want a delete symbol, but in cwiclo all
@@ -48,16 +48,16 @@ extern "C" void* _alloc (size_t n) noexcept MALLOCLIKE MALLOCLIKE_ARG(1);
 #pragma GCC diagnostic ignored "-Winline-new-delete"
 #endif
 
-inline void* operator new (size_t n)			{ return _alloc(n); }
-inline void* operator new[] (size_t n)			{ return _alloc(n); }
+[[nodiscard]] inline void* operator new (size_t n)	{ return _alloc(n); }
+[[nodiscard]] inline void* operator new[] (size_t n)	{ return _alloc(n); }
 inline void  operator delete (void* p) noexcept		{ free(p); }
 inline void  operator delete[] (void* p) noexcept	{ free(p); }
 inline void  operator delete (void* p, size_t) noexcept	{ free(p); }
 inline void  operator delete[] (void* p, size_t) noexcept { free(p); }
 
 // Default placement versions of operator new.
-inline void* operator new (size_t, void* p)	{ return p; }
-inline void* operator new[] (size_t, void* p)	{ return p; }
+[[nodiscard]] inline void* operator new (size_t, void* p)	{ return p; }
+[[nodiscard]] inline void* operator new[] (size_t, void* p)	{ return p; }
 
 // Default placement versions of operator delete.
 inline void  operator delete  (void*, void*)	{ }
@@ -96,13 +96,13 @@ namespace abi = __cxxabiv1;
 
 namespace cwiclo {
 
-template <typename T> constexpr decltype(auto)
+template <typename T> [[nodiscard]] constexpr decltype(auto)
 forward (remove_reference_t<T>& v) noexcept { return static_cast<T&&>(v); }
 
-template<typename T> constexpr decltype(auto)
+template<typename T> [[nodiscard]] constexpr decltype(auto)
 forward (remove_reference_t<T>&& v) noexcept { return static_cast<T&&>(v); }
 
-template<typename T> constexpr decltype(auto)
+template<typename T> [[nodiscard]] constexpr decltype(auto)
 move(T&& v) noexcept { return static_cast<remove_reference_t<T>&&>(v); }
 
 //}}}-------------------------------------------------------------------

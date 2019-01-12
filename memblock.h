@@ -43,7 +43,7 @@ public:
     inline auto&		operator= (cmemlink&& v)		{ swap (move(v)); return *this; }
     inline constexpr auto	max_size (void) const			{ return numeric_limits<size_type>::max()/2-1; }
     inline constexpr auto	size (void) const			{ return _size; }
-    inline constexpr auto	empty (void) const			{ return !size(); }
+    [[nodiscard]] inline constexpr auto	empty (void) const		{ return !size(); }
     inline constexpr auto	capacity (void) const			{ return _capacity; }
     constexpr const_pointer	data (void) const			{ return _data; }
     inline constexpr auto	cdata (void) const			{ return data(); }
