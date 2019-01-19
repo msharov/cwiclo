@@ -269,10 +269,10 @@ public:
     //}}}2--------------------------------------------------------------
 public:
     virtual		~Msger (void) noexcept		{ }
-    auto&		CreatorLink (void) const	{ return _link; }
-    auto		CreatorId (void) const		{ return CreatorLink().src; }
-    auto		MsgerId (void) const		{ return CreatorLink().dest; }
-    auto		Flag (unsigned f) const		{ return GetBit(_flags,f); }
+    constexpr auto&	CreatorLink (void) const	{ return _link; }
+    constexpr auto	CreatorId (void) const		{ return CreatorLink().src; }
+    constexpr auto	MsgerId (void) const		{ return CreatorLink().dest; }
+    constexpr auto	Flag (unsigned f) const		{ return GetBit(_flags,f); }
     static void		Error (const char* fmt, ...) noexcept PRINTFARGS(1,2);
     static void		ErrorLibc (const char* f) noexcept;
     virtual bool	Dispatch (Msg&) noexcept	{ return false; }
@@ -281,8 +281,8 @@ public:
     virtual void	OnMsgerDestroyed (mrid_t mid) noexcept
 			    { if (mid == CreatorId()) SetFlag (f_Unused); }
 protected:
-    explicit		Msger (const Msg::Link& l)	:_link(l),_flags() {}
-    explicit		Msger (mrid_t id)		:_link{id,id},_flags(BitMask(f_Static)) {}
+    explicit constexpr	Msger (const Msg::Link& l)	:_link(l),_flags() {}
+    explicit constexpr	Msger (mrid_t id)		:_link{id,id},_flags(BitMask(f_Static)) {}
 			Msger (const Msger&) = delete;
     void		operator= (const Msger&) = delete;
     void		SetFlag (unsigned f, bool v = true)	{ SetBit(_flags,f,v); }

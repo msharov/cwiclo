@@ -33,7 +33,7 @@ public:
     // Proxies are constructed with the calling object's oid.
     // Reply messages sent through reply interfaces, here PingR,
     // will be delivered to the given object.
-			PPing (mrid_t caller) : Proxy (caller) {}
+    constexpr		PPing (mrid_t caller) : Proxy (caller) {}
     // Methods are implemented by simple marshalling of the arguments.
     // M_Ping() is defined by DECLARE_INTERFACE above and returns the methodid_t of the Ping call.
     void		Ping (uint32_t v) {
@@ -73,7 +73,7 @@ public:
     // Reply proxies are constructed from the owning object's creating
     // link, copied from the message that created it. ProxyR will reverse
     // the link, sending replies to the originating object.
-			PPingR (const Msg::Link& l) : ProxyR (l) {}
+    constexpr		PPingR (const Msg::Link& l) : ProxyR (l) {}
 			// Using variadic Send is the easiest way to
 			// create a message that only marshals arguments.
     void		Ping (uint32_t v) { Send (M_Ping(), v); }

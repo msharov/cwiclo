@@ -40,7 +40,7 @@ public:
     static constexpr mstime_t TimerMax = INT64_MAX;
     static constexpr mstime_t TimerNone = UINT64_MAX;
 public:
-		PTimer (mrid_t caller) : Proxy (caller) {}
+    constexpr	PTimer (mrid_t caller) : Proxy (caller) {}
     void	Watch (WatchCmd cmd, fd_t fd, mstime_t timeoutms = TimerNone)
 		    { Send (M_Watch(), cmd, fd, timeoutms); }
     void	Stop (void)					{ Watch (WatchCmd::Stop, -1, TimerNone); }
@@ -70,7 +70,7 @@ class PTimerR : public ProxyR {
 public:
     using fd_t = PTimer::fd_t;
 public:
-		PTimerR (const Msg::Link& l)	: ProxyR (l) {}
+    constexpr	PTimerR (const Msg::Link& l)	: ProxyR (l) {}
     void	Timer (fd_t fd)			{ Send (M_Timer(), fd); }
 
     template <typename O>
@@ -88,7 +88,7 @@ public:
 class PSignal : public Proxy {
     DECLARE_INTERFACE (Signal, (Signal,"i"));
 public:
-		PSignal (mrid_t caller)	: Proxy (caller, mrid_Broadcast) {}
+    constexpr	PSignal (mrid_t caller)	: Proxy (caller, mrid_Broadcast) {}
     void	Signal (int sig)	{ Send (M_Signal(), sig); }
 
     template <typename O>

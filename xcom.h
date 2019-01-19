@@ -14,7 +14,7 @@ namespace cwiclo {
 class PCOM : public Proxy {
     DECLARE_INTERFACE (COM, (Error,"s")(Export,"s")(Delete,""))
 public:
-		PCOM (mrid_t src, mrid_t dest)	: Proxy (src, dest) {}
+    constexpr	PCOM (mrid_t src, mrid_t dest)	: Proxy (src, dest) {}
 		~PCOM (void) noexcept		{ FreeId(); }
     void	Error (const string& errmsg)	{ Send (M_Error(), errmsg); }
     void	Export (const string& elist)	{ Send (M_Export(), elist); }
@@ -49,7 +49,7 @@ public:
     using fd_t = PTimer::fd_t;
     enum class SocketSide : bool { Client, Server };
 public:
-		PExtern (mrid_t caller)	: Proxy(caller) {}
+    constexpr	PExtern (mrid_t caller)	: Proxy(caller) {}
 		~PExtern (void)		{ FreeId(); }
     void	Close (void)		{ Send (M_Close()); }
     void	Open (fd_t fd, const iid_t* eifaces, SocketSide side = SocketSide::Server)
@@ -108,7 +108,7 @@ public:
 class PExternR : public ProxyR {
     DECLARE_INTERFACE (ExternR, (Connected,"x"))
 public:
-		PExternR (const Msg::Link& l)		: ProxyR(l) {}
+    constexpr	PExternR (const Msg::Link& l)		: ProxyR(l) {}
     void	Connected (const ExternInfo* einfo)	{ Send (M_Connected(), einfo); }
     template <typename O>
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
@@ -201,33 +201,33 @@ private:
 	    c_MaxBodySize = (1<<24)-1
 	};
     public:
-			ExtMsg (void)		: _body(),_h{},_hbuf{} {}
-	inline		ExtMsg (Msg&& msg) noexcept;
-	streamsize	HeaderSize (void) const	{ return _h.hsz; }
-	auto&		GetHeader (void) const	{ return _h; }
-	streamsize	BodySize (void) const	{ return _h.sz; }
-	auto		Extid (void) const	{ return _h.extid; }
-	auto		FdOffset (void) const	{ return _h.fdoffset; }
-	streamsize	Size (void) const	{ return BodySize() + HeaderSize(); }
-	bool		HasFd (void) const	{ return FdOffset() != Msg::NoFdIncluded; }
-	void		SetHeader (const Header& h)	{ _h = h; }
-	void		AllocateBody (streamsize sz)	{ _body.allocate (sz); }
-	void		TrimBody (streamsize sz)	{ _body.shrink (sz); }
-	auto&&		MoveBody (void)			{ return move(_body); }
-	void		SetPassedFd (fd_t fd)	{ assert (HasFd()); ostream os (_body.iat(_h.fdoffset), sizeof(fd)); os << fd; }
-	fd_t		PassedFd (void) const noexcept;
-	void		WriteIOVecs (iovec* iov, streamsize bw) noexcept;
-	auto		Read (void) const	{ return istream (_body.data(), _body.size()); }
-	methodid_t	ParseMethod (void) const noexcept;
-	inline void	DebugDump (void) const noexcept;
+	constexpr		ExtMsg (void)		: _body(),_h{},_hbuf{} {}
+	inline			ExtMsg (Msg&& msg) noexcept;
+	constexpr streamsize	HeaderSize (void) const	{ return _h.hsz; }
+	constexpr auto&		GetHeader (void) const	{ return _h; }
+	constexpr streamsize	BodySize (void) const	{ return _h.sz; }
+	constexpr auto		Extid (void) const	{ return _h.extid; }
+	constexpr auto		FdOffset (void) const	{ return _h.fdoffset; }
+	constexpr streamsize	Size (void) const	{ return BodySize() + HeaderSize(); }
+	constexpr bool		HasFd (void) const	{ return FdOffset() != Msg::NoFdIncluded; }
+	void			SetHeader (const Header& h)	{ _h = h; }
+	void			AllocateBody (streamsize sz)	{ _body.allocate (sz); }
+	void			TrimBody (streamsize sz)	{ _body.shrink (sz); }
+	constexpr auto&&	MoveBody (void)		{ return move(_body); }
+	void			SetPassedFd (fd_t fd)	{ assert (HasFd()); ostream os (_body.iat(_h.fdoffset), sizeof(fd)); os << fd; }
+	fd_t			PassedFd (void) const noexcept;
+	void			WriteIOVecs (iovec* iov, streamsize bw) noexcept;
+	constexpr auto		Read (void) const	{ return istream (_body.data(), _body.size()); }
+	methodid_t		ParseMethod (void) const noexcept;
+	inline void		DebugDump (void) const noexcept;
     private:
-	auto		HeaderPtr (void) const	{ auto hp = _hbuf; return hp-sizeof(_h); }
-	auto		HeaderPtr (void)	{ return UNCONST_MEMBER_FN (HeaderPtr,); }
-	uint8_t		WriteHeaderStrings (methodid_t method) noexcept;
+	constexpr auto		HeaderPtr (void) const	{ auto hp = _hbuf; return hp-sizeof(_h); }
+	auto			HeaderPtr (void)	{ return UNCONST_MEMBER_FN (HeaderPtr,); }
+	uint8_t			WriteHeaderStrings (methodid_t method) noexcept;
     private:
-	Msg::Body	_body;
-	Header		_h;
-	char		_hbuf [c_MaxHeaderSize];
+	Msg::Body		_body;
+	Header			_h;
+	char			_hbuf [c_MaxHeaderSize];
     };
     //}}}2--------------------------------------------------------------
     //{{{2 RelayProxy
@@ -243,7 +243,7 @@ private:
     };
     //}}}2--------------------------------------------------------------
 private:
-    mrid_t		CreateExtidFromRelayId (mrid_t id) const noexcept
+    constexpr mrid_t	CreateExtidFromRelayId (mrid_t id) const noexcept
 			    { return id + ((_einfo.side == ExternInfo::SocketSide::Client) ? extid_ClientBase : extid_ServerBase); }
     static auto&	ExternList (void) noexcept
 			    { static vector<Extern*> s_ExternList; return s_ExternList; }
@@ -323,7 +323,7 @@ class ExternServer : public Msger {
 public:
     using fd_t = PExternServer::fd_t;
 public:
-    explicit		ExternServer (const Msg::Link& l) noexcept;
+    explicit constexpr	ExternServer (const Msg::Link& l) noexcept;
     bool		OnError (mrid_t eid, const string& errmsg) noexcept override;
     void		OnMsgerDestroyed (mrid_t mid) noexcept override;
     bool		Dispatch (Msg& msg) noexcept override;
@@ -338,6 +338,16 @@ private:
     PExternR		_reply;
     fd_t		_sockfd;
 };
+
+constexpr ExternServer::ExternServer (const Msg::Link& l) noexcept
+: Msger(l)
+,_conns()
+,_eifaces()
+,_timer (l.dest)
+,_reply (l)
+,_sockfd (-1)
+{
+}
 
 } // namespace cwiclo
 //}}}-------------------------------------------------------------------

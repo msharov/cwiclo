@@ -943,16 +943,6 @@ auto PExternServer::BindLocalIP6 (in_port_t port, const iid_t* eifaces) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ ExternServer
 
-ExternServer::ExternServer (const Msg::Link& l) noexcept
-: Msger(l)
-,_conns()
-,_eifaces()
-,_timer (l.dest)
-,_reply (l)
-,_sockfd (-1)
-{
-}
-
 bool ExternServer::OnError (mrid_t eid, const string& errmsg) noexcept
 {
     if (_timer.Dest() == eid || MsgerId() == eid)
