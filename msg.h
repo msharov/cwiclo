@@ -163,24 +163,29 @@ public:
     };
 public:
 			Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept;
-			Msg (const Link& l, methodid_t mid, Body&& body, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept;
-    inline auto&	GetLink (void) const	{ return _link; }
-    inline auto		Src (void) const	{ return GetLink().src; }
-    inline auto		Dest (void) const	{ return GetLink().dest; }
-    inline auto		Size (void) const	{ return _body.size(); }
-    inline auto		Method (void) const	{ return _method; }
-    inline auto		Interface (void) const	{ return InterfaceOfMethod (Method()); }
+    constexpr auto&	GetLink (void) const	{ return _link; }
+    constexpr auto	Src (void) const	{ return GetLink().src; }
+    constexpr auto	Dest (void) const	{ return GetLink().dest; }
+    constexpr auto	Size (void) const	{ return _body.size(); }
+    constexpr auto	Method (void) const	{ return _method; }
+    constexpr auto	Interface (void) const	{ return InterfaceOfMethod (Method()); }
     inline auto		Signature (void) const	{ return SignatureOfMethod (Method()); }
-    inline auto		Extid (void) const	{ return _extid; }
+    constexpr auto	Extid (void) const	{ return _extid; }
     inline void		SetExtid (mrid_t eid)	{ _extid = eid; }
-    inline auto		FdOffset (void) const	{ return _fdoffset; }
-    inline auto&&	MoveBody (void)		{ return move(_body); }
-    inline auto		Read (void) const	{ return istream (_body.data(),_body.size()); }
-    inline auto		Write (void)		{ return ostream (_body.data(),_body.size()); }
+    constexpr auto	FdOffset (void) const	{ return _fdoffset; }
+    constexpr auto&&	MoveBody (void)		{ return move(_body); }
+    constexpr auto	Read (void) const	{ return istream (_body.data(),_body.size()); }
+    constexpr auto	Write (void)		{ return ostream (_body.data(),_body.size()); }
     static streamsize	ValidateSignature (istream& is, const char* sig) noexcept;
     auto		Verify (void) const noexcept	{ auto is = Read(); return ValidateSignature (is, Signature()); }
-			Msg (Msg&& msg) : Msg(msg.GetLink(),msg.Method(),msg.MoveBody(),msg.Extid(),msg.FdOffset()) {}
-			Msg (Msg&& msg, const Link& l) : Msg(l,msg.Method(),msg.MoveBody(),msg.Extid(),msg.FdOffset()) {}
+    constexpr		Msg (const Link& l, methodid_t mid) noexcept
+			    :_method (mid),_link (l),_extid(0),_fdoffset (NoFdIncluded),_body() {}
+    constexpr		Msg (const Link& l, methodid_t mid, Body&& body, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept
+			    :_method (mid),_link (l),_extid (extid),_fdoffset (fdo),_body (move (body)) {}
+    constexpr		Msg (Msg&& msg) noexcept
+			    : Msg(msg.GetLink(),msg.Method(),msg.MoveBody(),msg.Extid(),msg.FdOffset()) {}
+    constexpr		Msg (Msg&& msg, const Link& l) noexcept
+			    : Msg(l,msg.Method(),msg.MoveBody(),msg.Extid(),msg.FdOffset()) {}
 			Msg (const Msg&) = delete;
     Msg&		operator= (const Msg&) = delete;
 private:

@@ -91,15 +91,6 @@ Msg::Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid, fdoffset
     fill (_body.end(), ppade, 0);	// zero out the alignment padding
 }
 
-Msg::Msg (const Link& l, methodid_t mid, Body&& body, mrid_t extid, fdoffset_t fdo) noexcept
-:_method (mid)
-,_link (l)
-,_extid (extid)
-,_fdoffset (fdo)
-,_body (move (body))
-{
-}
-
 static streamsize SigelementSize (char c) noexcept
 {
     static const struct { char sym; uint8_t sz; } syms[] =
