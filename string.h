@@ -15,7 +15,7 @@ public:
     inline		string (void)					: memblock() { set_zero_terminated(); }
     inline		string (const_pointer s, size_type len)		: memblock (s,len,true) { copy_link(); }
     inline		string (const_pointer s1, const_pointer s2)	: string (s1,s2-s1) {}
-    inline		string (const_pointer s)			: memblock (s, strlen(s), true) {}
+    constexpr		string (const_pointer s)			: memblock (s, __builtin_strlen(s), true) {}
     inline constexpr	string (string&& s)				: memblock (move(s)) {}
     inline		string (const string& s)			: string (s.data(), s.size()) {}
     constexpr auto	c_str (void) const				{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
@@ -127,7 +127,7 @@ public:
 			lstring (void)					: cmemlink () { set_zero_terminated(); }
     constexpr		lstring (const_pointer s, size_type len)	: cmemlink (s, len, true) {}
     constexpr		lstring (const_pointer s1, const_pointer s2)	: lstring (s1, s2-s1) {}
-    inline		lstring (const_pointer s)			: lstring (s, strlen(s)) {}
+    constexpr		lstring (const_pointer s)			: lstring (s, __builtin_strlen(s)) {}
     constexpr		lstring (lstring&& s)				: cmemlink (move(s)) {}
     constexpr		lstring (const lstring& s)			: cmemlink (s) {}
     constexpr		lstring (const string& s)			: cmemlink (s) {}

@@ -347,7 +347,7 @@ void LibTestApp::TestString (void) // static
 {
     static const char c_TestString1[] = "123456789012345678901234567890";
     static const char c_TestString2[] = "abcdefghijklmnopqrstuvwxyz";
-    static const char c_TestString3[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    static constexpr const lstring c_TestString3 ("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     string s1 (c_TestString1);
     string s2 (ArrayRange (c_TestString2));
     auto s3 (s1);
@@ -372,7 +372,9 @@ void LibTestApp::TestString (void) // static
 
     s1.unlink();
     s1 = c_TestString2;
+    tight_loop_pause();
     s1 += c_TestString3;
+    tight_loop_pause();
     s1 += '$';
     puts (s1.c_str());
 
