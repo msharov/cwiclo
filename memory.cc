@@ -107,7 +107,7 @@ extern "C" void print_backtrace (void) noexcept
 	auto addrstart = strchr (fnend, '[');
 	if (addrstart) {
 	    auto addr = strtoul (++addrstart, nullptr, 0);
-	    if constexpr (sizeof(void*) <= 8)
+	    if constexpr (sizeof(void*) < 8)
 		printf ("%8lx\t", addr);
 	    else
 		printf ("%16lx\t", addr);
@@ -123,7 +123,7 @@ extern "C" void print_backtrace (void) noexcept
 #ifndef UC_VERSION
 extern "C" void hexdump (const void* vp, size_t n) noexcept
 {
-    auto p = (const uint8_t*) vp;
+    auto p = reinterpret_cast<const uint8_t*>(vp);
     for (auto i = 0u; i < n; i += 16) {
 	for (auto j = 0u; j < 16; ++j) {
 	    if (i+j < n)
@@ -156,13 +156,15 @@ const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexce
     if (!penv)
 	penv = "/bin:/usr/bin:.";
     char path [PATH_MAX];
-    snprintf (ArrayBlock(path), "%s/%s"+strlen("%s/"), penv);
+    if (size(path) < size_t(snprintf (ArrayBlock(path), "%s/%s"+strlen("%s/"), penv)))
+	return nullptr;
 
     for (char *pf = path, *pl = pf; *pf; pf = pl) {
 	while (*pl && *pl != ':')
 	    ++pl;
 	*pl++ = 0;
-	snprintf (exe, exesz, "%s/%s", pf, efn);
+	if (exesz < size_t(snprintf (exe, exesz, "%s/%s", pf, efn)))
+	    return nullptr;
 	if (0 == access (exe, X_OK))
 	    return exe;
     }
@@ -199,28 +201,32 @@ int sd_listen_fd_by_name (const char* name) noexcept
 
 int mkpath (const char* path, mode_t mode) noexcept
 {
-    char pbuf [PATH_MAX], *pbe = pbuf;
-    do {
-	if (*path == '/' || !*path) {
-	    *pbe = '\0';
-	    if (pbuf[0] && 0 > mkdir (pbuf, mode) && errno != EEXIST)
-		return -1;
-	}
-	*pbe++ = *path;
-    } while (*path++);
+    char pbuf [PATH_MAX];
+    auto n = size_t(snprintf (ArrayBlock(pbuf), "%s", path));
+    if (n > size(pbuf))
+	return -1;
+    for (auto f = begin(pbuf), l = f+n; f < l; ++f) {
+	f = find (f, l, '/');
+	*f = 0;
+	if (0 > mkdir (pbuf, mode) && errno != EEXIST)
+	    return -1;
+	*f = '/';
+    }
     return 0;
 }
 
 int rmpath (const char* path) noexcept
 {
     char pbuf [PATH_MAX];
-    for (auto pend = stpcpy (pbuf, path)-1;; *pend = 0) {
-	if (0 > rmdir(pbuf))
+    if (size(pbuf) < size_t(snprintf (ArrayBlock(pbuf), "%s", path)))
+	return -1;
+    while (pbuf[0]) {
+	if (0 > rmdir (pbuf))
 	    return (errno == ENOTEMPTY || errno == EACCES) ? 0 : -1;
-	do {
-	    if (pend <= pbuf)
-		return 0;
-	} while (*--pend != '/');
+	auto pslash = strrchr (pbuf, '/');
+	if (!pslash)
+	    pslash = pbuf;
+	*pslash = 0;
     }
     return 0;
 }

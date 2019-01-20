@@ -197,10 +197,10 @@ public:
 public:
     inline constexpr		unique_ptr (void)		: _p (nullptr) {}
     inline constexpr explicit	unique_ptr (pointer p)		: _p (p) {}
-    inline			unique_ptr (unique_ptr&& p)	: _p (p.release()) {}
+    inline constexpr		unique_ptr (unique_ptr&& p)	: _p (p.release()) {}
     inline			~unique_ptr (void)		{ delete _p; }
     inline constexpr auto	get (void) const		{ return _p; }
-    inline auto			release (void)			{ return exchange (_p, nullptr); }
+    inline constexpr auto	release (void)			{ return exchange (_p, nullptr); }
     inline void			reset (pointer p = nullptr)	{ assert (p != _p || !p); delete exchange (_p, p); }
     inline void			swap (unique_ptr&& v)		{ ::cwiclo::swap (_p, v._p); }
     inline constexpr explicit	operator bool (void) const	{ return _p != nullptr; }
@@ -541,6 +541,22 @@ inline auto uninitialized_fill_n (I f, size_t n, const T& v)
 //{{{ Searching algorithms
 
 template <typename I, typename T>
+auto find (I f, I l, const T& v)
+{
+    while (f < l && !(*f == v))
+	++f;
+    return f;
+}
+
+template <typename I, typename P>
+auto find_if (I f, I l, P p)
+{
+    while (f < l && !p(*f))
+	++f;
+    return f;
+}
+
+template <typename I, typename T>
 I linear_search (I f, I l, const T& v)
 {
     for (; f < l; ++f)
@@ -606,24 +622,30 @@ void sort (I f, I l)
     qsort (f, l-f, sizeof(value_type), c_compare<value_type>);
 }
 
-template <typename Ctr>
-auto linear_search (Ctr& c, typename Ctr::const_reference v)
-    { return linear_search (c.begin(), c.end(), v); }
-template <typename Ctr, typename P>
-auto linear_search_if (Ctr& c, P p)
-    { return linear_search_if (c.begin(), c.end(), p); }
-template <typename Ctr>
-auto lower_bound (Ctr& c, typename Ctr::const_reference v)
-    { return lower_bound (c.begin(), c.end(), v); }
-template <typename Ctr>
-auto upper_bound (Ctr& c, typename Ctr::const_reference v)
-    { return upper_bound (c.begin(), c.end(), v); }
-template <typename Ctr>
-auto binary_search (Ctr& c, typename Ctr::const_reference v)
-    { return binary_search (c.begin(), c.end(), v); }
-template <typename Ctr>
-void sort (Ctr& c)
-    { sort (c.begin(), c.end()); }
+template <typename C, typename T>
+auto find (C& c, const T& v)
+    { return find (begin(c), end(c), v); }
+template <typename C, typename P>
+auto find_if (C& c, P p)
+    { return find_if (begin(c), end(c), move(p)); }
+template <typename C, typename T>
+auto linear_search (C& c, const T& v)
+    { return linear_search (begin(c), end(c), v); }
+template <typename C, typename P>
+auto linear_search_if (C& c, P p)
+    { return linear_search_if (begin(c), end(c), move(p)); }
+template <typename C, typename T>
+auto lower_bound (C& c, const T& v)
+    { return lower_bound (begin(c), end(c), v); }
+template <typename C, typename T>
+auto upper_bound (C& c, const T& v)
+    { return upper_bound (begin(c), end(c), v); }
+template <typename C, typename T>
+auto binary_search (C& c, const T& v)
+    { return binary_search (begin(c), end(c), v); }
+template <typename C>
+void sort (C& c)
+    { sort (begin(c), end(c)); }
 
 //}}}-------------------------------------------------------------------
 //{{{ zstri
@@ -707,12 +729,12 @@ private:
 //}}}-------------------------------------------------------------------
 //{{{ Other algorithms
 
-template <typename Ctr, typename Discriminator>
-void remove_if (Ctr& ctr, Discriminator f)
+template <typename C, typename P>
+void remove_if (C& c, P p)
 {
-    for (auto i = ctr.cbegin(); i < ctr.cend(); ++i)
-	if (f(*i))
-	    --(i = ctr.erase(i));
+    for (auto i = c.cbegin(); i < c.cend(); ++i)
+	if (p(*i))
+	    --(i = c.erase(i));
 }
 
 template <typename I>
@@ -721,16 +743,19 @@ void random_shuffle (I f, I l)
     for (; f < l; ++f)
 	iter_swap (f, f + (rand() % size_t(l-f)));
 }
-template <typename Ctr>
-inline void random_shuffle (Ctr& ctr)
-    { random_shuffle (ctr.begin(), ctr.end()); }
+template <typename C>
+inline void random_shuffle (C& c)
+    { random_shuffle (begin(c), end(c)); }
 
-template <typename I>
-inline void iota (I f, I l, typename iterator_traits<I>::value_type v)
+template <typename I, typename T>
+inline void iota (I f, I l, T v)
 {
     for (; f < l; ++f,++v)
 	*f = v;
 }
+template <typename C, typename T>
+inline void iota (C& c, T v)
+    { iota (begin(c), end(c), move(v)); }
 
 } // namespace cwiclo
 //}}}-------------------------------------------------------------------
