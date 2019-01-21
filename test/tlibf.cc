@@ -195,7 +195,7 @@ void LibTestApp::TestMB (void) // static
     b.link (cstrTest, strTestLen);
     if (b.data() != cstrTest)
 	printf ("begin() of const failed on memblock\n");
-    if (b.begin() != cstrTest)
+    if (as_const(b).begin() != cstrTest)
 	printf ("begin() failed on memblock\n");
     WriteMB (b);
     if (!(a == b))
