@@ -406,17 +406,17 @@ auto fill_n (I f, size_t n, const T& v)
     constexpr bool canstos = is_trivial<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value;
     if constexpr (canstos && sizeof(ovalue_type) == 1)
 #if __x86__
-	__asm__ volatile ("rep\tstosb":"+D"(f),"+c"(n):"a"(union_cast<uint8_t>(v)):"memory","cc");
+	__asm__ volatile ("rep\tstosb":"+D"(f),"+c"(n):"a"(bit_cast<uint8_t>(v)):"memory","cc");
     else if constexpr (canstos && sizeof(ovalue_type) == 2)
-	__asm__ volatile ("rep\tstosw":"+D"(f),"+c"(n):"a"(union_cast<uint16_t>(v)):"memory","cc");
+	__asm__ volatile ("rep\tstosw":"+D"(f),"+c"(n):"a"(bit_cast<uint16_t>(v)):"memory","cc");
     else if constexpr (canstos && sizeof(ovalue_type) == 4)
-	__asm__ volatile ("rep\tstosl":"+D"(f),"+c"(n):"a"(union_cast<uint32_t>(v)):"memory","cc");
+	__asm__ volatile ("rep\tstosl":"+D"(f),"+c"(n):"a"(bit_cast<uint32_t>(v)):"memory","cc");
 #if __x86_64__
     else if constexpr (canstos && sizeof(ovalue_type) == 8)
-	__asm__ volatile ("rep\tstosq":"+D"(f),"+c"(n):"a"(union_cast<uint64_t>(v)):"memory","cc");
+	__asm__ volatile ("rep\tstosq":"+D"(f),"+c"(n):"a"(bit_cast<uint64_t>(v)):"memory","cc");
 #endif
 #else // !__x86__, 1 byte fill
-	{ memset (f, union_cast<uint8_t>(v), n); f += n; }
+	{ memset (f, bit_cast<uint8_t>(v), n); f += n; }
 #endif
     else for (auto l = f+n; f < l; ++f)
 	*f = v;

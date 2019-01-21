@@ -63,9 +63,9 @@ template <typename T> struct is_signed : public integral_constant<bool, !is_same
 
 template <typename T> struct bits_in_type	{ static constexpr const size_t value = sizeof(T)*8; };
 
-template <typename T, typename F> constexpr decltype(auto) union_cast (F& v)
+template <typename T, typename F> constexpr decltype(auto) bit_cast (F& v) noexcept
     { union FTU { F f; T t; }; return reinterpret_cast<FTU&>(v).t; }
-template <typename T, typename F> constexpr decltype(auto) union_cast (const F& v)
+template <typename T, typename F> constexpr decltype(auto) bit_cast (const F& v) noexcept
     { union FTU { F f; T t; }; return reinterpret_cast<const FTU&>(v).t; }
 
 // Create a passthrough non-const member function from a call to a const member function
