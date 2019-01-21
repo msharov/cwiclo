@@ -8,7 +8,7 @@
 
 namespace cwiclo {
 
-class lstring;
+class string_view;
 
 class string : public memblock {
 public:
@@ -69,7 +69,7 @@ public:
     inline bool		operator> (const_reference c) const		{ return 0 < compare (begin(), end(), &c, &c + 1); }
     inline bool		operator<= (const_pointer s) const		{ return 0 >= compare (s); }
     inline bool		operator>= (const_pointer s) const		{ return 0 <= compare (s); }
-    inline		operator const lstring& (void) const		{ return reinterpret_cast<const lstring&>(*this); }
+    inline		operator const string_view& (void) const		{ return reinterpret_cast<const string_view&>(*this); }
     inline auto		erase (const_iterator ep, size_type n = 1)	{ return memblock::erase (ep, n); }
     inline auto		erase (const_iterator f, const_iterator l)	{ assert (f<=l); return erase (f, l-f); }
     inline void		pop_back (void)					{ assert (capacity() && "modifying a const linked string"); assert (size() && "pop_back called on empty string"); memlink::resize (size()-1); *end() = 0; }
@@ -122,18 +122,18 @@ public:
 
 //----------------------------------------------------------------------
 
-class lstring : public cmemlink {
+class string_view : public cmemlink {
 public:
-			lstring (void)					: cmemlink () { set_zero_terminated(); }
-    constexpr		lstring (const_pointer s, size_type len)	: cmemlink (s, len, true) {}
-    constexpr		lstring (const_pointer s1, const_pointer s2)	: lstring (s1, s2-s1) {}
-    constexpr		lstring (const_pointer s)			: lstring (s, __builtin_strlen(s)) {}
-    constexpr		lstring (lstring&& s)				: cmemlink (move(s)) {}
-    constexpr		lstring (const lstring& s)			: cmemlink (s) {}
-    constexpr		lstring (const string& s)			: cmemlink (s) {}
-    inline void		swap (lstring&& s)				{ cmemlink::swap (move(s)); }
+			string_view (void)				: cmemlink () { set_zero_terminated(); }
+    constexpr		string_view (const_pointer s, size_type len)	: cmemlink (s, len, true) {}
+    constexpr		string_view (const_pointer s1, const_pointer s2): string_view (s1, s2-s1) {}
+    constexpr		string_view (const_pointer s)			: string_view (s, __builtin_strlen(s)) {}
+    constexpr		string_view (string_view&& s)			: cmemlink (move(s)) {}
+    constexpr		string_view (const string_view& s)		: cmemlink (s) {}
+    constexpr		string_view (const string& s)			: cmemlink (s) {}
+    inline void		swap (string_view&& s)				{ cmemlink::swap (move(s)); }
     inline auto&	operator= (const string& s)			{ cmemlink::operator= (s); return *this; }
-    inline auto&	operator= (lstring&& s)				{ cmemlink::operator= (move(s)); return *this; }
+    inline auto&	operator= (string_view&& s)				{ cmemlink::operator= (move(s)); return *this; }
 
     inline auto&	str (void) const				{ return reinterpret_cast<const string&>(*this); }
     inline		operator const string& (void) const		{ return str(); }
@@ -143,7 +143,7 @@ public:
 
     inline static int	compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2)
 									{ return string::compare (f1,l1,f2,l2); }
-    inline auto		compare (const lstring& s) const		{ return compare (begin(), end(), s.begin(), s.end()); }
+    inline auto		compare (const string_view& s) const		{ return compare (begin(), end(), s.begin(), s.end()); }
     inline auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
     inline auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
 

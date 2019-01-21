@@ -346,7 +346,7 @@ void LibTestApp::TestString (void) // static
 {
     static const char c_TestString1[] = "123456789012345678901234567890";
     static const char c_TestString2[] = "abcdefghijklmnopqrstuvwxyz";
-    static constexpr const lstring c_TestString3 ("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+    static constexpr const string_view c_TestString3 ("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     string s1 (c_TestString1);
     string s2 (ArrayRange (c_TestString2));
     auto s3 (s1);

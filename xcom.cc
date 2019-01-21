@@ -426,7 +426,7 @@ void Extern::EnableCredentialsPassing (bool enable) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Extern::COM
 
-void Extern::COM_Error (const lstring& errmsg) noexcept
+void Extern::COM_Error (const string_view& errmsg) noexcept
 {
     // Errors occuring on in the Extern Msger on the other side of the socket
     Error ("%s", errmsg.c_str());	// report it on this side
@@ -793,7 +793,7 @@ void COMRelay::OnMsgerDestroyed (mrid_t id) noexcept
     SetFlag (f_Unused);
 }
 
-void COMRelay::COM_Error (const lstring& errmsg) noexcept
+void COMRelay::COM_Error (const string_view& errmsg) noexcept
 {
     // COM_Error is received for errors in the remote object. The remote
     // object is destroyed and COM_Delete will shortly follow. Here, create
@@ -807,7 +807,7 @@ void COMRelay::COM_Error (const lstring& errmsg) noexcept
     App::Instance().ForwardError (_localp.Dest(), _localp.Src());
 }
 
-void COMRelay::COM_Export (const lstring&) noexcept
+void COMRelay::COM_Export (const string_view&) noexcept
 {
     // Relays never receive this message
 }

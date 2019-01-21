@@ -29,9 +29,9 @@ public:
     template <typename O>
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() == M_Error())
-	    o->COM_Error (lstring_from_const_stream (msg.Read()));
+	    o->COM_Error (string_view_from_const_stream (msg.Read()));
 	else if (msg.Method() == M_Export())
-	    o->COM_Export (lstring_from_const_stream (msg.Read()));
+	    o->COM_Export (string_view_from_const_stream (msg.Read()));
 	else if (msg.Method() == M_Delete())
 	    o->COM_Delete ();
 	else
@@ -132,8 +132,8 @@ public:
     bool		Dispatch (Msg& msg) noexcept override;
     bool		OnError (mrid_t eid, const string& errmsg) noexcept override;
     void		OnMsgerDestroyed (mrid_t id) noexcept override;
-    inline void		COM_Error (const lstring& errmsg) noexcept;
-    inline void		COM_Export (const lstring& elist) noexcept;
+    inline void		COM_Error (const string_view& errmsg) noexcept;
+    inline void		COM_Export (const string_view& elist) noexcept;
     inline void		COM_Delete (void) noexcept;
 private:
     Extern*	_pExtern;	// Outgoing connection object
@@ -180,7 +180,7 @@ public:
     void		UnregisterRelay (const COMRelay* relay) noexcept;
     inline void		Extern_Open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide side) noexcept;
     void		Extern_Close (void) noexcept;
-    inline void		COM_Error (const lstring& errmsg) noexcept;
+    inline void		COM_Error (const string_view& errmsg) noexcept;
     inline void		COM_Export (string elist) noexcept;
     inline void		COM_Delete (void) noexcept;
     void		TimerR_Timer (fd_t fd) noexcept;
