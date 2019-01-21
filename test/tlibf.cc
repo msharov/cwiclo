@@ -80,17 +80,16 @@ static void TestUtility (void)
     printf ("Square(3) = %u\n", Square(3));
     printf ("Square(-4) = %u\n\n", Square(-4));
 
-    printf ("FirstBit(0) = %d\n", FirstBit(0));
-    printf ("FirstBit(1) = %d\n", FirstBit(1));
-    printf ("FirstBit(4) = %d\n", FirstBit(4));
-    printf ("FirstBit(3827) = %d\n", FirstBit(3827));
-    printf ("FirstBit(0xFFFFFFF0) = %d\n\n", FirstBit(0xFFFFFFF0));
+    printf ("log2p1(0) = %u\n", log2p1(0));
+    printf ("log2p1(1) = %u\n", log2p1(1));
+    printf ("log2p1(4) = %u\n", log2p1(4));
+    printf ("log2p1(3827) = %u\n", log2p1(3827u));
+    printf ("log2p1(0xFFFFFFF0) = %u\n\n", log2p1(0xFFFFFFF0));
 
-    printf ("ceil2(0) = %d\n", ceil2(0));
-    printf ("ceil2(1) = %d\n", ceil2(1));
-    printf ("ceil2(4) = %d\n", ceil2(4));
-    printf ("ceil2(3827) = %d\n", ceil2(3827));
-    printf ("ceil2(0xFFFFFFF0) = %d\n\n", ceil2(0xFFFFFFF0));
+    printf ("ceil2(1) = %u\n", ceil2(1));
+    printf ("ceil2(4) = %u\n", ceil2(4));
+    printf ("ceil2(3827) = %u\n", ceil2(3827));
+    printf ("ceil2(0xFFFFFFF0) = %#lx\n\n", ceil2(0xFFFFFFF0l));
 
     auto cvp = reinterpret_cast<const void*>(0x1234);
     auto vp = reinterpret_cast<void*>(0x4321);

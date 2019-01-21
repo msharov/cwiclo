@@ -236,26 +236,24 @@ template <typename T>
     { return (v >> n) | (v << (bits_in_type<T>::value-n)); }
 
 template <typename T>
-inline auto FirstBit (T v, remove_reference_t<T> nbv = 0)
+inline make_unsigned_t<T> log2p1 (T v)
 {
-    auto n = nbv;
 #if __x86__
-    if constexpr (!compile_constant(v)) __asm__("bsr\t%1, %0":"+r"(n):"rm"(v)); else
+    if constexpr (!compile_constant(v)) {
+	T n = T(-1);
+	__asm__("bsr\t%1, %0":"+r"(n):"rm"(v));
+	return n+1;
+    } else
 #endif
-    if (v) n = (bits_in_type<T>::value-1) - __builtin_clz(v);
-    return n;
+    if constexpr (sizeof(T) <= sizeof(unsigned))
+	return bits_in_type<T>::value - __builtin_clz(v);
+    else
+	return bits_in_type<T>::value - __builtin_clzl(v);
 }
 
 template <typename T>
 inline T ceil2 (T v)
-{
-    T r = v-1;
-#if __x86__
-    if constexpr (!compile_constant(r)) __asm__("bsr\t%0, %0":"+r"(r)); else
-#endif
-    { r = FirstBit(r,r); if (r >= T(bits_in_type<T>::value-1)) r = T(-1); }
-    return 1<<(1+r);
-}
+    { return T(1)<<log2p1(v-1); }
 
 template <typename T>
 inline constexpr bool ispow2 (T v)

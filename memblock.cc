@@ -99,13 +99,13 @@ void memblock::reserve (size_type cap) noexcept
 {
     if ((cap += zero_terminated()) <= capacity())
 	return;
-    cap = ceil2 (cap);
+    auto newsz = ceil2 (size_t(cap));
     auto oldBlock (capacity() ? data() : nullptr);
-    auto newBlock = reinterpret_cast<pointer> (_realloc (oldBlock, cap));
+    auto newBlock = reinterpret_cast<pointer> (_realloc (oldBlock, newsz));
     if (!oldBlock && data())
-	copy_n (data(), min (size() + zero_terminated(), cap), newBlock);
+	copy_n (data(), min (size() + zero_terminated(), newsz), newBlock);
     link (newBlock, size());
-    set_capacity (cap);
+    set_capacity (newsz);
 }
 
 void memblock::deallocate (void) noexcept
