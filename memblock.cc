@@ -100,10 +100,11 @@ void memblock::reserve (size_type cap) noexcept
     if ((cap += zero_terminated()) <= capacity())
 	return;
     auto newsz = ceil2 (size_t(cap));
+    assert (newsz <= max_size() && "memblock maximum allocation size exceeded; memory leaks may occur");
     auto oldBlock (capacity() ? data() : nullptr);
     auto newBlock = reinterpret_cast<pointer> (_realloc (oldBlock, newsz));
     if (!oldBlock && data())
-	copy_n (data(), min (size() + zero_terminated(), newsz), newBlock);
+	copy_n (data(), min (newsz, size() + zero_terminated()), newBlock);
     link (newBlock, size());
     set_capacity (newsz);
 }
