@@ -99,14 +99,22 @@ void memblock::reserve (size_type cap) noexcept
 {
     if ((cap += zero_terminated()) <= capacity())
 	return;
-    auto newsz = ceil2 (size_t(cap));
-    assert (newsz <= max_size() && "memblock maximum allocation size exceeded; memory leaks may occur");
+    // Allocate to next power of 2 size block
+    auto nshift = log2p1 (cap-1);
+    auto newcap = size_type(1)<<nshift;
+    constexpr auto maxshift = bits_in_type<size_type>::value-1;
+    if (unlikely (nshift >= maxshift)) {
+	assert (nshift <= maxshift && "memblock maximum allocation size exceeded");
+	if (unlikely (nshift > maxshift))
+	    abort();
+	--newcap;	// clamp to max_size+1
+    }
     auto oldBlock (capacity() ? data() : nullptr);
-    auto newBlock = reinterpret_cast<pointer> (_realloc (oldBlock, newsz));
+    auto newBlock = reinterpret_cast<pointer> (_realloc (oldBlock, newcap));
     if (!oldBlock && data())
-	copy_n (data(), min (newsz, size() + zero_terminated()), newBlock);
+	copy_n (data(), min (newcap, size() + zero_terminated()), newBlock);
     link (newBlock, size());
-    set_capacity (newsz);
+    set_capacity (newcap);
 }
 
 void memblock::deallocate (void) noexcept
