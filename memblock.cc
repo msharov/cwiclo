@@ -95,20 +95,41 @@ auto memlink::erase (const_iterator ie, size_type n) noexcept -> iterator
 
 //----------------------------------------------------------------------
 
-void memblock::reserve (size_type cap) noexcept
+inline static auto next_capacity (memblock::size_type cap) noexcept
 {
-    if ((cap += zero_terminated()) <= capacity())
-	return;
+    using size_type = memblock::size_type;
     // Allocate to next power of 2 size block
     auto nshift = log2p1 (cap-1);
     auto newcap = size_type(1)<<nshift;
     constexpr auto maxshift = bits_in_type<size_type>::value-1;
-    if (unlikely (nshift >= maxshift)) {
+#if __x86__
+    // For some reason gcc 8 is unable to generate this code,
+    // preferring a bewildering collection of movs and cmps.
+    __asm__ goto (
+	"cmp\t%1, %0\n\t"
+	"jb\t%l[noadj]\n\t"
+	"je\t%l[noabort]"
+	::"r"(nshift),"n"(maxshift):"cc":noabort,noadj);
+    abort();
+noabort:
+    --newcap;
+noadj:
+#else
+    if (nshift >= maxshift) {
 	assert (nshift <= maxshift && "memblock maximum allocation size exceeded");
-	if (unlikely (nshift > maxshift))
+	if (nshift > maxshift)
 	    abort();
 	--newcap;	// clamp to max_size+1
     }
+#endif
+    return newcap;
+}
+
+void memblock::reserve (size_type cap) noexcept
+{
+    if ((cap += zero_terminated()) <= capacity())
+	return;
+    auto newcap = next_capacity (cap);
     auto oldBlock (capacity() ? data() : nullptr);
     auto newBlock = reinterpret_cast<pointer> (_realloc (oldBlock, newcap));
     if (!oldBlock && data())
