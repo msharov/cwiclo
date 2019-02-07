@@ -150,7 +150,7 @@ void LibTestApp::TestML (void) // static
     if (cb.begin() != cstr)
 	printf ("begin() failed on memlink\n");
     WriteML (cb);
-    if (!(a == cb))
+    if (a != cb)
 	printf ("operator== failed on memlink\n");
     memlink b (ArrayBlock(str));
     b.resize (size(str)-2);
@@ -479,7 +479,7 @@ void LibTestApp::TestStringVector (void) // static
 
     foreach (i,v) PrintString(*i);
 
-    if (!(v[2] == string("element3")))
+    if (v[2] != string("element3"))
 	printf ("operator== failed\n");
     auto el3i = linear_search (v, string("element3"));
     if (el3i)

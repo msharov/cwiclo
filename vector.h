@@ -37,6 +37,7 @@ public:
     inline auto&		operator= (vector&& v)		{ assign (move(v)); return *this; }
     inline auto&		operator= (initlist_t v)	{ assign (v); return *this; }
     bool			operator== (const vector& v) const noexcept;
+    inline bool			operator!= (const vector& v) const noexcept	{ return !(*this == v); }
     constexpr			operator const memlink& (void) const	{ return _data; }
     inline void			reserve (size_type n)		{ _data.reserve (n * sizeof(T)); }
     void			resize (size_type n) noexcept;

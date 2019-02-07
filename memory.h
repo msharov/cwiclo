@@ -210,8 +210,16 @@ public:
     inline constexpr auto	operator-> (void) const		{ return get(); }
     inline constexpr bool	operator== (const pointer p) const	{ return _p == p; }
     inline constexpr bool	operator== (const unique_ptr& p) const	{ return _p == p._p; }
+    inline constexpr bool	operator!= (const pointer p) const	{ return _p != p; }
+    inline constexpr bool	operator!= (const unique_ptr& p) const	{ return _p != p._p; }
     inline constexpr bool	operator< (const pointer p) const	{ return _p < p; }
     inline constexpr bool	operator< (const unique_ptr& p) const	{ return _p < p._p; }
+    inline constexpr bool	operator<= (const pointer p) const	{ return _p <= p; }
+    inline constexpr bool	operator<= (const unique_ptr& p) const	{ return _p <= p._p; }
+    inline constexpr bool	operator> (const pointer p) const	{ return _p > p; }
+    inline constexpr bool	operator> (const unique_ptr& p) const	{ return _p > p._p; }
+    inline constexpr bool	operator>= (const pointer p) const	{ return _p >= p; }
+    inline constexpr bool	operator>= (const unique_ptr& p) const	{ return _p >= p._p; }
 private:
     pointer			_p;
 };
@@ -688,7 +696,11 @@ public:
     inline auto		operator+ (unsigned n) const	{ auto r(*this); r += n; return r; }
     inline		operator bool (void) const	{ return remaining(); }
     inline bool		operator== (const zstri& i) const	{ return base() == i.base(); }
+    inline bool		operator!= (const zstri& i) const	{ return base() != i.base(); }
     inline bool		operator< (const zstri& i) const	{ return base() < i.base(); }
+    inline bool		operator<= (const zstri& i) const	{ return base() <= i.base(); }
+    inline bool		operator> (const zstri& i) const	{ return i < *this; }
+    inline bool		operator>= (const zstri& i) const	{ return i <= *this; }
 private:
     pointer		_s;
     difference_type	_n;
@@ -720,7 +732,11 @@ public:
     inline auto		operator+ (unsigned n) const	{ auto r(*this); r += n; return r; }
     inline		operator bool (void) const	{ return remaining(); }
     inline bool		operator== (const czstri& i) const	{ return base() == i.base(); }
+    inline bool		operator!= (const czstri& i) const	{ return base() != i.base(); }
     inline bool		operator< (const czstri& i) const	{ return base() < i.base(); }
+    inline bool		operator<= (const czstri& i) const	{ return base() <= i.base(); }
+    inline bool		operator> (const czstri& i) const	{ return i < *this; }
+    inline bool		operator>= (const czstri& i) const	{ return i <= *this; }
 private:
     pointer		_s;
     difference_type	_n;

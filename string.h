@@ -45,8 +45,9 @@ public:
     template <typename... Args>
     inline static auto	createf (const char* fmt, Args&&... args)	{ string r; r.assignf (fmt, forward<Args>(args)...); return r; }
     static int		compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2) noexcept;
-    inline auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
-    inline auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
+    auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
+    auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
+    auto		compare (const_reference c) const		{ return compare (begin(), end(), &c, &c+1); }
     inline void		swap (string&& s)				{ memblock::swap (move(s)); }
     inline auto&	operator= (const string& s)			{ assign (s); return *this; }
     inline auto&	operator= (const_pointer s)			{ assign (s); return *this; }
@@ -63,12 +64,16 @@ public:
     inline bool		operator!= (const_reference c) const		{ return !operator== (c); }
     inline bool		operator< (const string& s) const		{ return 0 > compare (s); }
     inline bool		operator< (const_pointer s) const		{ return 0 > compare (s); }
-    inline bool		operator< (const_reference c) const		{ return 0 > compare (begin(), end(), &c, &c + 1); }
+    inline bool		operator< (const_reference c) const		{ return 0 > compare (c); }
     inline bool		operator> (const string& s) const		{ return 0 < compare (s); }
     inline bool		operator> (const_pointer s) const		{ return 0 < compare (s); }
-    inline bool		operator> (const_reference c) const		{ return 0 < compare (begin(), end(), &c, &c + 1); }
+    inline bool		operator> (const_reference c) const		{ return 0 < compare (c); }
+    inline bool		operator<= (const string& s) const		{ return 0 >= compare (s); }
     inline bool		operator<= (const_pointer s) const		{ return 0 >= compare (s); }
+    inline bool		operator<= (const_reference c) const		{ return 0 >= compare (c); }
+    inline bool		operator>= (const string& s) const		{ return 0 <= compare (s); }
     inline bool		operator>= (const_pointer s) const		{ return 0 <= compare (s); }
+    inline bool		operator>= (const_reference c) const		{ return 0 <= compare (c); }
     inline		operator const string_view& (void) const		{ return reinterpret_cast<const string_view&>(*this); }
     inline auto		erase (const_iterator ep, size_type n = 1)	{ return memblock::erase (ep, n); }
     inline auto		erase (const_iterator f, const_iterator l)	{ assert (f<=l); return erase (f, l-f); }
@@ -143,9 +148,9 @@ public:
 
     inline static int	compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2)
 									{ return string::compare (f1,l1,f2,l2); }
-    inline auto		compare (const string_view& s) const		{ return compare (begin(), end(), s.begin(), s.end()); }
-    inline auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
-    inline auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
+    auto		compare (const string_view& s) const		{ return compare (begin(), end(), s.begin(), s.end()); }
+    auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
+    auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
 
     inline bool		operator== (const string& s) const		{ return str() == s; }
     inline bool		operator== (const_pointer s) const		{ return str() == s; }
@@ -159,8 +164,12 @@ public:
     inline bool		operator> (const string& s) const		{ return str() > s; }
     inline bool		operator> (const_pointer s) const		{ return str() > s; }
     inline bool		operator> (const_reference c) const		{ return str() > c; }
+    inline bool		operator<= (const string& s) const		{ return str() <= s; }
     inline bool		operator<= (const_pointer s) const		{ return str() <= s; }
+    inline bool		operator<= (const_reference c) const		{ return str() <= c; }
+    inline bool		operator>= (const string& s) const		{ return str() >= s; }
     inline bool		operator>= (const_pointer s) const		{ return str() >= s; }
+    inline bool		operator>= (const_reference c) const		{ return str() >= c; }
 
     inline auto		find (const_pointer s, const_iterator fi) const		{ return str().find (s, fi); }
     inline auto		find (const string& s, const_iterator fi) const		{ return str().find (s, fi); }
