@@ -30,19 +30,19 @@ template <typename T> struct remove_reference<T&>	{ using type = T; };
 template <typename T> struct remove_reference<T&&>	{ using type = T; };
 template <typename T> using remove_reference_t = typename remove_reference<T>::type;
 
-template <typename T> struct remove_inner_const { using type = T; };
-template <typename T> struct remove_inner_const<const T> { using type = T; };
-template <typename T> struct remove_inner_const<const T*> { using type = T*; };
-template <typename T> struct remove_inner_const<const T&> { using type = T&; };
-template <typename T> using remove_inner_const_t = typename remove_inner_const<T>::type;
+template <typename T> struct remove_const { using type = T; };
+template <typename T> struct remove_const<const T> { using type = T; };
+template <typename T> struct remove_const<const T*> { using type = T*; };
+template <typename T> struct remove_const<const T&> { using type = T&; };
+template <typename T> using remove_const_t = typename remove_const<T>::type;
 
-template <typename T> struct add_inner_const { using type = const T; };
-template <typename T> struct add_inner_const<const T> { using type = const T; };
-template <typename T> struct add_inner_const<const T*> { using type = const T*; };
-template <typename T> struct add_inner_const<const T&> { using type = const T&; };
-template <typename T> struct add_inner_const<T*> { using type = const T*; };
-template <typename T> struct add_inner_const<T&> { using type = const T&; };
-template <typename T> using add_inner_const_t = typename add_inner_const<T>::type;
+template <typename T> struct add_const { using type = const T; };
+template <typename T> struct add_const<const T> { using type = const T; };
+template <typename T> struct add_const<const T*> { using type = const T*; };
+template <typename T> struct add_const<const T&> { using type = const T&; };
+template <typename T> struct add_const<T*> { using type = const T*; };
+template <typename T> struct add_const<T&> { using type = const T&; };
+template <typename T> using add_const_t = typename add_const<T>::type;
 
 template <typename T> T&& declval (void) noexcept;
 
@@ -63,7 +63,7 @@ template <typename T> struct is_signed : public integral_constant<bool, !is_same
 
 template <typename T> struct bits_in_type	{ static constexpr const size_t value = sizeof(T)*8; };
 
-template <typename T> constexpr add_inner_const_t<T>& as_const (T& t) noexcept { return t; }
+template <typename T> constexpr add_const_t<T>& as_const (T& t) noexcept { return t; }
 template <typename T> void as_const (T&&) = delete;
 
 template <typename T, typename F> constexpr decltype(auto) bit_cast (F& v) noexcept
@@ -73,7 +73,7 @@ template <typename T, typename F> constexpr decltype(auto) bit_cast (const F& v)
 
 // Create a passthrough non-const member function from a call to a const member function
 #define UNCONST_MEMBER_FN(f,...)	\
-    const_cast<remove_inner_const_t<decltype((const_cast<add_inner_const_t<decltype(this)>>(this)->f(__VA_ARGS__)))>>(const_cast<add_inner_const_t<decltype(this)>>(this)->f(__VA_ARGS__));
+    const_cast<remove_const_t<decltype((const_cast<add_const_t<decltype(this)>>(this)->f(__VA_ARGS__)))>>(const_cast<add_const_t<decltype(this)>>(this)->f(__VA_ARGS__));
 
 //}}}-------------------------------------------------------------------
 //{{{ numeric limits
