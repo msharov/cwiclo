@@ -320,17 +320,17 @@ auto copy_n (II f, size_t n, OI r)
     using ivalue_type = remove_const_t<typename iterator_traits<II>::value_type>;
     using ovalue_type = remove_const_t<typename iterator_traits<OI>::value_type>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
-#if __x86__
+    #if __x86__
 	if constexpr (compile_constant(n))
-#endif
+    #endif
 	    return OI (__builtin_mempcpy (r, f, n*sizeof(ovalue_type)));
-#if __x86__
-#if __x86_64__
+    #if __x86__
+    #if __x86_64__
 	else if constexpr (!(sizeof(ovalue_type)%8)) {
 	    n *= sizeof(ovalue_type)/8;
 	    __asm__ volatile ("rep movsq":"+S"(f),"+D"(r),"+c"(n)::"cc","memory");
 	}
-#endif
+    #endif
 	else if constexpr (!(sizeof(ovalue_type)%4)) {
 	    n *= sizeof(ovalue_type)/4;
 	    __asm__ volatile ("rep movsl":"+S"(f),"+D"(r),"+c"(n)::"cc","memory");
@@ -341,7 +341,7 @@ auto copy_n (II f, size_t n, OI r)
 	    n *= sizeof(ovalue_type);
 	     __asm__ volatile ("rep movsb":"+S"(f),"+D"(r),"+c"(n)::"cc","memory");
 	}
-#endif
+    #endif
     } else for (auto l = f+n; f < l; ++r, ++f)
 	*r = *f;
     return r;
@@ -365,24 +365,28 @@ auto copy_backward_n (II f, size_t n, OI r)
     using ivalue_type = remove_const_t<typename iterator_traits<II>::value_type>;
     using ovalue_type = remove_const_t<typename iterator_traits<OI>::value_type>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
-#if __x86__
-	auto cf = reinterpret_cast<const char*>(&*(f+n));
-	auto cr = reinterpret_cast<char*>(&*(r+n));
-#if __x86_64__
-	if constexpr (!(sizeof(ovalue_type)%8)) { cf -= 8; cr -= 8; } else
-#endif
-	if constexpr (!(sizeof(ovalue_type)%4)) { cf -= 4; cr -= 4; }
-	else if constexpr (!(sizeof(ovalue_type)%2)) { cf -= 2; cr -= 2; }
-	else { --cf; --cr; }
-	__asm__ volatile ("std":::"cc");
-	copy_n (reinterpret_cast<add_const_t<II>>(cf), n, reinterpret_cast<OI>(cr));
-	__asm__ volatile ("cld":::"cc");
-	return OI(cr);
-#else // !__x86__
-	return memmove (r, f, n*sizeof(ovalue_type));
-#endif
-    }
-    while (n--)
+    #if __x86__
+	if constexpr (compile_constant(n))
+    #endif
+	    memmove (&*r, &*f, n*sizeof(ovalue_type));
+    #if __x86__
+	else {
+	    __asm__ volatile ("std":::"cc");
+	#if __x86_64__
+	    if constexpr (!(sizeof(ovalue_type)%8))
+		copy_n (reinterpret_cast<const uint64_t*>(&*(f+n))-1, n*sizeof(ovalue_type)/8, reinterpret_cast<uint64_t*>(&*(r+n))-1);
+	    else
+	#endif
+	    if constexpr (!(sizeof(ovalue_type)%4))
+		copy_n (reinterpret_cast<const uint32_t*>(&*(f+n))-1, n*sizeof(ovalue_type)/4, reinterpret_cast<uint32_t*>(&*(r+n))-1);
+	    else if constexpr (!(sizeof(ovalue_type)%2))
+		copy_n (reinterpret_cast<const uint16_t*>(&*(f+n))-1, n*sizeof(ovalue_type)/2, reinterpret_cast<uint16_t*>(&*(r+n))-1);
+	    else
+		copy_n (reinterpret_cast<const uint8_t*>(&*(f+n))-1, n*sizeof(ovalue_type), reinterpret_cast<uint8_t*>(&*(r+n))-1);
+	    __asm__ volatile ("cld":::"cc");
+	}
+    #endif // !__x86__
+    } else while (n--)
 	r[n] = f[n];
     return r;
 }
