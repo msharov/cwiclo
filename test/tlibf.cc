@@ -80,13 +80,12 @@ static void TestUtility (void)
     printf ("Square(3) = %u\n", Square(3));
     printf ("Square(-4) = %u\n\n", Square(-4));
 
-    printf ("log2p1(0) = %u\n", log2p1(0));
     printf ("log2p1(1) = %u\n", log2p1(1));
     printf ("log2p1(4) = %u\n", log2p1(4));
     printf ("log2p1(3827) = %u\n", log2p1(3827u));
     printf ("log2p1(0xFFFFFFF0) = %u\n\n", log2p1(0xFFFFFFF0));
 
-    printf ("ceil2(1) = %u\n", ceil2(1));
+    printf ("ceil2(3) = %u\n", ceil2(3));
     printf ("ceil2(4) = %u\n", ceil2(4));
     printf ("ceil2(3827) = %u\n", ceil2(3827));
     printf ("ceil2(0xFFFFFFF0) = %#lx\n\n", ceil2(0xFFFFFFF0l));

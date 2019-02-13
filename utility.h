@@ -239,15 +239,8 @@ template <typename T>
     { return (v >> n) | (v << (bits_in_type<T>::value-n)); }
 
 template <typename T>
-inline make_unsigned_t<T> log2p1 (T v)
+inline constexpr make_unsigned_t<T> log2p1 (T v)
 {
-#if __x86__
-    if constexpr (!compile_constant(v)) {
-	T n = T(-1);
-	__asm__("bsr\t%1, %0":"+r"(n):"rm"(v));
-	return n+1;
-    } else
-#endif
     if constexpr (sizeof(T) <= sizeof(unsigned))
 	return bits_in_type<T>::value - __builtin_clz(v);
     else
@@ -255,7 +248,7 @@ inline make_unsigned_t<T> log2p1 (T v)
 }
 
 template <typename T>
-inline T ceil2 (T v)
+inline constexpr T ceil2 (T v)
     { return T(1)<<log2p1(v-1); }
 
 template <typename T>
@@ -280,11 +273,7 @@ namespace {
 inline static void tight_loop_pause (void)
 {
     #if __x86__
-	#if __clang__
-	    __asm__("rep nop");
-	#else
-	    __builtin_ia32_pause();
-	#endif
+	__builtin_ia32_pause();
     #else
 	usleep (1);
     #endif

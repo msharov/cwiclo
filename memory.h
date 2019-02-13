@@ -328,18 +328,18 @@ auto copy_n (II f, size_t n, OI r)
 #if __x86_64__
 	else if constexpr (!(sizeof(ovalue_type)%8)) {
 	    n *= sizeof(ovalue_type)/8;
-	    __asm__ volatile ("rep movsq":"+S"(f),"+D"(r),"+c"(n)::"memory","cc");
+	    __asm__ volatile ("rep movsq":"+S"(f),"+D"(r),"+c"(n)::"cc","memory");
 	}
 #endif
 	else if constexpr (!(sizeof(ovalue_type)%4)) {
 	    n *= sizeof(ovalue_type)/4;
-	    __asm__ volatile ("rep movsl":"+S"(f),"+D"(r),"+c"(n)::"memory","cc");
+	    __asm__ volatile ("rep movsl":"+S"(f),"+D"(r),"+c"(n)::"cc","memory");
 	} else if constexpr (!(sizeof(ovalue_type)%2)) {
 	    n *= sizeof(ovalue_type)/2;
-	    __asm__ volatile ("rep movsw":"+S"(f),"+D"(r),"+c"(n)::"memory","cc");
+	    __asm__ volatile ("rep movsw":"+S"(f),"+D"(r),"+c"(n)::"cc","memory");
 	} else {
 	    n *= sizeof(ovalue_type);
-	     __asm__ volatile ("rep movsb":"+S"(f),"+D"(r),"+c"(n)::"memory","cc");
+	     __asm__ volatile ("rep movsb":"+S"(f),"+D"(r),"+c"(n)::"cc","memory");
 	}
 #endif
     } else for (auto l = f+n; f < l; ++r, ++f)
@@ -366,24 +366,17 @@ auto copy_backward_n (II f, size_t n, OI r)
     using ovalue_type = remove_inner_const_t<typename iterator_traits<OI>::value_type>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
 #if __x86__
-	const char* cf = reinterpret_cast<const char*>(&*(f+n));
-	char* cr = reinterpret_cast<char*>(&*(r+n));
+	auto cf = reinterpret_cast<const char*>(&*(f+n));
+	auto cr = reinterpret_cast<char*>(&*(r+n));
 #if __x86_64__
-	if constexpr (!(sizeof(ovalue_type)%8)) {
-	    n *= sizeof(ovalue_type)/8; cf -= 8; cr -= 8;
-	    __asm__ volatile ("std\n\trep movsq\n\tcld":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
-	} else
+	if constexpr (!(sizeof(ovalue_type)%8)) { cf -= 8; cr -= 8; } else
 #endif
-	if constexpr (!(sizeof(ovalue_type)%4)) {
-	    n *= sizeof(ovalue_type)/4; cf -= 4; cr -= 4;
-	    __asm__ volatile ("std\n\trep movsl\n\tcld":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
-	} else if constexpr (!(sizeof(ovalue_type)%2)) {
-	    n *= sizeof(ovalue_type)/2; cf -= 2; cr -= 2;
-	    __asm__ volatile ("std\n\trep movsw\n\tcld":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
-	} else {
-	    n *= sizeof(ovalue_type); --cf; --cr;
-	     __asm__ volatile ("std\n\trep movsb\n\tcld":"+S"(cf),"+D"(cr),"+c"(n)::"memory","cc");
-	}
+	if constexpr (!(sizeof(ovalue_type)%4)) { cf -= 4; cr -= 4; }
+	else if constexpr (!(sizeof(ovalue_type)%2)) { cf -= 2; cr -= 2; }
+	else { --cf; --cr; }
+	__asm__ volatile ("std":::"cc");
+	copy_n (reinterpret_cast<add_inner_const_t<II>>(cf), n, reinterpret_cast<OI>(cr));
+	__asm__ volatile ("cld":::"cc");
 	return OI(cr);
 #else // !__x86__
 	return memmove (r, f, n*sizeof(ovalue_type));
@@ -414,14 +407,14 @@ auto fill_n (I f, size_t n, const T& v)
     constexpr bool canstos = is_trivial<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value;
     if constexpr (canstos && sizeof(ovalue_type) == 1)
 #if __x86__
-	__asm__ volatile ("rep\tstosb":"+D"(f),"+c"(n):"a"(bit_cast<uint8_t>(v)):"memory","cc");
+	__asm__ volatile ("rep stosb":"+D"(f),"+c"(n):"a"(bit_cast<uint8_t>(v)):"cc","memory");
     else if constexpr (canstos && sizeof(ovalue_type) == 2)
-	__asm__ volatile ("rep\tstosw":"+D"(f),"+c"(n):"a"(bit_cast<uint16_t>(v)):"memory","cc");
+	__asm__ volatile ("rep stosw":"+D"(f),"+c"(n):"a"(bit_cast<uint16_t>(v)):"cc","memory");
     else if constexpr (canstos && sizeof(ovalue_type) == 4)
-	__asm__ volatile ("rep\tstosl":"+D"(f),"+c"(n):"a"(bit_cast<uint32_t>(v)):"memory","cc");
+	__asm__ volatile ("rep stosl":"+D"(f),"+c"(n):"a"(bit_cast<uint32_t>(v)):"cc","memory");
 #if __x86_64__
     else if constexpr (canstos && sizeof(ovalue_type) == 8)
-	__asm__ volatile ("rep\tstosq":"+D"(f),"+c"(n):"a"(bit_cast<uint64_t>(v)):"memory","cc");
+	__asm__ volatile ("rep stosq":"+D"(f),"+c"(n):"a"(bit_cast<uint64_t>(v)):"cc","memory");
 #endif
 #else // !__x86__, 1 byte fill
 	{ memset (f, bit_cast<uint8_t>(v), n); f += n; }
@@ -675,7 +668,7 @@ public:
     inline static auto	next (pointer s, difference_type& n) NONNULL() {
 			    #if __x86__
 			    if (!compile_constant(strlen(s)) || !compile_constant(n))
-				__asm__("repnz\tscasb":"+D"(s),"+c"(n):"a"(0):"cc","memory");
+				__asm__("repnz scasb":"+D"(s),"+c"(n):"a"(0):"cc","memory");
 			    else
 			    #endif
 			    { auto l = strnlen(s, n); l += !!l; s += l; n -= l; }

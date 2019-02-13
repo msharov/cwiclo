@@ -102,26 +102,12 @@ inline static auto next_capacity (memblock::size_type cap) noexcept
     auto nshift = log2p1 (cap-1);
     auto newcap = size_type(1)<<nshift;
     constexpr auto maxshift = bits_in_type<size_type>::value-1;
-#if __x86__
-    // For some reason gcc 8 is unable to generate this code,
-    // preferring a bewildering collection of movs and cmps.
-    __asm__ goto (
-	"cmp\t%1, %0\n\t"
-	"jb\t%l[noadj]\n\t"
-	"je\t%l[noabort]"
-	::"r"(nshift),"n"(maxshift):"cc":noabort,noadj);
-    abort();
-noabort:
-    --newcap;
-noadj:
-#else
     if (nshift >= maxshift) {
 	assert (nshift <= maxshift && "memblock maximum allocation size exceeded");
 	if (nshift > maxshift)
 	    abort();
 	--newcap;	// clamp to max_size+1
     }
-#endif
     return newcap;
 }
 

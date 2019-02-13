@@ -26,13 +26,12 @@ DivRound(-1,7) = 0
 Square(3) = 9
 Square(-4) = 16
 
-log2p1(0) = 0
 log2p1(1) = 1
 log2p1(4) = 3
 log2p1(3827) = 12
 log2p1(0xFFFFFFF0) = 32
 
-ceil2(1) = 1
+ceil2(3) = 4
 ceil2(4) = 4
 ceil2(3827) = 4096
 ceil2(0xFFFFFFF0) = 0x100000000
