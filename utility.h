@@ -239,12 +239,12 @@ template <typename T>
     { return (v >> n) | (v << (bits_in_type<T>::value-n)); }
 
 template <typename T>
-inline constexpr make_unsigned_t<T> log2p1 (T v)
+inline constexpr unsigned log2p1 (T v)
 {
-    if constexpr (sizeof(T) <= sizeof(unsigned))
-	return bits_in_type<T>::value - __builtin_clz(v);
+    if constexpr (sizeof(T) <= sizeof(int))
+	return bits_in_type<int>::value-__builtin_clz(v);
     else
-	return bits_in_type<T>::value - __builtin_clzl(v);
+	return bits_in_type<long>::value-__builtin_clzl(v);
 }
 
 template <typename T>
