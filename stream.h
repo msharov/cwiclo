@@ -25,6 +25,8 @@ public:
     inline constexpr		istream (pointer p, streamsize sz)	: istream(p,p+sz) {}
     inline constexpr		istream (const cmemlink& m)		: istream(m.data(),m.size()) {}
     inline constexpr		istream (const istream& is) = default;
+    template <typename T, streamsize N>
+    inline constexpr		istream (const T (&a)[N])		: istream(a, N*sizeof(T)) { static_assert (is_trivial<T>::value, "array ctor only works for trivial types"); }
     inline constexpr auto	end (void) const __restrict__		{ return _e; }
     inline constexpr streamsize	remaining (void) const __restrict__	{ return end()-_p; }
     template <typename T = char>
@@ -98,6 +100,8 @@ public:
     inline constexpr		ostream (pointer p, streamsize sz)	: ostream(p,p+sz) {}
     inline constexpr		ostream (memlink& m)			: ostream(m.data(),m.size()) {}
     inline constexpr		ostream (const ostream& os) = default;
+    template <typename T, streamsize N>
+    inline constexpr		ostream (T (&a)[N])			: ostream(a, N*sizeof(T)) { static_assert (is_trivial<T>::value, "array ctor only works for trivial types"); }
     inline constexpr auto	end (void) const __restrict__		{ return _e; }
     inline constexpr streamsize	remaining (void) const __restrict__	{ return end()-_p; }
     template <typename T = char>
@@ -200,11 +204,11 @@ private:
 
 /// Returns the size of the given object. Do not overload - use sstream.
 template <typename T>
-inline auto stream_size_of (const T& v) { sstream ss; ss << v; return ss.size(); }
+inline auto stream_size_of (const T& v) { return (sstream() << v).size(); }
 
 template <typename... Args>
 inline auto variadic_stream_size (const Args&... args)
-    { sstream ss; (ss << ... << args); return ss.size(); }
+    { return (sstream() << ... << args).size(); }
 
 /// Returns the recommended stream alignment for type \p T. Override with STREAM_ALIGN.
 template <typename T>

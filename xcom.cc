@@ -28,17 +28,17 @@ string PCOM::StringFromInterfaceList (const iid_t* elist) noexcept // static
     return elstr;
 }
 
-Msg PCOM::ExportMsg (mrid_t extid, const string& elstr) noexcept // static
+Msg PCOM::ExportMsg (const string& elstr) noexcept // static
 {
-    Msg msg (Msg::Link{}, PCOM::M_Export(), stream_size_of(elstr), extid);
+    Msg msg (Msg::Link{}, PCOM::M_Export(), stream_size_of(elstr), Msg::NoFdIncluded);
     auto os = msg.Write();
     os << elstr;
     return msg;
 }
 
-Msg PCOM::ErrorMsg (mrid_t extid, const string& errmsg) noexcept // static
+Msg PCOM::ErrorMsg (const string& errmsg) noexcept // static
 {
-    Msg msg (Msg::Link{}, PCOM::M_Error(), stream_size_of(errmsg), extid);
+    Msg msg (Msg::Link{}, PCOM::M_Error(), stream_size_of(errmsg), Msg::NoFdIncluded);
     auto os = msg.Write();
     os << errmsg;
     return msg;
@@ -230,9 +230,9 @@ bool Extern::Dispatch (Msg& msg) noexcept
 	|| Msger::Dispatch (msg);
 }
 
-void Extern::QueueOutgoing (Msg&& msg) noexcept
+void Extern::QueueOutgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid) noexcept
 {
-    _outq.emplace_back (move (msg));
+    _outq.emplace_back (mid, move(body), fdo, extid);
     TimerR_Timer (_sockfd);
 }
 
@@ -288,12 +288,9 @@ Extern* Extern::LookupByRelayId (mrid_t rid) noexcept // static
 //}}}-------------------------------------------------------------------
 //{{{ Extern::ExtMsg
 
-Extern::ExtMsg::ExtMsg (Msg&& msg) noexcept
-:_body (msg.MoveBody())
-,_h { Align (_body.size(), Msg::Alignment::Body)
-    , msg.Extid()
-    , msg.FdOffset()
-    , WriteHeaderStrings (msg.Method()) }
+Extern::ExtMsg::ExtMsg (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid) noexcept
+:_body (move(body))
+,_h { Align (_body.size(), Msg::Alignment::Body), extid, fdo, WriteHeaderStrings(mid) }
 {
     assert (_body.capacity() >= _h.sz && "message body must be created aligned to Msg::Alignment::Body");
     _body.shrink (_h.sz);
@@ -304,7 +301,7 @@ uint8_t Extern::ExtMsg::WriteHeaderStrings (methodid_t method) noexcept
     // _hbuf contains iface\0method\0signature\0, padded to Msg::Alignment::Header
     auto iface = InterfaceOfMethod (method);
     assert (ptrdiff_t(sizeof(_hbuf)) >= InterfaceNameSize(iface)+MethodNextOffset(method)-2 && "the interface and method names for this message are too long to export");
-    ostream os (_hbuf, sizeof(_hbuf));
+    ostream os (_hbuf);
     os.write (iface, InterfaceNameSize(iface));
     os.write (method, MethodNextOffset(method)-2);
     os.align (Msg::Alignment::Header);
@@ -378,7 +375,7 @@ void Extern::Extern_Open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide sid
     _einfo.side = side;
     EnableCredentialsPassing (true);
     // Initial handshake is an exchange of COM::Export messages
-    QueueOutgoing (PCOM::ExportMsg (extid_COM, eifaces));
+    QueueOutgoing (PCOM::ExportMsg (eifaces), extid_COM);
 }
 
 void Extern::Extern_Close (void) noexcept
@@ -680,7 +677,7 @@ bool Extern::AcceptIncomingMessage (void) noexcept
     }
 
     // Create local message from ExtMsg and forward it to the COMRelay
-    rp->relay.Forward (Msg (rp->relay.Link(), method, _inmsg.MoveBody(), _inmsg.Extid(), _inmsg.FdOffset()));
+    rp->relay.Forward (Msg (rp->relay.Link(), method, _inmsg.MoveBody(), _inmsg.FdOffset(), _inmsg.Extid()));
     return true;
 }
 //}}}2
@@ -718,7 +715,7 @@ COMRelay::~COMRelay (void) noexcept
     //    COMRelay_ObjectDestroyed, and no message is sent here.
     if (_pExtern) {
 	if (_extid)
-	    _pExtern->QueueOutgoing (PCOM::DeleteMsg (_extid));
+	    _pExtern->QueueOutgoing (PCOM::DeleteMsg(), _extid);
 	_pExtern->UnregisterRelay (this);
     }
     _pExtern = nullptr;
@@ -752,10 +749,9 @@ bool COMRelay::Dispatch (Msg& msg) noexcept
     }
 
     // Forward the message in the direction opposite which it was received
-    if (msg.Src() == _localp.Dest()) {
-	msg.SetExtid (_extid);
-	_pExtern->QueueOutgoing (move(msg));
-    } else {
+    if (msg.Src() == _localp.Dest())
+	_pExtern->QueueOutgoing (move(msg), _extid);
+    else {
 	assert (msg.Extid() == _extid && "Extern routed a message to the wrong relay");
 	_localp.Forward (move(msg));
     }
@@ -770,7 +766,7 @@ bool COMRelay::OnError (mrid_t eid, const string& errmsg) noexcept
     //
     if (_pExtern && eid == _localp.Dest()) {
 	DEBUG_PRINTF ("[X] COMRelay forwarding error to extern creator\n");
-	_pExtern->QueueOutgoing (PCOM::ErrorMsg (_extid, errmsg));
+	_pExtern->QueueOutgoing (PCOM::ErrorMsg (errmsg), _extid);
 	return true;	// handled on the remote end.
     }
     // Errors occuring in the Extern object or elsewhere can not be handled

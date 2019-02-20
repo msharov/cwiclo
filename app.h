@@ -116,7 +116,7 @@ public:
     inline int		Run (void) noexcept;
     Msg::Link&		CreateLink (Msg::Link& l, iid_t iid) noexcept;
     Msg::Link&		CreateLinkWith (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept;
-    inline Msg&		CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, Msg::fdoffset_t fdo = Msg::NoFdIncluded) noexcept;
+    inline Msg&		CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, Msg::fdoffset_t fdo = Msg::NoFdIncluded) noexcept;
     inline void		ForwardMsg (Msg&& msg, Msg::Link& l) noexcept;
     static iid_t	InterfaceByName (const char* iname, streamsize inamesz) noexcept;
     msgq_t::size_type	HasMessagesFor (mrid_t mid) const noexcept;
@@ -283,9 +283,9 @@ void App::Timer::Timer_Watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t ti
     _nextfire = timeoutms + (timeoutms <= PTimer::TimerMax ? PTimer::Now() : PTimer::TimerNone);
 }
 
-Msg& App::CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, mrid_t extid, Msg::fdoffset_t fdo) noexcept
+Msg& App::CreateMsg (Msg::Link& l, methodid_t mid, streamsize size, Msg::fdoffset_t fdo) noexcept
 {
-    return _outq.emplace_back (CreateLink(l,InterfaceOfMethod(mid)),mid,size,extid,fdo);
+    return _outq.emplace_back (CreateLink(l,InterfaceOfMethod(mid)),mid,size,fdo);
 }
 
 void App::ForwardMsg (Msg&& msg, Msg::Link& l) noexcept

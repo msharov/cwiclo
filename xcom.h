@@ -14,18 +14,19 @@ namespace cwiclo {
 class PCOM : public Proxy {
     DECLARE_INTERFACE (COM, (Error,"s")(Export,"s")(Delete,""))
 public:
-    constexpr	PCOM (mrid_t src, mrid_t dest)	: Proxy (src, dest) {}
-		~PCOM (void) noexcept		{ FreeId(); }
-    void	Error (const string& errmsg)	{ Send (M_Error(), errmsg); }
-    void	Export (const string& elist)	{ Send (M_Export(), elist); }
-    void	Delete (void)			{ Send (M_Delete()); }
-    void	Forward (Msg&& msg)		{ Proxy::Forward (move(msg)); }
-  static string	StringFromInterfaceList (const iid_t* elist) noexcept;
-    static Msg	ErrorMsg (mrid_t extid, const string& errmsg) noexcept;
-    static Msg	ExportMsg (mrid_t extid, const string& elstr) noexcept;
-    static auto	ExportMsg (mrid_t extid, const iid_t* elist) noexcept
-							{ return ExportMsg (extid, StringFromInterfaceList (elist)); }
-    static auto	DeleteMsg (mrid_t extid) noexcept	{ return Msg (Msg::Link{}, PCOM::M_Delete(), 0, extid); }
+    constexpr		PCOM (mrid_t src, mrid_t dest)	: Proxy (src, dest) {}
+			~PCOM (void) noexcept		{ FreeId(); }
+    void		Error (const string& errmsg)	{ Send (M_Error(), errmsg); }
+    void		Export (const string& elist)	{ Send (M_Export(), elist); }
+    void		Delete (void)			{ Send (M_Delete()); }
+    void		Forward (Msg&& msg)		{ Proxy::Forward (move(msg)); }
+    static string	StringFromInterfaceList (const iid_t* elist) noexcept;
+    static Msg		ErrorMsg (const string& errmsg) noexcept;
+    static Msg		ExportMsg (const string& elstr) noexcept;
+    static auto		ExportMsg (const iid_t* elist) noexcept
+			    { return ExportMsg (StringFromInterfaceList (elist)); }
+    static auto		DeleteMsg (void) noexcept
+			    { return Msg (Msg::Link{}, M_Delete(), 0, Msg::NoFdIncluded); }
     template <typename O>
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() == M_Error())
@@ -172,7 +173,8 @@ public:
 			~Extern (void) noexcept override;
     auto&		Info (void) const	{ return _einfo; }
     bool		Dispatch (Msg& msg) noexcept override;
-    void		QueueOutgoing (Msg&& msg) noexcept;
+    void		QueueOutgoing (Msg&& msg, mrid_t extid) noexcept
+			    { QueueOutgoing (msg.Method(), msg.MoveBody(), msg.FdOffset(), extid); }
     static Extern*	LookupById (mrid_t id) noexcept;
     static Extern*	LookupByImported (iid_t id) noexcept;
     static Extern*	LookupByRelayId (mrid_t rid) noexcept;
@@ -202,7 +204,8 @@ private:
 	};
     public:
 	constexpr		ExtMsg (void)		: _body(),_h{},_hbuf{} {}
-	inline			ExtMsg (Msg&& msg) noexcept;
+	inline			ExtMsg (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid) noexcept;
+	void			operator= (Msg&&) = delete;
 	constexpr streamsize	HeaderSize (void) const	{ return _h.hsz; }
 	constexpr auto&		GetHeader (void) const	{ return _h; }
 	constexpr streamsize	BodySize (void) const	{ return _h.sz; }
@@ -214,7 +217,7 @@ private:
 	void			AllocateBody (streamsize sz)	{ _body.allocate (sz); }
 	void			TrimBody (streamsize sz)	{ _body.shrink (sz); }
 	constexpr auto&&	MoveBody (void)		{ return move(_body); }
-	void			SetPassedFd (fd_t fd)	{ assert (HasFd()); ostream os (_body.iat(_h.fdoffset), sizeof(fd)); os << fd; }
+	void			SetPassedFd (fd_t fd)	{ assert (HasFd()); ostream(_body.iat(_h.fdoffset), sizeof(fd)) << fd; }
 	fd_t			PassedFd (void) const noexcept;
 	void			WriteIOVecs (iovec* iov, streamsize bw) noexcept;
 	constexpr auto		Read (void) const	{ return istream (_body.data(), _body.size()); }
@@ -243,6 +246,7 @@ private:
     };
     //}}}2--------------------------------------------------------------
 private:
+    void		QueueOutgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid) noexcept;
     constexpr mrid_t	CreateExtidFromRelayId (mrid_t id) const noexcept
 			    { return id + ((_einfo.side == ExternInfo::SocketSide::Client) ? extid_ClientBase : extid_ServerBase); }
     static auto&	ExternList (void) noexcept

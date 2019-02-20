@@ -132,7 +132,7 @@ public:
     inline constexpr		memblock (const_pointer p, size_type n, bool z)	: memlink(p,n,z) {}
     inline			memblock (void* p, size_type n)		: memlink(p,n) {}
     inline			memblock (const void* p, size_type n)	: memlink(p,n) {}
-    inline			memblock (size_type sz) noexcept	: memblock() { resize (sz); }
+    inline explicit		memblock (size_type sz) noexcept	: memblock() { resize (sz); }
     inline constexpr		memblock (const cmemlink& v)		: memlink(v) {}
     inline			memblock (const memblock& v)		: memblock() { assign(v); }
     inline constexpr		memblock (memblock&& v)			: memlink(move(v)) {}

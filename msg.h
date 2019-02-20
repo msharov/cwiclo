@@ -145,7 +145,7 @@ public:
 	using memblock::end;
 	using memblock::iat;
 	constexpr Body (void)		: memblock() {}
-		Body (size_type sz)	: memblock(sz) {}
+	explicit  Body (size_type sz)	: memblock(sz) {}
 	constexpr Body (Body&& v)	: memblock(move(v)) {}
 	constexpr Body (memblock&& v)	: memblock(move(v)) {}
 		~Body (void) noexcept;
@@ -163,7 +163,7 @@ public:
 	static constexpr streamsize Fd = alignof(int);
     };
 public:
-			Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept;
+			Msg (const Link& l, methodid_t mid, streamsize size, fdoffset_t fdo = NoFdIncluded) noexcept;
     constexpr auto&	GetLink (void) const	{ return _link; }
     constexpr auto	Src (void) const	{ return GetLink().src; }
     constexpr auto	Dest (void) const	{ return GetLink().dest; }
@@ -172,7 +172,6 @@ public:
     constexpr auto	Interface (void) const	{ return InterfaceOfMethod (Method()); }
     inline auto		Signature (void) const	{ return SignatureOfMethod (Method()); }
     constexpr auto	Extid (void) const	{ return _extid; }
-    inline void		SetExtid (mrid_t eid)	{ _extid = eid; }
     constexpr auto	FdOffset (void) const	{ return _fdoffset; }
     constexpr auto&&	MoveBody (void)		{ return move(_body); }
     constexpr auto	Read (void) const	{ return istream (_body.data(),_body.size()); }
@@ -181,12 +180,12 @@ public:
     auto		Verify (void) const noexcept	{ auto is = Read(); return ValidateSignature (is, Signature()); }
     constexpr		Msg (const Link& l, methodid_t mid) noexcept
 			    :_method (mid),_link (l),_extid(0),_fdoffset (NoFdIncluded),_body() {}
-    constexpr		Msg (const Link& l, methodid_t mid, Body&& body, mrid_t extid = 0, fdoffset_t fdo = NoFdIncluded) noexcept
+    constexpr		Msg (const Link& l, methodid_t mid, Body&& body, fdoffset_t fdo = NoFdIncluded, mrid_t extid = 0) noexcept
 			    :_method (mid),_link (l),_extid (extid),_fdoffset (fdo),_body (move (body)) {}
-    constexpr		Msg (Msg&& msg) noexcept
-			    : Msg(msg.GetLink(),msg.Method(),msg.MoveBody(),msg.Extid(),msg.FdOffset()) {}
     constexpr		Msg (Msg&& msg, const Link& l) noexcept
-			    : Msg(l,msg.Method(),msg.MoveBody(),msg.Extid(),msg.FdOffset()) {}
+			    : Msg (l,msg.Method(),msg.MoveBody(),msg.FdOffset(),msg.Extid()) {}
+    constexpr		Msg (Msg&& msg) noexcept
+			    : Msg (move(msg), msg.GetLink()) {}
 			Msg (const Msg&) = delete;
     Msg&		operator= (const Msg&) = delete;
 private:
@@ -214,7 +213,7 @@ protected:
     inline auto&	LinkW (void) noexcept;
     void		operator= (const ProxyB&) = delete;
     Msg&		CreateMsg (methodid_t imethod, streamsize sz) noexcept;
-    Msg&		CreateMsg (methodid_t imethod, streamsize sz, mrid_t extid, Msg::fdoffset_t fdo) noexcept;
+    Msg&		CreateMsg (methodid_t imethod, streamsize sz, Msg::fdoffset_t fdo) noexcept;
     void		Forward (Msg&& msg) noexcept;
 #ifdef NDEBUG	// CommitMsg only does debug checking
     void		CommitMsg (Msg&, ostream&) noexcept	{ }
@@ -229,7 +228,7 @@ protected:
 			}
     inline void		SendFd (methodid_t imethod, fd_t fd) {
 			    assert (string_view("h") == SignatureOfMethod(imethod));
-			    auto& msg = CreateMsg (imethod, stream_size_of(fd), 0, 0);
+			    auto& msg = CreateMsg (imethod, stream_size_of(fd), 0);
 			    CommitMsg (msg, msg.Write() << fd);
 			}
 private:

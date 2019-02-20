@@ -21,14 +21,14 @@ methodid_t LookupInterfaceMethod (iid_t iid, const char* __restrict__ mname, siz
 
 auto& ProxyB::LinkW (void) noexcept { return _link; }
 
-Msg& ProxyB::CreateMsg (methodid_t mid, streamsize sz, mrid_t extid, Msg::fdoffset_t fdo) noexcept
+Msg& ProxyB::CreateMsg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo) noexcept
 {
-    return App::Instance().CreateMsg (LinkW(), mid, sz, extid, fdo);
+    return App::Instance().CreateMsg (LinkW(), mid, sz, fdo);
 }
 
 Msg& ProxyB::CreateMsg (methodid_t mid, streamsize sz) noexcept
 {
-    return CreateMsg (mid, sz, 0, Msg::NoFdIncluded);
+    return CreateMsg (mid, sz, Msg::NoFdIncluded);
 }
 
 void ProxyB::Forward (Msg&& msg) noexcept
@@ -84,10 +84,10 @@ Msg::Body::~Body (void) noexcept { wipe(); }
 
 //----------------------------------------------------------------------
 
-Msg::Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid, fdoffset_t fdo) noexcept
+Msg::Msg (const Link& l, methodid_t mid, streamsize size, fdoffset_t fdo) noexcept
 :_method (mid)
 ,_link (l)
-,_extid (extid)
+,_extid (0)
 ,_fdoffset (fdo)
 ,_body (Align (size, Alignment::Body))
 {
