@@ -154,6 +154,7 @@ public:
 	void	wipe (void)		{ fill_n (data(), capacity(), value_type(0)); }
     };
     //}}}2
+    using fd_t = int32_t;
     using fdoffset_t = uint8_t;
     static constexpr fdoffset_t NoFdIncluded = numeric_limits<fdoffset_t>::max();
     struct Alignment {
@@ -201,6 +202,7 @@ private:
 
 class ProxyB {
 public:
+    using fd_t = Msg::fd_t;
     using pfn_factory_t = Msger* (*)(const Msg::Link& l);
 public:
     constexpr auto&	Link (void) const			{ return _link; }
@@ -212,6 +214,7 @@ protected:
     inline auto&	LinkW (void) noexcept;
     void		operator= (const ProxyB&) = delete;
     Msg&		CreateMsg (methodid_t imethod, streamsize sz) noexcept;
+    Msg&		CreateMsg (methodid_t imethod, streamsize sz, mrid_t extid, Msg::fdoffset_t fdo) noexcept;
     void		Forward (Msg&& msg) noexcept;
 #ifdef NDEBUG	// CommitMsg only does debug checking
     void		CommitMsg (Msg&, ostream&) noexcept	{ }
@@ -220,12 +223,15 @@ protected:
 #endif
     inline void		Send (methodid_t imethod)		{ CreateMsg (imethod, 0); }
     template <typename... Args>
-    inline void Send (methodid_t imethod, const Args&... args) {
-	auto& msg = CreateMsg (imethod, variadic_stream_size(args...));
-	auto os = msg.Write();
-	(os << ... << args);
-	CommitMsg (msg, os);
-    }
+    inline void		Send (methodid_t imethod, const Args&... args) {
+			    auto& msg = CreateMsg (imethod, variadic_stream_size(args...));
+			    CommitMsg (msg, (msg.Write() << ... << args));
+			}
+    inline void		SendFd (methodid_t imethod, fd_t fd) {
+			    assert (string_view("h") == SignatureOfMethod(imethod));
+			    auto& msg = CreateMsg (imethod, stream_size_of(fd), 0, 0);
+			    CommitMsg (msg, msg.Write() << fd);
+			}
 private:
     Msg::Link		_link;
 };

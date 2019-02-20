@@ -35,7 +35,6 @@ public:
 	WriteTimer	= Write| Timer,
 	ReadWriteTimer	= ReadWrite| Timer
     };
-    using fd_t = int32_t;
     using mstime_t = uint64_t;
     static constexpr mstime_t TimerMax = INT64_MAX;
     static constexpr mstime_t TimerNone = UINT64_MAX;

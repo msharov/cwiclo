@@ -21,9 +21,14 @@ methodid_t LookupInterfaceMethod (iid_t iid, const char* __restrict__ mname, siz
 
 auto& ProxyB::LinkW (void) noexcept { return _link; }
 
+Msg& ProxyB::CreateMsg (methodid_t mid, streamsize sz, mrid_t extid, Msg::fdoffset_t fdo) noexcept
+{
+    return App::Instance().CreateMsg (LinkW(), mid, sz, extid, fdo);
+}
+
 Msg& ProxyB::CreateMsg (methodid_t mid, streamsize sz) noexcept
 {
-    return App::Instance().CreateMsg (LinkW(), mid, sz);
+    return CreateMsg (mid, sz, 0, Msg::NoFdIncluded);
 }
 
 void ProxyB::Forward (Msg&& msg) noexcept
@@ -94,7 +99,7 @@ Msg::Msg (const Link& l, methodid_t mid, streamsize size, mrid_t extid, fdoffset
 static streamsize SigelementSize (char c) noexcept
 {
     static const struct { char sym; uint8_t sz; } syms[] =
-	{{'y',1},{'b',1},{'n',2},{'q',2},{'i',4},{'u',4},{'h',4},{'x',8},{'t',8}};
+	{{'y',1},{'b',1},{'n',2},{'q',2},{'i',4},{'u',4},{'h',sizeof(Msg::fd_t)},{'x',8},{'t',8}};
     for (auto& i : syms)
 	if (i.sym == c)
 	    return i.sz;
