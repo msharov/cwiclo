@@ -4,6 +4,7 @@
 // This file is free software, distributed under the MIT License.
 
 #include "app.h"
+#include <fcntl.h>
 #include <signal.h>
 #include <time.h>
 
@@ -14,7 +15,13 @@ DEFINE_INTERFACE (Timer)
 DEFINE_INTERFACE (TimerR)
 DEFINE_INTERFACE (Signal)
 
-auto PTimer::Now (void) noexcept -> mstime_t
+int PTimer::MakeNonblocking (fd_t fd) noexcept // static
+{
+    auto f = fcntl (fd, F_GETFL);
+    return f < 0 ? f : fcntl (fd, F_SETFL, f| O_NONBLOCK| O_CLOEXEC);
+}
+
+auto PTimer::Now (void) noexcept -> mstime_t // static
 {
     struct timespec t;
     if (0 > clock_gettime (CLOCK_REALTIME, &t))

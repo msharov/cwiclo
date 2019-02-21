@@ -404,11 +404,7 @@ bool Extern::AttachToSocket (fd_t fd) noexcept
 	return false;
 
     // If matches, need to set the fd nonblocking for the poll loop to work
-    if (auto f = fcntl (fd, F_GETFL); f < 0)
-	return false;
-    else if (0 > fcntl (fd, F_SETFL, f| O_NONBLOCK| O_CLOEXEC))
-	return false;
-    return true;
+    return !PTimer::MakeNonblocking (fd);
 }
 
 void Extern::EnableCredentialsPassing (bool enable) noexcept
@@ -983,7 +979,7 @@ void ExternServer::TimerR_Timer (PTimer::fd_t) noexcept
 void ExternServer::ExternServer_Open (int fd, const iid_t* eifaces, PExternServer::WhenEmpty closeWhenEmpty) noexcept
 {
     assert (_sockfd == -1 && "each ExternServer instance can only listen to one socket");
-    if (auto f = fcntl (fd, F_GETFL); f < 0 || 0 > fcntl (fd, F_SETFL, O_NONBLOCK| f))
+    if (PTimer::MakeNonblocking (fd))
 	return ErrorLibc ("fcntl(SETFL(O_NONBLOCK))");
     _sockfd = fd;
     _eifaces = eifaces;

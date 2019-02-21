@@ -59,6 +59,7 @@ public:
 	o->Timer_Watch (cmd, fd, timer);
 	return true;
     }
+    static int	MakeNonblocking (fd_t fd) noexcept;
     static mstime_t Now (void) noexcept;
 };
 
