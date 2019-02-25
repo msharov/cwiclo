@@ -17,33 +17,45 @@ using streampos = streamsize;
 
 class istream {
 public:
-    using const_pointer		= cmemlink::const_pointer;
-    using pointer		= const_pointer;
+    using value_type		= char;
+    using pointer		= value_type*;
+    using const_pointer		= const value_type*;
+    using reference		= value_type&;
+    using const_reference	= const value_type&;
+    using size_type		= streamsize;
+    using difference_type	= streampos;
+    using const_iterator	= const_pointer;
+    using iterator		= pointer;
     enum { is_reading = true, is_writing = false, is_sizing = false };
 public:
-    inline constexpr		istream (pointer p, pointer e)		: _p(p),_e(e) {}
-    inline constexpr		istream (pointer p, streamsize sz)	: istream(p,p+sz) {}
+    inline constexpr		istream (const_pointer p, const_pointer e)	: _p(p),_e(e) {}
+    inline constexpr		istream (const_pointer p, streamsize sz)	: istream(p,p+sz) {}
     inline constexpr		istream (const cmemlink& m)		: istream(m.data(),m.size()) {}
     inline constexpr		istream (const istream& is) = default;
     template <typename T, streamsize N>
     inline constexpr		istream (const T (&a)[N])		: istream(a, N*sizeof(T)) { static_assert (is_trivial<T>::value, "array ctor only works for trivial types"); }
+    inline constexpr auto	begin (void) const __restrict__		{ return _p; }
     inline constexpr auto	end (void) const __restrict__		{ return _e; }
-    inline constexpr streamsize	remaining (void) const __restrict__	{ return end()-_p; }
+    inline constexpr streamsize	size (void) const __restrict__		{ return end()-begin(); }
+    inline constexpr auto	remaining (void) const __restrict__	{ return size(); }
+    inline constexpr auto	iat (streampos n) const __restrict__	{ return begin()+n; }
     template <typename T = char>
-    inline auto			ptr (void) const __restrict__		{ return reinterpret_cast<const T*>(_p); }
-    inline void			skip (streamsize sz) __restrict__	{ seek (_p + sz); }
-    inline void			unread (streamsize sz) __restrict__	{ seek (_p - sz); }
+    inline auto			ptr (void) const __restrict__		{ return reinterpret_cast<const T*>(begin()); }
+    inline void			seek (const_pointer p) __restrict__	{ assert (p <= end()); _p = p; }
+    inline void			skip (streamsize sz) __restrict__	{ seek (iat(sz)); }
+    inline void			unread (streamsize sz) __restrict__	{ seek (begin() - sz); }
     inline void			align (streamsize g) __restrict__	{ seek (alignptr(g)); }
-    inline streamsize		alignsz (streamsize g) const		{ return alignptr(g) - _p; }
-    inline bool			can_align (streamsize g) const		{ return alignptr(g) <= _e; }
-    inline bool			aligned (streamsize g) const		{ return alignptr(g) == _p; }
+    inline streamsize		alignsz (streamsize g) const		{ return alignptr(g) - begin(); }
+    inline bool			can_align (streamsize g) const		{ return alignptr(g) <= end(); }
+    inline bool			aligned (streamsize g) const		{ return alignptr(g) == begin(); }
     inline void			read (void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
-				    copy_n (_p, sz, p); skip(sz);
+				    copy_n (begin(), sz, p);
+				    skip (sz);
 				}
     const char*			read_strz (void) {
 				    const char* __restrict__ v = ptr<char>();
-				    auto se = static_cast<pointer>(memchr (v, 0, remaining()));
+				    auto se = static_cast<const_pointer>(memchr (v, 0, remaining()));
 				    if (!se)
 					return nullptr;
 				    seek (se+1);
@@ -52,7 +64,7 @@ public:
     template <typename T>
     inline auto&		read_trivial (void) __restrict__ {
 				    const T* __restrict__ p = ptr<T>();
-				    skip(sizeof(T));
+				    skip (sizeof(T));
 				    return *p;
 				}
     template <typename T>
@@ -80,11 +92,10 @@ public:
 				    else { T v; v.read (*this); return v; }
 				}
 protected:
-    inline void			seek (pointer p) __restrict__			{ assert(p <= end()); _p = p; }
-    inline pointer		alignptr (streamsize g) const __restrict__	{ return pointer (Align (uintptr_t(_p), g)); }
+    inline const_pointer	alignptr (streamsize g) const __restrict__	{ return const_pointer (Align (uintptr_t(_p), g)); }
 private:
-    pointer			_p;
-    const pointer		_e;
+    const_pointer		_p;
+    const const_pointer		_e;
 };
 
 //}}}-------------------------------------------------------------------
@@ -92,8 +103,15 @@ private:
 
 class ostream {
 public:
-    using pointer		= cmemlink::pointer;
-    using const_pointer		= cmemlink::const_pointer;
+    using value_type		= istream::value_type;
+    using pointer		= istream::pointer;
+    using const_pointer		= istream::const_pointer;
+    using reference		= istream::reference;
+    using const_reference	= istream::const_reference;
+    using size_type		= istream::size_type;
+    using difference_type	= istream::difference_type;
+    using const_iterator	= const_pointer;
+    using iterator		= pointer;
     enum { is_reading = false, is_writing = true, is_sizing = false };
 public:
     inline constexpr		ostream (pointer p, const_pointer e)	: _p(p),_e(e) {}
@@ -102,31 +120,28 @@ public:
     inline constexpr		ostream (const ostream& os) = default;
     template <typename T, streamsize N>
     inline constexpr		ostream (T (&a)[N])			: ostream(a, N*sizeof(T)) { static_assert (is_trivial<T>::value, "array ctor only works for trivial types"); }
+    inline constexpr auto	begin (void) const __restrict__		{ return _p; }
     inline constexpr auto	end (void) const __restrict__		{ return _e; }
-    inline constexpr streamsize	remaining (void) const __restrict__	{ return end()-_p; }
+    inline constexpr streamsize	size (void) const __restrict__		{ return end()-begin(); }
+    inline constexpr auto	remaining (void) const __restrict__	{ return size(); }
     template <typename T = char>
-    inline auto			ptr (void) __restrict__	{ return reinterpret_cast<T*>(_p); }
-    inline void			skip (streamsize sz) __restrict__ {
-				    pointer __restrict__ p = _p;
-				    assert (p+sz <= end());
-				    for (auto i = 0u; i < sz; ++i)
-					*p++ = 0;
-				    _p = p;
-				}
+    inline auto			ptr (void) __restrict__			{ return reinterpret_cast<T*>(begin()); }
+    inline void			seek (pointer p) __restrict__		{ assert (p <= end()); _p = p; }
+    inline void			skip (streamsize sz) __restrict__	{ seek (fill_n (begin(), sz, 0)); }
     inline void			align (streamsize g) __restrict__ {
-				    pointer __restrict__ p = _p;
+				    pointer __restrict__ p = begin();
 				    while (uintptr_t(p) % g) {
 					assert (p+1 <= end());
 					*p++ = 0;
 				    }
-				    _p = p;
+				    seek (p);
 				}
-    inline streamsize		alignsz (streamsize g) const	{ return alignptr(g) - _p; }
-    inline bool			can_align (streamsize g) const	{ return alignptr(g) <= _e; }
-    inline bool			aligned (streamsize g) const	{ return alignptr(g) == _p; }
+    inline streamsize		alignsz (streamsize g) const	{ return alignptr(g) - begin(); }
+    inline bool			can_align (streamsize g) const	{ return alignptr(g) <= end(); }
+    inline bool			aligned (streamsize g) const	{ return alignptr(g) == begin(); }
     inline void			write (const void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
-				    _p = copy_n (p, sz, _p);
+				    seek (copy_n (p, sz, begin()));
 				}
     inline void			write_strz (const char* s)	{ write (s, strlen(s)+1); }
     template <typename T>
@@ -152,8 +167,6 @@ public:
 				    return *this;
 				}
 private:
-    inline void			seek (pointer p) __restrict__
-				    { assert(p < end()); _p = p; }
     inline const_pointer	alignptr (streamsize g) const __restrict__
 				    { return const_pointer (Align (uintptr_t(_p), g)); }
 private:
@@ -166,16 +179,25 @@ private:
 
 class sstream {
 public:
-    using const_pointer		= cmemlink::const_pointer;
+    using value_type		= istream::value_type;
+    using pointer		= istream::pointer;
+    using const_pointer		= istream::const_pointer;
+    using reference		= istream::reference;
+    using const_reference	= istream::const_reference;
+    using size_type		= istream::size_type;
+    using difference_type	= istream::difference_type;
+    using const_iterator	= const_pointer;
+    using iterator		= pointer;
     enum { is_reading = false, is_writing = false, is_sizing = true };
 public:
     inline constexpr		sstream (void)		: _sz() {}
     inline constexpr		sstream (const sstream& ss) = default;
-    inline constexpr auto	size (void) const	{ return _sz; }
-    inline constexpr streamsize	remaining (void) const	{ return UINT32_MAX; }
     template <typename T = char>
     inline constexpr T*		ptr (void)	{ return nullptr; }
+    inline constexpr auto	begin (void)	{ return ptr(); }
     inline constexpr auto	end (void)	{ return ptr(); }
+    inline constexpr auto	size (void) const	{ return _sz; }
+    inline constexpr streamsize	remaining (void) const	{ return numeric_limits<size_type>::max(); }
     inline void			skip (streamsize sz)	{ _sz += sz; }
     inline void			align (streamsize g)	{ _sz = Align (_sz, g); }
     inline constexpr streamsize	alignsz (streamsize g) const	{ return Align(_sz,g) - _sz; }

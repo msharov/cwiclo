@@ -410,8 +410,8 @@ auto fill_n (I f, size_t n, const T& v)
     using ovalue_type = remove_const_t<typename iterator_traits<I>::value_type>;
     constexpr bool canstos = is_trivial<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value;
     if constexpr (canstos && sizeof(ovalue_type) == 1)
+	{ __builtin_memset (f, bit_cast<uint8_t>(v), n); f += n; }
 #if __x86__
-	__asm__ volatile ("rep stosb":"+D"(f),"+c"(n):"a"(bit_cast<uint8_t>(v)):"cc","memory");
     else if constexpr (canstos && sizeof(ovalue_type) == 2)
 	__asm__ volatile ("rep stosw":"+D"(f),"+c"(n):"a"(bit_cast<uint16_t>(v)):"cc","memory");
     else if constexpr (canstos && sizeof(ovalue_type) == 4)
@@ -420,8 +420,6 @@ auto fill_n (I f, size_t n, const T& v)
     else if constexpr (canstos && sizeof(ovalue_type) == 8)
 	__asm__ volatile ("rep stosq":"+D"(f),"+c"(n):"a"(bit_cast<uint64_t>(v)):"cc","memory");
 #endif
-#else // !__x86__, 1 byte fill
-	{ memset (f, bit_cast<uint8_t>(v), n); f += n; }
 #endif
     else for (auto l = f+n; f < l; ++f)
 	*f = v;
