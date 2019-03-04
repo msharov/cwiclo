@@ -164,6 +164,82 @@ public:
 
 //----------------------------------------------------------------------
 
+// A memblock that ensures its storage is zeroed when freed.
+class memblaz : protected memblock {
+public:	// memblock is a protected base to disallow calling its reserve
+    using memblock::value_type;
+    using memblock::pointer;
+    using memblock::const_pointer;
+    using memblock::reference;
+    using memblock::const_reference;
+    using memblock::size_type;
+    using memblock::difference_type;
+    using memblock::const_iterator;
+    using memblock::iterator;
+public:
+    using memblock::size;
+    using memblock::capacity;
+    using memblock::data;
+    using memblock::begin;
+    using memblock::end;
+    using memblock::iat;
+    using memblock::max_size;
+    using memblock::empty;
+    using memblock::at;
+    using memblock::cdata;
+    using memblock::cbegin;
+    using memblock::cend;
+    using memblock::link;
+    using memblock::unlink;
+    using memblock::manage;
+    using memblock::erase;
+    using memblock::write;
+    using memblock::write_file;
+    using memblock::write_file_atomic;
+public:
+    inline constexpr		memblaz (void)				: memblock() {}
+    inline			memblaz (size_type n)			: memblock(n) {}
+    inline			memblaz (const cmemlink& v)		: memblock() { assign(v); }
+    inline			memblaz (const memblaz& v)		: memblock() { assign(v); }
+    inline constexpr		memblaz (memblock&& v)			: memblock (move(v)) {}
+    inline constexpr		memblaz (memblaz&& v)			: memblock (move(v)) {}
+				~memblaz (void) noexcept		{ wipe(); }
+    void			assign (const_pointer p, size_type n) noexcept;
+    inline void			assign (const cmemlink& v) noexcept	{ assign (v.data(), v.size()); }
+    inline void			assign (const memblaz& v) noexcept	{ assign (v.data(), v.size()); }
+    inline void			assign (memblaz&& v) noexcept		{ swap (move(v)); }
+    inline void			clear (void)				{ shrink(0); }
+    inline auto&		operator[] (size_type i)		{ return at (i); }
+    inline auto&		operator[] (size_type i) const		{ return at (i); }
+    inline auto&		operator= (const cmemlink& v) noexcept	{ assign (v); return *this; }
+    inline auto&		operator= (const memblaz& v) noexcept	{ assign (v); return *this; }
+    inline auto&		operator= (memblaz&& v) noexcept	{ assign (move(v)); return *this; }
+    inline bool			operator== (const cmemlink& v) const	{ return v == *this; }
+    inline bool			operator== (const memblaz& v) const	{ return memblock::operator== (v); }
+    inline bool			operator!= (const cmemlink& v) const	{ return v != *this; }
+    inline bool			operator!= (const memblaz& v) const	{ return memblock::operator!= (v); }
+    inline			operator const cmemlink& (void) const	{ return *this; }
+    inline void			copy_link (void) noexcept		{ resize (size()); }
+    void			allocate (size_type sz)	{ assert (!capacity()); memblock::resize(sz); }
+    void			shrink (size_type sz)	{ assert (sz <= capacity()); memlink::resize(sz); }
+    void			wipe (void)		{ fill_n (data(), capacity(), value_type(0)); }
+    void			reserve (size_type sz) noexcept;
+    void			resize (size_type sz) noexcept;
+    iterator			insert (const_iterator start, size_type n) noexcept;
+    auto			insert (const_iterator ip, const_pointer s, size_type n)
+				    { auto ipw = insert (ip,n); copy_n (s, n, ipw); return ipw; }
+    void		   	append (const_pointer s, size_type n)	{ insert (end(), s, n); }
+    iterator			replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn) noexcept;
+    void			shrink_to_fit (void) noexcept;
+    void			deallocate (void) noexcept;
+    void			read (istream& is, size_type elsize = sizeof(value_type)) noexcept;
+    int				read_file (const char* filename) noexcept;
+    inline static auto		create_from_file (const char* filename) noexcept
+				    { memblaz r; r.read_file (filename); return r; }
+};
+
+//----------------------------------------------------------------------
+
 /// Use with memlink-derived classes to link to a static array
 #define static_link(v)	link (ArrayBlock(v))
 /// Use with memlink-derived classes to allocate and link to stack space.

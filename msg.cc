@@ -80,10 +80,6 @@ void Msger::ErrorLibc (const char* f) noexcept // static
 
 //----------------------------------------------------------------------
 
-Msg::Body::~Body (void) noexcept { wipe(); }
-
-//----------------------------------------------------------------------
-
 Msg::Msg (const Link& l, methodid_t mid, streamsize size, fdoffset_t fdo) noexcept
 :_method (mid)
 ,_link (l)

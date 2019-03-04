@@ -207,4 +207,71 @@ int memblock::read_file (const char* filename) noexcept
     return complete_read (fd, data(), st.st_size);
 }
 
+//----------------------------------------------------------------------
+
+void memblaz::reserve (size_type cap) noexcept
+{
+    if (cap <= capacity())
+	return;
+    memblaz r;
+    r.memblock::reserve (cap);
+    r.memblock::assign (*this);
+    swap (move(r));
+}
+
+void memblaz::shrink_to_fit (void) noexcept
+{
+    memblaz r;
+    r.manage (reinterpret_cast<pointer>(_realloc (nullptr, size())), size());
+    copy_n (data(), size(), r.data());
+    swap (move(r));
+}
+
+void memblaz::deallocate (void) noexcept
+{
+    wipe();
+    memblock::deallocate();
+}
+
+void memblaz::resize (size_type sz) noexcept
+{
+    reserve (sz);
+    memlink::resize (sz);
+}
+
+void memblaz::assign (const_pointer p, size_type sz) noexcept
+{
+    wipe();
+    memblock::assign (p, sz);
+}
+
+auto memblaz::insert (const_iterator start, size_type n) noexcept -> iterator
+{
+    const auto ip = start - begin();
+    assert (ip <= size());
+    resize (size() + n);
+    return memlink::insert (iat(ip), n);
+}
+
+memblaz::iterator memblaz::replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn) noexcept
+{
+    auto dsz = difference_type(sn) - ipn;
+    auto ipw = (dsz > 0 ? insert (ip, dsz) : erase (ip, -dsz));
+    copy_n (s, sn, ipw);
+    return ipw;
+}
+
+/// Reads the object from stream \p s
+void memblaz::read (istream& is, size_type elsize) noexcept
+{
+    wipe();
+    memblock::read (is, elsize);
+}
+
+int memblaz::read_file (const char* filename) noexcept
+{
+    wipe();
+    return memblock::read_file (filename);
+}
+
 } // namespace cwiclo

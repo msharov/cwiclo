@@ -135,25 +135,7 @@ public:
 	mrid_t	src;
 	mrid_t	dest;
     };
-    //{{{2 Body
-    class Body : protected memblock {
-    public:
-	using memblock::size;
-	using memblock::capacity;
-	using memblock::data;
-	using memblock::begin;
-	using memblock::end;
-	using memblock::iat;
-	constexpr Body (void)		: memblock() {}
-	explicit  Body (size_type sz)	: memblock(sz) {}
-	constexpr Body (Body&& v)	: memblock(move(v)) {}
-	constexpr Body (memblock&& v)	: memblock(move(v)) {}
-		~Body (void) noexcept;
-	void	allocate (size_type sz)	{ assert (!capacity()); memblock::resize(sz); }
-	void	shrink (size_type sz)	{ assert (sz <= capacity()); memlink::resize(sz); }
-	void	wipe (void)		{ fill_n (data(), capacity(), value_type(0)); }
-    };
-    //}}}2
+    using Body = memblaz;
     using fd_t = int32_t;
     using fdoffset_t = uint8_t;
     static constexpr fdoffset_t NoFdIncluded = numeric_limits<fdoffset_t>::max();
