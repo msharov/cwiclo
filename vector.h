@@ -29,7 +29,7 @@ public:
     inline			vector (const vector& v)	: _data() { uninitialized_copy_n (v.begin(), v.size(), iterator(_data.insert(_data.begin(),v.bsize()))); }
     inline			vector (const_iterator i1, const_iterator i2) noexcept;
     template <size_type N>
-    inline constexpr		vector (const T (&a)[N])	: _data (a, N*sizeof(T)) { static_assert (is_trivial<T>::value, "array ctor only works for trivial types"); }
+    inline			vector (const T (&a)[N])	: vector (VectorRange(a)) {}
     inline			vector (initlist_t v) noexcept;
     constexpr			vector (vector&& v)		: _data (move(v._data)) {}
     inline			~vector (void) noexcept		{ if (!is_linked()) destroy (begin(), end()); }
@@ -105,9 +105,9 @@ public:
     constexpr bool		is_linked (void) const			{ return !_data.capacity(); }
     inline void			unlink (void)				{ _data.unlink(); }
     inline void			copy_link (void) noexcept;
-    inline void			link (const_pointer p, size_type n)	{ _data.link (memblock::const_pointer(p), n * sizeof(T)); }
+    inline void			link (pointer p, size_type n)		{ _data.link (memblock::pointer(p), n*sizeof(T)); }
     inline void			link (const vector& v)			{ _data.link (v); }
-    inline void			link (const_pointer f, const_pointer l)	{ link (f, l-f); }
+    inline void			link (pointer f, pointer l)		{ link (f, l-f); }
     void			read (istream& is) noexcept {
 				    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
 					return _data.read (is, sizeof(T));

@@ -100,8 +100,9 @@ private:
 
 class memlink : public cmemlink {
 public:
-				using cmemlink::cmemlink;
-    inline constexpr		memlink (const cmemlink& v)		: cmemlink(v) {}
+    inline constexpr		memlink (void)				: cmemlink() {}
+    inline constexpr		memlink (pointer p, size_type n, bool z = false)	: cmemlink (p,n,z) {}
+    inline			memlink (void* p, size_type n)		: memlink (reinterpret_cast<pointer>(p), n) {}
     inline constexpr		memlink (const memlink& v)		: cmemlink(v) {}
     inline constexpr		memlink (memlink&& v)			: cmemlink(move(v)) {}
 				using cmemlink::data;
@@ -114,13 +115,19 @@ public:
     inline constexpr auto	iat (size_type i)			{ assert (i <= size()); return begin() + i; }
 				using cmemlink::at;
     inline auto&		at (size_type i)			{ assert (i < size()); return begin()[i]; }
-    inline auto&		operator= (const cmemlink& v)		{ cmemlink::operator=(v); return *this; }
     inline auto&		operator= (const memlink& v)		{ cmemlink::operator=(v); return *this; }
     inline auto&		operator= (memlink&& v)			{ cmemlink::operator=(move(v)); return *this; }
     inline auto&		operator[] (size_type i)		{ return at (i); }
     inline auto&		operator[] (size_type i) const		{ return at (i); }
+    inline void			link (pointer p, size_type n)		{ cmemlink::link (p, n); }
+    inline void			link (pointer p, size_type n, bool z)	{ cmemlink::link (p, n, z); }
+    inline void			link (const memlink& v)			{ cmemlink::link (v); }
+    inline void			swap (memlink&& v)			{ cmemlink::swap (move (v)); }
     iterator			insert (const_iterator start, size_type n) noexcept;
     iterator			erase (const_iterator start, size_type n) noexcept;
+protected:
+    inline constexpr		memlink (const_pointer p, size_type n, bool z = false)	: cmemlink (p,n,z) {}
+    inline constexpr		memlink (const cmemlink& l)		: cmemlink (l) {}
 };
 
 //----------------------------------------------------------------------
@@ -128,13 +135,11 @@ public:
 class memblock : public memlink {
 public:
     inline constexpr		memblock (void)				: memlink() {}
-    inline constexpr		memblock (const_pointer p, size_type n)	: memlink(p,n) {}
-    inline constexpr		memblock (const_pointer p, size_type n, bool z)	: memlink(p,n,z) {}
-    inline			memblock (void* p, size_type n)		: memlink(p,n) {}
-    inline			memblock (const void* p, size_type n)	: memlink(p,n) {}
     inline explicit		memblock (size_type sz) noexcept	: memblock() { resize (sz); }
-    inline constexpr		memblock (const cmemlink& v)		: memlink(v) {}
-    inline			memblock (const memblock& v)		: memblock() { assign(v); }
+    inline			memblock (const_pointer p, size_type n, bool z = false)	: memlink(p,n,z) { resize(n); }
+    inline			memblock (const void* p, size_type n)	: memblock(reinterpret_cast<const_pointer>(p),n) {}
+    inline			memblock (const cmemlink& v)		: memlink(v) { copy_link(); }
+    inline constexpr		memblock (memlink&& v)			: memlink(move(v)) {}
     inline constexpr		memblock (memblock&& v)			: memlink(move(v)) {}
     inline			~memblock (void) noexcept		{ deallocate(); }
     inline void			manage (pointer p, size_type n)		{ assert(!capacity() && "unlink or deallocate first"); link (p, n); set_capacity(n); }
@@ -198,9 +203,12 @@ public:
     using memblock::write_file_atomic;
 public:
     inline constexpr		memblaz (void)				: memblock() {}
-    inline			memblaz (size_type n)			: memblock(n) {}
+    inline explicit		memblaz (size_type n)			: memblock(n) {}
+    inline			memblaz (const_pointer p, size_type n, bool z = false)	: memblock(p,n,z) {}
+    inline			memblaz (const void* p, size_type n)	: memblock(p,n) {}
     inline			memblaz (const cmemlink& v)		: memblock() { assign(v); }
     inline			memblaz (const memblaz& v)		: memblock() { assign(v); }
+    inline constexpr		memblaz (memlink&& v)			: memblock (move(v)) {}
     inline constexpr		memblaz (memblock&& v)			: memblock (move(v)) {}
     inline constexpr		memblaz (memblaz&& v)			: memblock (move(v)) {}
 				~memblaz (void) noexcept		{ wipe(); }
@@ -219,6 +227,8 @@ public:
     inline bool			operator!= (const cmemlink& v) const	{ return v != *this; }
     inline bool			operator!= (const memblaz& v) const	{ return memblock::operator!= (v); }
     inline			operator const cmemlink& (void) const	{ return *this; }
+    inline			operator const memlink& (void) const	{ return *this; }
+    inline			operator const memblock& (void) const	{ return *this; }
     inline void			copy_link (void) noexcept		{ resize (size()); }
     void			allocate (size_type sz)	{ assert (!capacity()); memblock::resize(sz); }
     void			shrink (size_type sz)	{ assert (sz <= capacity()); memlink::resize(sz); }

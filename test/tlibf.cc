@@ -143,7 +143,7 @@ void LibTestApp::TestML (void) // static
 	printf ("memcmp failed on memlink\n");
     WriteML (a);
     memlink cb;
-    cb.link (cstr, size(str));
+    cb.link (ArrayBlock(str));
     if (cb.data() != cstr)
 	printf ("begin() of const failed on memlink\n");
     if (cb.begin() != cstr)
@@ -394,8 +394,7 @@ void LibTestApp::TestString (void) // static
     if (s1[0] != s1[0])
 	puts ("s1[0] != s1[0]");
 
-    string s4;
-    s4.link (s1);
+    string_view s4 (s1);
     if (s1 == s4)
 	puts ("s1 == s4");
 
@@ -472,18 +471,18 @@ void LibTestApp::TestStringVector (void) // static
 {
     vector<string> v = { "Hello world!", "Hello again!", "element3", "element4", "element5_long_element5" };
 
-    auto bogusi = linear_search (v, string("bogus"));
+    auto bogusi = linear_search (v, "bogus");
     if (bogusi)
 	printf ("bogus found at position %td\n", bogusi - v.begin());
 
     foreach (i,v) PrintString(*i);
 
-    if (v[2] != string("element3"))
+    if (v[2] != "element3")
 	printf ("operator== failed\n");
-    auto el3i = linear_search (v, string("element3"));
+    auto el3i = linear_search (v, string_view("element3"));
     if (el3i)
 	printf ("%s found at position %td\n", el3i->c_str(), el3i - v.begin());
-    bogusi = linear_search (v, string("bogus"));
+    bogusi = linear_search (v, "bogus");
     if (bogusi)
 	printf ("%s found at position %td\n", bogusi->c_str(), bogusi - v.begin());
 
@@ -509,10 +508,10 @@ void LibTestApp::TestStringVector (void) // static
     sort (v);
     printf ("After sort:\n");
     foreach (i,v) PrintString(*i);
-    el3i = binary_search (v, string("element3"));
+    el3i = binary_search (v, "element3");
     if (el3i)
 	printf ("%s found at position %td\n", el3i->c_str(), el3i - v.begin());
-    bogusi = binary_search (v, string("bogus"));
+    bogusi = binary_search (v, "bogus");
     if (bogusi)
 	printf ("%s found at position %td\n", bogusi->c_str(), bogusi - v.begin());
 }

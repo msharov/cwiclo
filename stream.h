@@ -31,6 +31,7 @@ public:
     inline constexpr		istream (const_pointer p, const_pointer e)	: _p(p),_e(e) {}
     inline constexpr		istream (const_pointer p, streamsize sz)	: istream(p,p+sz) {}
     inline constexpr		istream (const cmemlink& m)		: istream(m.data(),m.size()) {}
+    inline constexpr		istream (const memblaz& m)		: istream(m.data(),m.size()) {}
     inline constexpr		istream (const istream& is) = default;
     template <typename T, streamsize N>
     inline constexpr		istream (const T (&a)[N])		: istream(a, N*sizeof(T)) { static_assert (is_trivial<T>::value, "array ctor only works for trivial types"); }
@@ -72,7 +73,7 @@ public:
     template <typename T>
     inline void			read_trivial_unaligned (T& v) __restrict__ {
 				    #if __x86__
-					v = read_trivial (v);
+					read_trivial (v);
 				    #else
 					read (&v, sizeof(v));
 				    #endif
@@ -117,6 +118,7 @@ public:
     inline constexpr		ostream (pointer p, const_pointer e)	: _p(p),_e(e) {}
     inline constexpr		ostream (pointer p, streamsize sz)	: ostream(p,p+sz) {}
     inline constexpr		ostream (memlink& m)			: ostream(m.data(),m.size()) {}
+    inline constexpr		ostream (memblaz& m)			: ostream(m.data(),m.size()) {}
     inline constexpr		ostream (const ostream& os) = default;
     template <typename T, streamsize N>
     inline constexpr		ostream (T (&a)[N])			: ostream(a, N*sizeof(T)) { static_assert (is_trivial<T>::value, "array ctor only works for trivial types"); }
