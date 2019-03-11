@@ -334,7 +334,7 @@ auto Extern::ExtMsg::PassedFd (void) const noexcept -> fd_t
     if (!HasFd())
 	return -1;
     istream fdis (_body.iat(_h.fdoffset), sizeof(int));
-    return fdis.readv<int>();
+    return fdis.read<int>();
 }
 
 methodid_t Extern::ExtMsg::ParseMethod (void) const noexcept

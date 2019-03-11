@@ -67,7 +67,7 @@ inline auto string_view_from_const_stream (const istream& is)
 
 inline auto string_view_from_stream (istream& is)
 {
-    auto ssz = is.readv<uint32_t>();
+    auto ssz = is.read<uint32_t>();
     auto scp = is.ptr<char>()-!ssz;
     is.skip (Align (ssz,sizeof(ssz)));
     if (ssz)

@@ -30,6 +30,7 @@ public:
 public:
     inline constexpr		istream (const_pointer p, const_pointer e)	: _p(p),_e(e) {}
     inline constexpr		istream (const_pointer p, streamsize sz)	: istream(p,p+sz) {}
+    inline			istream (const void* p, streamsize sz)	: istream(reinterpret_cast<const_pointer>(p),sz) {}
     inline constexpr		istream (const cmemlink& m)		: istream(m.data(),m.size()) {}
     inline constexpr		istream (const memblaz& m)		: istream(m.data(),m.size()) {}
     inline constexpr		istream (const istream& is) = default;
@@ -63,35 +64,45 @@ public:
 				    return v;
 				}
     template <typename T>
-    inline auto&		read_trivial (void) __restrict__ {
+    inline auto&		readt (void) __restrict__ {
 				    const T* __restrict__ p = ptr<T>();
 				    skip (sizeof(T));
 				    return *p;
 				}
     template <typename T>
-    inline void			read_trivial (T& v) __restrict__ { v = read_trivial<T>(); }
+    inline void			readt (T& v) __restrict__ { v = readt<T>(); }
     template <typename T>
-    inline void			read_trivial_unaligned (T& v) __restrict__ {
+    inline void			read (T& v) __restrict__ {
+				    if constexpr (is_trivial<T>::value)
+					readt (v);
+				    else
+					v.read (*this);
+				}
+    template <typename T>
+    inline decltype(auto)	read (void) __restrict__ {
+				    if constexpr (is_trivial<T>::value)
+					return readt<T>();
+				    else { T v; v.read (*this); return v; }
+				}
+    template <typename T>
+    inline void			readtu (T& v) __restrict__ {
 				    #if __x86__
-					read_trivial (v);
+					readt (v);	// x86 can do direct unaligned reads, albeit slower
 				    #else
 					read (&v, sizeof(v));
 				    #endif
 				}
     template <typename T>
-    inline auto&		operator>> (T& v) {
+    inline decltype(auto)	readu (void) __restrict__ {
+				    T v;
 				    if constexpr (is_trivial<T>::value)
-					read_trivial (v);
+					readtu<T>(v);
 				    else
-					v.read (*this);
-				    return *this;
+					v.readu (*this);
+				    return v;
 				}
     template <typename T>
-    inline decltype(auto)	readv (void) {
-				    if constexpr (is_trivial<T>::value)
-					return read_trivial<T>();
-				    else { T v; v.read (*this); return v; }
-				}
+    inline auto&		operator>> (T& v) { read(v); return *this; }
 protected:
     inline const_pointer	alignptr (streamsize g) const __restrict__	{ return const_pointer (Align (uintptr_t(_p), g)); }
 private:
@@ -117,6 +128,7 @@ public:
 public:
     inline constexpr		ostream (pointer p, const_pointer e)	: _p(p),_e(e) {}
     inline constexpr		ostream (pointer p, streamsize sz)	: ostream(p,p+sz) {}
+    inline			ostream (void* p, streamsize sz)	: ostream(reinterpret_cast<pointer>(p),sz) {}
     inline constexpr		ostream (memlink& m)			: ostream(m.data(),m.size()) {}
     inline constexpr		ostream (memblaz& m)			: ostream(m.data(),m.size()) {}
     inline constexpr		ostream (const ostream& os) = default;
@@ -147,27 +159,35 @@ public:
 				}
     inline void			write_strz (const char* s)	{ write (s, strlen(s)+1); }
     template <typename T>
-    inline void			write_trivial (const T& v) __restrict__ {
+    inline void			writet (const T& v) __restrict__ {
 				    assert(remaining() >= sizeof(T));
 				    T* __restrict__ p = ptr<T>(); *p = v;
 				    _p += sizeof(T);
 				}
     template <typename T>
-    inline void			write_trivial_unaligned (const T& v) __restrict__ {
+    inline void			write (const T& v) __restrict__ {
+				    if constexpr (is_trivial<T>::value)
+					writet (v);
+				    else
+					v.write (*this);
+				}
+    template <typename T>
+    inline void			writetu (const T& v) __restrict__ {
 				    #if __x86__
-					write_trivial (v);
+					writet (v);	// x86 can do direct unaligned writes, albeit slower
 				    #else
 					write (&v, sizeof(v));
 				    #endif
 				}
     template <typename T>
-    inline auto&		operator<< (const T& v) {
+    inline void			writeu (const T& v) __restrict__ {
 				    if constexpr (is_trivial<T>::value)
-					write_trivial (v);
+					writetu (v);
 				    else
-					v.write (*this);
-				    return *this;
+					v.writeu (*this);
 				}
+    template <typename T>
+    inline auto&		operator<< (const T& v) { write(v); return *this; }
 private:
     inline const_pointer	alignptr (streamsize g) const __restrict__
 				    { return const_pointer (Align (uintptr_t(_p), g)); }
@@ -208,17 +228,25 @@ public:
     inline void			write (const void*, streamsize sz) { skip (sz); }
     inline void			write_strz (const char* s)	{ write (s, strlen(s)+1); }
     template <typename T>
-    inline void			write_trivial (const T& v)	{ write (&v, sizeof(v)); }
+    inline void			writet (const T& v)	{ write (&v, sizeof(v)); }
     template <typename T>
-    inline void			write_trivial_unaligned (const T& v)	{ write (&v, sizeof(v)); }
+    inline void			writetu (const T& v)	{ write (&v, sizeof(v)); }
     template <typename T>
-    inline auto&		operator<< (const T& v) {
+    inline void			write (const T& v) {
 				    if constexpr (is_trivial<T>::value)
-					write_trivial (v);
+					writet (v);
 				    else
 					v.write (*this);
-				    return *this;
 				}
+    template <typename T>
+    inline void			writeu (const T& v) {
+				    if constexpr (is_trivial<T>::value)
+					writetu (v);
+				    else
+					v.writeu (*this);
+				}
+    template <typename T>
+    inline auto&		operator<< (const T& v) { write(v); return *this; }
 private:
     streampos			_sz;
 };

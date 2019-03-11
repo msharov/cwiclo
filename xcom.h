@@ -69,9 +69,9 @@ public:
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() == M_Open()) {
 	    auto is = msg.Read();
-	    auto eifaces = is.readv<const iid_t*>();
-	    auto fd = is.readv<fd_t>();
-	    auto side = is.readv<SocketSide>();
+	    auto eifaces = is.read<const iid_t*>();
+	    auto fd = is.read<fd_t>();
+	    auto side = is.read<SocketSide>();
 	    o->Extern_Open (fd, eifaces, side);
 	} else if (msg.Method() == M_Close())
 	    o->Extern_Close();
@@ -115,7 +115,7 @@ public:
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() != M_Connected())
 	    return false;
-	o->ExternR_Connected (msg.Read().readv<const ExternInfo*>());
+	o->ExternR_Connected (msg.Read().read<const ExternInfo*>());
 	return true;
     }
 
@@ -305,9 +305,9 @@ public:
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() == M_Open()) {
 	    auto is = msg.Read();
-	    auto eifaces = is.readv<const iid_t*>();
-	    auto fd = is.readv<fd_t>();
-	    auto closeWhenEmpty = is.readv<WhenEmpty>();
+	    auto eifaces = is.read<const iid_t*>();
+	    auto fd = is.read<fd_t>();
+	    auto closeWhenEmpty = is.read<WhenEmpty>();
 	    o->ExternServer_Open (fd, eifaces, closeWhenEmpty);
 	} else if (msg.Method() == M_Close())
 	    o->ExternServer_Close();

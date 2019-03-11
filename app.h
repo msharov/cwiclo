@@ -53,9 +53,9 @@ public:
 	if (msg.Method() != M_Watch())
 	    return false;
 	auto is = msg.Read();
-	auto cmd = is.readv<WatchCmd>();
-	auto fd = is.readv<fd_t>();
-	auto timer = is.readv<mstime_t>();
+	auto cmd = is.read<WatchCmd>();
+	auto fd = is.read<fd_t>();
+	auto timer = is.read<mstime_t>();
 	o->Timer_Watch (cmd, fd, timer);
 	return true;
     }
@@ -77,7 +77,7 @@ public:
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() != M_Timer())
 	    return false;
-	o->TimerR_Timer (msg.Read().readv<fd_t>());
+	o->TimerR_Timer (msg.Read().read<fd_t>());
 	return true;
     }
 };
@@ -95,7 +95,7 @@ public:
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() != M_Signal())
 	    return false;
-	o->Signal_Signal (msg.Read().readv<int>());
+	o->Signal_Signal (msg.Read().read<int>());
 	return true;
     }
 };

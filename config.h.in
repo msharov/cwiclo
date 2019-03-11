@@ -35,24 +35,25 @@
 #include <assert.h>
 
 // gcc attribute shortcuts
-#define PRINTFARGS(fmt,args)    __attribute__((__format__(__printf__,fmt,args)))
-#define CONST                   __attribute__((const))
-#define PURE                    __attribute__((pure))
-#define MALLOCLIKE              __attribute__((malloc))
-#define WEAKSYM			__attribute__((weak))
+#define CONST			__attribute__((const))
+#define FORMATARG(fmt)		__attribute__((format_arg(fmt)))
+#define INLINE			__attribute__((always_inline))
+#define MALLOCLIKE		__attribute__((malloc))
+#define NONNULL(...)		__attribute__((nonnull(__VA_ARGS__)))
+#define PRINTFARGS(fmt,args)	__attribute__((__format__(__printf__,fmt,args)))
+#define PURE			__attribute__((pure))
 #define WEAKALIAS(sym)		__attribute__((weak,alias(sym)))
-#define FORMATARG(fmt)          __attribute__((format_arg(fmt)))
-#define NONNULL(...)            __attribute__((nonnull(__VA_ARGS__)))
-#define likely(x)               __builtin_expect(!!(x), 1)
-#define unlikely(x)             __builtin_expect(!!(x), 0)
-#define compile_constant(x)     __builtin_constant_p(x)
+#define WEAKSYM			__attribute__((weak))
+#define compile_constant(x)	__builtin_constant_p(x)
+#define likely(x)		__builtin_expect(!!(x), 1)
+#define unlikely(x)		__builtin_expect(!!(x), 0)
 #if __clang__
     #define MALLOCLIKE_ARG(...)
 #else
     #define MALLOCLIKE_ARG(...)	__attribute__((alloc_size(__VA_ARGS__)))
 #endif
 #if defined(NDEBUG) && !defined(inline)
-    #define inline		__attribute__((always_inline)) inline
+    #define inline		INLINE inline
 #endif
 #if __i386__ || __x86_64__
     #define __x86__ 1

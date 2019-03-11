@@ -81,7 +81,7 @@ public:
     inline static bool Dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.Method() != M_Ping())
 	    return false;
-	o->PingR_Ping (msg.Read().readv<uint32_t>());
+	o->PingR_Ping (msg.Read().read<uint32_t>());
 	return true;
     }
 };

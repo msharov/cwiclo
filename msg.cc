@@ -183,7 +183,7 @@ static streamsize ValidateSigelement (istream& is, const char*& sig) noexcept
 	    sig = SkipOneSigelement (sig);
 	else {				// for strings, verify zero-termination
 	    is.unread (1);
-	    if (is.readv<char>())
+	    if (is.read<char>())
 		return 0;
 	}
 	if (!ValidateReadAlign (is, sz, elal))	// align the end of element block, if element alignment < 4
