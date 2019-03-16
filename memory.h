@@ -317,8 +317,8 @@ inline void destroy_n (I f, size_t n) noexcept
 template <typename II, typename OI>
 auto copy_n (II f, size_t n, OI r)
 {
-    using ivalue_type = remove_const_t<typename iterator_traits<II>::value_type>;
-    using ovalue_type = remove_const_t<typename iterator_traits<OI>::value_type>;
+    using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
     #if __x86__
 	if constexpr (compile_constant(n))
@@ -350,8 +350,8 @@ auto copy_n (II f, size_t n, OI r)
 template <typename II, typename OI>
 auto copy (II f, II l, OI r)
 {
-    using ivalue_type = remove_const_t<typename iterator_traits<II>::value_type>;
-    using ovalue_type = remove_const_t<typename iterator_traits<OI>::value_type>;
+    using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return copy_n (f, l-f, r);
     for (; f < l; ++r, ++f)
@@ -362,8 +362,8 @@ auto copy (II f, II l, OI r)
 template <typename II, typename OI>
 auto copy_backward_n (II f, size_t n, OI r)
 {
-    using ivalue_type = remove_const_t<typename iterator_traits<II>::value_type>;
-    using ovalue_type = remove_const_t<typename iterator_traits<OI>::value_type>;
+    using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
     #if __x86__
 	if constexpr (compile_constant(n))
@@ -394,8 +394,8 @@ auto copy_backward_n (II f, size_t n, OI r)
 template <typename II, typename OI>
 auto copy_backward (II f, II l, OI r)
 {
-    using ivalue_type = remove_const_t<typename iterator_traits<II>::value_type>;
-    using ovalue_type = remove_const_t<typename iterator_traits<OI>::value_type>;
+    using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return copy_backward_n (f, l-f, r);
     while (f < l)
@@ -406,8 +406,8 @@ auto copy_backward (II f, II l, OI r)
 template <typename I, typename T>
 auto fill_n (I f, size_t n, const T& v)
 {
-    using ivalue_type = remove_const_t<T>;
-    using ovalue_type = remove_const_t<typename iterator_traits<I>::value_type>;
+    using ivalue_type = make_unsigned_t<remove_const_t<T>>;
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
     constexpr bool canstos = is_trivial<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value;
     if constexpr (canstos && sizeof(ovalue_type) == 1)
 	{ __builtin_memset (f, bit_cast<uint8_t>(v), n); f += n; }
@@ -429,8 +429,8 @@ auto fill_n (I f, size_t n, const T& v)
 template <typename I, typename T>
 auto fill (I f, I l, const T& v)
 {
-    using ivalue_type = remove_const_t<T>;
-    using ovalue_type = remove_const_t<typename iterator_traits<I>::value_type>;
+    using ivalue_type = make_unsigned_t<remove_const_t<T>>;
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
     if constexpr (is_trivial<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return fill_n (f, l-f, v);
     for (; f < l; ++f)
@@ -649,6 +649,46 @@ auto binary_search (C& c, const T& v)
 template <typename C>
 void sort (C& c)
     { sort (begin(c), end(c)); }
+
+template <typename I1, typename I2>
+bool equal_n (I1 i1, size_t n, I2 i2)
+{
+    using value1_type = make_unsigned_t<remove_const_t<typename iterator_traits<I1>::value_type>>;
+    using value2_type = make_unsigned_t<remove_const_t<typename iterator_traits<I2>::value_type>>;
+    if constexpr (is_trivial<value1_type>::value && is_same<value1_type,value2_type>::value) {
+	#if __x86__ && __clang__
+	    bool r;
+	    __asm__("repz\tcmpsb\n\tsete\t%3":"+D"(i1),"+S"(i2),"+c"(n),"=r"(r)::"cc","memory");
+	    return r;
+	#elif __x86__
+	    bool e,l;
+	    __asm__("repz\tcmpsb":"+D"(i1),"+S"(i2),"+c"(n),"=@cce"(e),"=@ccl"(l)::"memory");
+	    return e;
+	#else
+	    return 0 == memcmp (i1, i2, n);
+	#endif
+    }
+    while (n--)
+	if (!(i1 == i2))
+	    return false;
+    return true;
+}
+
+template <typename I1, typename I2>
+bool equal_n (I1 i1, size_t n1, I2 i2, size_t n2)
+    { return n1 == n2 && equal_n (i1, n1, i2); }
+
+template <typename I1, typename I2>
+bool equal (I1 i1f, I1 i1l, I2 i2)
+    { return equal_n (i1f, i1l-i1f, i2); }
+template <typename I1, typename I2>
+bool equal (I1 i1f, I1 i1l, I2 i2f, I2 i2l)
+    { return equal_n (i1f, i1l-i1f, i2f, i2l-i2f); }
+
+template <typename C, typename I>
+bool equal (const C& c, I i)
+    { return equal_n (begin(c), size(c), i); }
+
 
 //}}}-------------------------------------------------------------------
 //{{{ zstri

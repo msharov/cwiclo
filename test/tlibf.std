@@ -66,6 +66,10 @@ min(3,4) = 3
 min(6u,1u) = 1
 max(-3,-6) = -3
 max(-3l,6l) = 6
+
+equal(abcd,abcd) = 1
+equal(abcd,acbd) = 0
+equal(,) = 1
 ######################################################################
 memlink{27}: abcdefghijklmnopqrstuvwzyz.
 memlink{27}: abcdefghijklmnopqrstuvwzyz.
@@ -123,6 +127,12 @@ Concatenated HelloWorld string.
 s1 < s2
 s1 == s1
 s1 == s4
+abcd == abcd
+abc != abcd
+abcc < abcd
+abce > abcd
+aaaa < abc
+abce > abc
 56789 == 56789
 &s1[7] =	89012345678901234567890
 initial:	123456789012345678901234567890

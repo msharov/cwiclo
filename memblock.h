@@ -55,7 +55,7 @@ public:
     inline constexpr auto	ciat (size_type i) const		{ assert (i <= size()); return cbegin() + i; }
     inline constexpr auto&	at (size_type i) const			{ assert (i < size()); return begin()[i]; }
     inline constexpr auto&	operator[] (size_type i) const		{ return at (i); }
-    inline bool			operator== (const cmemlink& v) const	{ return size() == v.size() && 0 == memcmp (data(), v.data(), size()); }
+    inline bool			operator== (const cmemlink& v) const	{ return equal (v, begin()); }
     inline bool			operator!= (const cmemlink& v) const	{ return !operator==(v); }
     inline void			link (pointer p, size_type n)		{ _data = p; _size = n; }
     inline void			link (const_pointer p, size_type n)	{ link (const_cast<pointer>(p), n); }
@@ -226,9 +226,7 @@ public:
     inline bool			operator== (const memblaz& v) const	{ return memblock::operator== (v); }
     inline bool			operator!= (const cmemlink& v) const	{ return v != *this; }
     inline bool			operator!= (const memblaz& v) const	{ return memblock::operator!= (v); }
-    inline			operator const cmemlink& (void) const	{ return *this; }
-    inline			operator const memlink& (void) const	{ return *this; }
-    inline			operator const memblock& (void) const	{ return *this; }
+    inline const memblock&	mb (void) const				{ return *this; }
     inline void			copy_link (void) noexcept		{ resize (size()); }
     void			allocate (size_type sz)	{ assert (!capacity()); memblock::resize(sz); }
     void			shrink (size_type sz)	{ assert (sz <= capacity()); memlink::resize(sz); }

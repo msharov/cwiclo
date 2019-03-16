@@ -165,7 +165,7 @@ public:
 				    _p += sizeof(T);
 				}
     template <typename T>
-    inline void			write (const T& v) __restrict__ {
+    inline void			write (const T& v) {
 				    if constexpr (is_trivial<T>::value)
 					writet (v);
 				    else

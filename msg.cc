@@ -12,7 +12,7 @@ namespace cwiclo {
 methodid_t LookupInterfaceMethod (iid_t iid, const char* __restrict__ mname, size_t mnamesz) noexcept
 {
     for (methodid_t __restrict__ mid = iid+iid[-1]; mid[0]; mid += mid[0])
-	if (uint8_t(mid[0]-2) == mnamesz && 0 == memcmp (mname, mid+2, mnamesz))
+	if (equal_n (mname, mnamesz, mid+2, mid[0]-2))
 	    return mid+2;
     return nullptr;
 }

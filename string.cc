@@ -67,11 +67,8 @@ int string::compare (const_iterator f1, const_iterator l1, const_iterator f2, co
 {
     assert (f1 <= l1 && (f2 <= l2 || !l2) && "Negative ranges result in memory allocation errors.");
     const auto len1 = l1-f1, len2 = l2-f2;
-    const auto rvbylen = sign (len1 - len2);
-    int8_t rv; auto n = min(len1,len2);
-    if (!(rv = memcmp (f1, f2, n)))
-	rv = rvbylen;
-    return rv;
+    auto rv = memcmp (f1, f2, min(len1,len2));
+    return rv ? rv : sign (len1 - len2);
 }
 
 bool string::operator== (const_pointer s) const noexcept

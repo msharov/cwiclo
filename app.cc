@@ -48,7 +48,7 @@ App::~App (void) noexcept
 iid_t App::InterfaceByName (const char* iname, streamsize inamesz) noexcept // static
 {
     for (auto mii = s_MsgerImpls; mii->iface; ++mii)
-	if (InterfaceNameSize(mii->iface) == inamesz && 0 == memcmp (mii->iface, iname, inamesz))
+	if (equal_n (iname, inamesz, mii->iface, InterfaceNameSize(mii->iface)))
 	    return mii->iface;
     return nullptr;
 }

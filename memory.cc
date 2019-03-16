@@ -190,7 +190,7 @@ int sd_listen_fd_by_name (const char* name) noexcept
 	const char *ee = strchr(na,':');
 	if (!ee)
 	    ee = na+strlen(na);
-	if (size_t(ee-na) == namelen && 0 == memcmp (na, name, namelen))
+	if (equal_n (name, namelen, na, ee-na))
 	    return fdi < sd_listen_fds() ? SD_LISTEN_FDS_START+fdi : -1;
 	if (!*ee)
 	    break;

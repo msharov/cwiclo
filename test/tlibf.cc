@@ -116,6 +116,10 @@ static void TestUtility (void)
     printf ("min(6u,1u) = %d\n", min(6u,1u));
     printf ("max(-3,-6) = %d\n", max(-3,-6));
     printf ("max(-3l,6l) = %ld\n", max(-3l,6l));
+
+    printf ("\nequal(abcd,abcd) = %u\n", equal("abcd","abcd"));
+    printf ("equal(abcd,acbd) = %u\n", equal("abcd","acbd"));
+    printf ("equal(,) = %u\n", equal("",""));
 }
 //}}}
 //{{{ TestML
@@ -139,8 +143,8 @@ void LibTestApp::TestML (void) // static
     a.static_link (str);
     if (a.begin() + 5 != &str[5])
 	printf ("begin() + 5 failed on memlink\n");
-    if (0 != memcmp (a.begin(), ArrayBlock(str)))
-	printf ("memcmp failed on memlink\n");
+    if (!equal (str, a.begin()))
+	printf ("memlinks are not equal\n");
     WriteML (a);
     memlink cb;
     cb.link (ArrayBlock(str));
@@ -188,8 +192,8 @@ void LibTestApp::TestMB (void) // static
 	printf ("begin() failed on memblock\n");
     if (a.begin() + 5 != &strTest[5])
 	printf ("begin() + 5 failed on memblock\n");
-    if (0 != memcmp (a.begin(), strTest, strTestLen))
-	printf ("memcmp failed on memblock\n");
+    if (!equal (a, strTest))
+	printf ("compare failed on memblock\n");
     WriteMB (a);
     b.link (cstrTest, strTestLen);
     if (b.data() != cstrTest)
@@ -397,6 +401,19 @@ void LibTestApp::TestString (void) // static
     string_view s4 (s1);
     if (s1 == s4)
 	puts ("s1 == s4");
+
+    if (string_view("abcd") == "abcd")
+	puts ("abcd == abcd");
+    if (string_view("abc") != "abcd")
+	puts ("abc != abcd");
+    if (string_view("abcc") < "abcd")
+	puts ("abcc < abcd");
+    if (string_view("abce") > "abcd")
+	puts ("abce > abcd");
+    if (string_view("aaaa") < "abc")
+	puts ("aaaa < abc");
+    if (string_view("abce") > "abc")
+	puts ("abce > abc");
 
     s1 = c_TestString1;
     string s5 (s1.begin() + 4, s1.begin() + 4 + 5);
