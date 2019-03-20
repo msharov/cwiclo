@@ -571,7 +571,7 @@ void LibTestApp::TestStreams (void) // static
 
     memblock b;
     b.resize (ss.size());
-    fill (b.begin(), b.end(), 0xcd);
+    fill (b, '\xcd');
     ostream os (b);
 
     os << c;

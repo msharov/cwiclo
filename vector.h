@@ -76,7 +76,7 @@ public:
     inline void			assign (const vector& v)	{ assign (v.begin(), v.end()); }
     inline void			assign (vector&& v)		{ swap (v); }
     inline void			assign (const_iterator i1, const_iterator i2) noexcept;
-    inline void			assign (size_type n,const T& v)		{ resize (n); fill (begin(), end(), v); }
+    inline void			assign (size_type n, const T& v)	{ resize (n); fill_n (begin(), n, v); }
     inline void			assign (initlist_t v)			{ assign (v.begin(), v.end()); }
     inline auto			insert (const_iterator ip)		{ return construct_at (insert_hole (ip, 1)); }
     inline auto			insert (const_iterator ip, const T& v)	{ return emplace (ip, v); }

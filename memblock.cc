@@ -223,7 +223,7 @@ void memblaz::shrink_to_fit (void) noexcept
 {
     memblaz r;
     r.manage (reinterpret_cast<pointer>(_realloc (nullptr, size())), size());
-    copy_n (data(), size(), r.data());
+    copy (*this, r.data());
     swap (move(r));
 }
 

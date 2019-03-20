@@ -359,6 +359,10 @@ auto copy (II f, II l, OI r)
     return r;
 }
 
+template <typename C, typename OI>
+auto copy (const C& c, OI r)
+    { return copy_n (begin(c), size(c), r); }
+
 template <typename II, typename OI>
 auto copy_backward_n (II f, size_t n, OI r)
 {
@@ -403,6 +407,10 @@ auto copy_backward (II f, II l, OI r)
     return r;
 }
 
+template <typename C, typename OI>
+auto copy_backward (const C& c, OI r)
+    { return copy_backward_n (begin(c), size(c), r); }
+
 template <typename I, typename T>
 auto fill_n (I f, size_t n, const T& v)
 {
@@ -438,6 +446,10 @@ auto fill (I f, I l, const T& v)
     return f;
 }
 
+template <typename C, typename T>
+auto fill (C& c, const T& v)
+    { return fill_n (begin(c), size(c), v); }
+
 template <typename I>
 auto shift_left (I f, I l, size_t n)
 {
@@ -446,6 +458,10 @@ auto shift_left (I f, I l, size_t n)
     return copy_n (m, l-m, f);
 }
 
+template <typename C, typename T>
+auto shift_left (C& c, size_t n)
+    { return shift_left (begin(c), end(c), n); }
+
 template <typename I>
 auto shift_right (I f, I l, size_t n)
 {
@@ -453,6 +469,10 @@ auto shift_right (I f, I l, size_t n)
     assert (m >= f && m <= l);
     return copy_backward_n (f, l-m, m);
 }
+
+template <typename C, typename T>
+auto shift_right (C& c, size_t n)
+    { return shift_right (begin(c), end(c), n); }
 
 extern "C" void brotate (void* vf, void* vm, void* vl) noexcept;
 
@@ -688,7 +708,6 @@ bool equal (I1 i1f, I1 i1l, I2 i2f, I2 i2l)
 template <typename C, typename I>
 bool equal (const C& c, I i)
     { return equal_n (begin(c), size(c), i); }
-
 
 //}}}-------------------------------------------------------------------
 //{{{ zstri
