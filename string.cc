@@ -10,7 +10,7 @@ namespace cwiclo {
 
 int string::insertv (const_iterator cip, const char* fmt, va_list args) noexcept
 {
-    auto ip = const_cast<iterator>(cip);
+    auto ip = p2i (cip);
     const char c = (ip < end() ? *ip : 0);
     for (int wcap = 0;;) {
 	va_list args2;
@@ -83,7 +83,7 @@ string::iterator string::replace (const_iterator f, const_iterator l, size_type 
 	f = memblock::insert (f, dsz);
     else
 	f = memblock::erase (f, -dsz);
-    auto iwp = const_cast<pointer>(f);
+    auto iwp = p2i (f);
     memset (iwp, c, n);
     return iwp;
 }

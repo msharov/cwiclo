@@ -58,6 +58,8 @@ public:
     constexpr auto		iat (size_type i)		{ assert (i <= size()); return begin() + i; }
     constexpr auto		iat (size_type i) const		{ assert (i <= size()); return begin() + i; }
     constexpr auto		ciat (size_type i) const	{ assert (i <= size()); return cbegin() + i; }
+    constexpr auto		p2i (const_pointer p)		{ assert (begin() <= p && end() >= p); return begin() + (p - data()); }
+    constexpr auto		p2i (const_pointer p) const	{ assert (begin() <= p && end() >= p); return begin() + (p - data()); }
     constexpr auto		iback (void)			{ return iterator(_data.end()-sizeof(T)); }
     constexpr auto		iback (void) const		{ return const_iterator(_data.end()-sizeof(T)); }
     inline auto&		at (size_type i)		{ assert (i < size()); return begin()[i]; }
@@ -257,7 +259,7 @@ auto vector<T>::insert (const_iterator ip, const_iterator i1, const_iterator i2)
 template <typename T>
 auto vector<T>::erase (const_iterator cep, size_type n) noexcept
 {
-    auto ep = const_cast<iterator>(cep);
+    auto ep = p2i (cep);
     destroy_n (ep, n);
     return iterator (_data.erase (memblock::iterator(ep), n * sizeof(T)));
 }

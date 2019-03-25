@@ -80,7 +80,7 @@ int cmemlink::write_file_atomic (const char* filename) const noexcept
 auto memlink::insert (const_iterator ii, size_type n) noexcept -> iterator
 {
     assert (data() || !n);
-    auto istart = const_cast<iterator>(ii);
+    auto istart = p2i (ii);
     shift_right (istart, end(), n);
     return istart;
 }
@@ -88,7 +88,7 @@ auto memlink::insert (const_iterator ii, size_type n) noexcept -> iterator
 auto memlink::erase (const_iterator ie, size_type n) noexcept -> iterator
 {
     assert (data() || !n);
-    auto istart = const_cast<iterator>(ie);
+    auto istart = p2i (ie);
     shift_left (istart, end(), n);
     return istart;
 }

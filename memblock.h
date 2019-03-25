@@ -54,6 +54,7 @@ public:
     inline constexpr auto	iat (size_type i) const			{ assert (i <= size()); return begin() + i; }
     inline constexpr auto	ciat (size_type i) const		{ assert (i <= size()); return cbegin() + i; }
     inline constexpr auto&	at (size_type i) const			{ assert (i < size()); return begin()[i]; }
+    inline constexpr auto	p2i (const_pointer p) const		{ assert (begin() <= p && end() >= p); return begin() + (p - data()); }
     inline constexpr auto&	operator[] (size_type i) const		{ return at (i); }
     inline bool			operator== (const cmemlink& v) const	{ return equal (v, begin()); }
     inline bool			operator!= (const cmemlink& v) const	{ return !operator==(v); }
@@ -114,6 +115,7 @@ public:
 				using cmemlink::iat;
     inline constexpr auto	iat (size_type i)			{ assert (i <= size()); return begin() + i; }
 				using cmemlink::at;
+    inline constexpr auto	p2i (const_pointer p)			{ assert (begin() <= p && end() >= p); return begin() + (p - data()); }
     inline auto&		at (size_type i)			{ assert (i < size()); return begin()[i]; }
     inline auto&		operator= (const memlink& v)		{ cmemlink::operator=(v); return *this; }
     inline auto&		operator= (memlink&& v)			{ cmemlink::operator=(move(v)); return *this; }
