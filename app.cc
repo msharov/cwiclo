@@ -268,8 +268,7 @@ void App::ProcessInputQueue (void) noexcept
 	// Dump the message if tracing
 	if (DEBUG_MSG_TRACE) {
 	    DEBUG_PRINTF ("Msg: %hu -> %hu.%s.%s [%u] = {""{{\n", msg.Src(), msg.Dest(), msg.Interface(), msg.Method(), msg.Size());
-	    auto msgbody = msg.Read();
-	    hexdump (msgbody.ptr<char>(), msgbody.remaining());
+	    hexdump (msg.Read());
 	    DEBUG_PRINTF ("}""}}\n");
 	}
 

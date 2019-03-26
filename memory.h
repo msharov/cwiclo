@@ -252,6 +252,14 @@ extern "C" void print_backtrace (void) noexcept;
 extern "C" void hexdump (const void* vp, size_t n) noexcept;
 #endif
 
+template <typename C>
+void hexdump (const C& c)
+{
+    auto ii = begin(c);
+    using value_type = typename iterator_traits<decltype(ii)>::value_type;
+    hexdump (ii, sizeof(value_type)*size(c));
+}
+
 //}}}-------------------------------------------------------------------
 //{{{ construct and destroy
 

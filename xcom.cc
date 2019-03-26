@@ -357,9 +357,10 @@ methodid_t Extern::ExtMsg::ParseMethod (void) const noexcept
 void Extern::ExtMsg::DebugDump (void) const noexcept
 {
     if (DEBUG_MSG_TRACE) {
-	DEBUG_PRINTF ("[X] Message for extid %u of size %u completed:\n", _h.extid, _h.sz);
+	DEBUG_PRINTF ("[X] Incoming message for extid %u of size %u = {{{\n", _h.extid, _h.sz);
 	hexdump (HeaderPtr(), _h.hsz);
-	hexdump (_body.data(), _body.size());
+	hexdump (_body);
+	DEBUG_PRINTF ("}}}\n");
     }
 }
 
