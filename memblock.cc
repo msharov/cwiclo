@@ -117,7 +117,7 @@ void memblock::reserve (size_type cap) noexcept
 	return;
     auto newcap = next_capacity (cap);
     auto oldBlock (capacity() ? data() : nullptr);
-    auto newBlock = reinterpret_cast<pointer> (_realloc (oldBlock, newcap));
+    auto newBlock = static_cast<pointer> (_realloc (oldBlock, newcap));
     if (!oldBlock && data())
 	copy_n (data(), min (newcap, size() + zero_terminated()), newBlock);
     link (newBlock, size());
@@ -234,7 +234,7 @@ void memblaz::reserve (size_type cap) noexcept
 void memblaz::shrink_to_fit (void) noexcept
 {
     memblaz r;
-    r.manage (reinterpret_cast<pointer>(_realloc (nullptr, size())), size());
+    r.manage (static_cast<pointer>(_realloc (nullptr, size())), size());
     copy (*this, r.data());
     swap (move(r));
 }

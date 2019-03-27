@@ -123,7 +123,7 @@ extern "C" void print_backtrace (void) noexcept
 #ifndef UC_VERSION
 extern "C" void hexdump (const void* vp, size_t n) noexcept
 {
-    auto p = reinterpret_cast<const uint8_t*>(vp);
+    auto p = static_cast<const uint8_t*>(vp);
     for (auto i = 0u; i < n; i += 16) {
 	for (auto j = 0u; j < 16; ++j) {
 	    if (i+j < n)

@@ -984,7 +984,7 @@ void ExternServer::ExternServer_Open (int fd, const iid_t* eifaces, PExternServe
 	return ErrorLibc ("fcntl(SETFL(O_NONBLOCK))");
     _sockfd = fd;
     _eifaces = eifaces;
-    SetFlag (f_CloseWhenEmpty, static_cast<bool>(closeWhenEmpty));
+    SetFlag (f_CloseWhenEmpty, bool(closeWhenEmpty));
     TimerR_Timer (_sockfd);
 }
 

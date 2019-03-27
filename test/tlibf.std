@@ -206,3 +206,4 @@ float:   0.12345678
 double:  0.123456789123457
 short:   0x1234
 u_short: 0x1234
+hello:   Hello world!

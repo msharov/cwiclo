@@ -289,7 +289,7 @@ auto uninitialized_default_construct (I f, I l)
 {
     if constexpr (is_trivially_constructible<typename iterator_traits<I>::value_type>::value) {
 	if (f < l)
-	    memset (reinterpret_cast<void*>(f), 0, (l-f)*sizeof(*f));
+	    memset (static_cast<void*>(f), 0, (l-f)*sizeof(*f));
     } else for (; f < l; ++f)
 	construct_at (f);
     return f;
@@ -310,7 +310,7 @@ void destroy (I f [[maybe_unused]], I l [[maybe_unused]]) noexcept
     }
 #ifndef NDEBUG
     else if (f < l)
-	memset (reinterpret_cast<void*>(f), 0xcd, (l-f)*sizeof(*f));
+	memset (static_cast<void*>(f), 0xcd, (l-f)*sizeof(*f));
 #endif
 }
 

@@ -25,7 +25,7 @@ public:
     using iterator		= pointer;
 public:
     inline constexpr		cmemlink (const_pointer p, size_type n, bool z = false)	: _data(const_cast<pointer>(p)), _size(n), _capz(z) {}
-    inline			cmemlink (const void* p, size_type n)	: cmemlink (reinterpret_cast<const_pointer>(p), n) {}
+    inline			cmemlink (const void* p, size_type n)	: cmemlink (static_cast<const_pointer>(p), n) {}
 #if __SSE2__ && NDEBUG		// turn off _sblk union member for debugging
     inline constexpr		cmemlink (void)				: _sblk (simd16_t::zero()) {}
     inline constexpr		cmemlink (const cmemlink& v)		: _sblk (v._sblk) {}
@@ -103,7 +103,7 @@ class memlink : public cmemlink {
 public:
     inline constexpr		memlink (void)				: cmemlink() {}
     inline constexpr		memlink (pointer p, size_type n, bool z = false)	: cmemlink (p,n,z) {}
-    inline			memlink (void* p, size_type n)		: memlink (reinterpret_cast<pointer>(p), n) {}
+    inline			memlink (void* p, size_type n)		: memlink (static_cast<pointer>(p), n) {}
     inline constexpr		memlink (const memlink& v)		: cmemlink(v) {}
     inline constexpr		memlink (memlink&& v)			: cmemlink(move(v)) {}
 				using cmemlink::data;
@@ -139,7 +139,7 @@ public:
     inline constexpr		memblock (void)				: memlink() {}
     inline explicit		memblock (size_type sz) noexcept	: memblock() { resize (sz); }
     inline			memblock (const_pointer p, size_type n, bool z = false)	: memlink(p,n,z) { resize(n); }
-    inline			memblock (const void* p, size_type n)	: memblock(reinterpret_cast<const_pointer>(p),n) {}
+    inline			memblock (const void* p, size_type n)	: memblock(static_cast<const_pointer>(p),n) {}
     inline			memblock (const cmemlink& v)		: memlink(v) { copy_link(); }
     inline			memblock (const memblock& v)		: memlink(v) { copy_link(); }
     inline constexpr		memblock (memlink&& v)			: memlink(move(v)) {}

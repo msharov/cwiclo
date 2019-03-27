@@ -30,7 +30,7 @@ public:
 public:
     inline constexpr		istream (const_pointer p, const_pointer e)	: _p(p),_e(e) {}
     inline constexpr		istream (const_pointer p, streamsize sz)	: istream(p,p+sz) {}
-    inline			istream (const void* p, streamsize sz)	: istream(reinterpret_cast<const_pointer>(p),sz) {}
+    inline			istream (const void* p, streamsize sz)	: istream(static_cast<const_pointer>(p),sz) {}
     inline constexpr		istream (const cmemlink& m)		: istream(m.data(),m.size()) {}
     inline constexpr		istream (const memblaz& m)		: istream(m.data(),m.size()) {}
     inline constexpr		istream (const istream& is) = default;
@@ -128,7 +128,7 @@ public:
 public:
     inline constexpr		ostream (pointer p, const_pointer e)	: _p(p),_e(e) {}
     inline constexpr		ostream (pointer p, streamsize sz)	: ostream(p,p+sz) {}
-    inline			ostream (void* p, streamsize sz)	: ostream(reinterpret_cast<pointer>(p),sz) {}
+    inline			ostream (void* p, streamsize sz)	: ostream(static_cast<pointer>(p),sz) {}
     inline constexpr		ostream (memlink& m)			: ostream(m.data(),m.size()) {}
     inline constexpr		ostream (memblaz& m)			: ostream(m.data(),m.size()) {}
     inline constexpr		ostream (const ostream& os) = default;
