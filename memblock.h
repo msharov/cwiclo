@@ -141,6 +141,7 @@ public:
     inline			memblock (const_pointer p, size_type n, bool z = false)	: memlink(p,n,z) { resize(n); }
     inline			memblock (const void* p, size_type n)	: memblock(reinterpret_cast<const_pointer>(p),n) {}
     inline			memblock (const cmemlink& v)		: memlink(v) { copy_link(); }
+    inline			memblock (const memblock& v)		: memlink(v) { copy_link(); }
     inline constexpr		memblock (memlink&& v)			: memlink(move(v)) {}
     inline constexpr		memblock (memblock&& v)			: memlink(move(v)) {}
     inline			~memblock (void) noexcept		{ deallocate(); }
@@ -156,11 +157,17 @@ public:
     inline void			clear (void)				{ resize(0); }
     inline void			copy_link (void) noexcept		{ resize (size()); }
     iterator			insert (const_iterator start, size_type n) noexcept;
-    auto			insert (const_iterator ip, const_pointer s, size_type n)
-				    { auto ipw = insert (ip,n); copy_n (s, n, ipw); return ipw; }
+    iterator			insert (const_iterator ip, const_pointer s, size_type n) noexcept;
+    auto			insert (const_iterator ip, const cmemlink& b)
+				    { return insert (ip, b.data(), b.size()); }
     void		   	append (const_pointer s, size_type n)	{ insert (end(), s, n); }
+    void		   	append (const cmemlink& b)		{ insert (end(), b); }
+    inline auto&		operator+= (const cmemlink& b)		{ append (b); return *this; }
+    auto			operator+ (const cmemlink& b) const	{ memblock r (*this); r += b; return r; }
     iterator			erase (const_iterator start, size_type n) noexcept;
     iterator			replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn) noexcept;
+    auto			replace (const_iterator ip, size_type ipn, const cmemlink& b)
+				    { return replace (ip, ipn, b.data(), b.size()); }
     void			shrink_to_fit (void) noexcept;
     void			deallocate (void) noexcept;
     void			read (istream& is, size_type elsize = sizeof(value_type)) noexcept;
@@ -190,6 +197,7 @@ public:
     using memblock::begin;
     using memblock::end;
     using memblock::iat;
+    using memblock::p2i;
     using memblock::max_size;
     using memblock::empty;
     using memblock::at;
@@ -213,7 +221,7 @@ public:
     inline constexpr		memblaz (memlink&& v)			: memblock (move(v)) {}
     inline constexpr		memblaz (memblock&& v)			: memblock (move(v)) {}
     inline constexpr		memblaz (memblaz&& v)			: memblock (move(v)) {}
-				~memblaz (void) noexcept		{ wipe(); }
+				~memblaz (void) noexcept;
     void			assign (const_pointer p, size_type n) noexcept;
     inline void			assign (const cmemlink& v) noexcept	{ assign (v.data(), v.size()); }
     inline void			assign (const memblaz& v) noexcept	{ assign (v.data(), v.size()); }
@@ -232,14 +240,27 @@ public:
     inline void			copy_link (void) noexcept		{ resize (size()); }
     void			allocate (size_type sz)	{ assert (!capacity()); memblock::resize(sz); }
     void			shrink (size_type sz)	{ assert (sz <= capacity()); memlink::resize(sz); }
-    void			wipe (void)		{ fill_n (data(), capacity(), value_type(0)); }
+    inline void			wipe (void)		{ fill_n (data(), capacity(), value_type(0)); }
     void			reserve (size_type sz) noexcept;
     void			resize (size_type sz) noexcept;
     iterator			insert (const_iterator start, size_type n) noexcept;
-    auto			insert (const_iterator ip, const_pointer s, size_type n)
-				    { auto ipw = insert (ip,n); copy_n (s, n, ipw); return ipw; }
+    iterator			insert (const_iterator ip, const_pointer s, size_type n) noexcept;
+    auto			insert (const_iterator ip, const cmemlink& b)
+				    { return insert (ip, b.data(), b.size()); }
+    auto			insert (const_iterator ip, const memblaz& b)
+				    { return insert (ip, b.data(), b.size()); }
     void		   	append (const_pointer s, size_type n)	{ insert (end(), s, n); }
+    void		   	append (const cmemlink& b)		{ insert (end(), b); }
+    void		   	append (const memblaz& b)		{ insert (end(), b); }
+    inline auto&		operator+= (const cmemlink& b)		{ append (b); return *this; }
+    inline auto&		operator+= (const memblaz& b)		{ append (b); return *this; }
+    auto			operator+ (const cmemlink& b) const	{ memblaz r (*this); r += b; return r; }
+    auto			operator+ (const memblaz& b) const	{ memblaz r (*this); r += b; return r; }
     iterator			replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn) noexcept;
+    auto			replace (const_iterator ip, size_type ipn, const cmemlink& b)
+				    { return replace (ip, ipn, b.data(), b.size()); }
+    auto			replace (const_iterator ip, size_type ipn, const memblaz& b)
+				    { return replace (ip, ipn, b.data(), b.size()); }
     void			shrink_to_fit (void) noexcept;
     void			deallocate (void) noexcept;
     void			read (istream& is, size_type elsize = sizeof(value_type)) noexcept;

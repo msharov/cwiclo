@@ -162,6 +162,13 @@ auto memblock::insert (const_iterator start, size_type n) noexcept -> iterator
     return memlink::insert (iat(ip), n);
 }
 
+auto memblock::insert (const_iterator ip, const_pointer s, size_type n) noexcept -> iterator
+{
+    auto ipw = insert (ip,n);
+    copy_n (s, n, ipw);
+    return ipw;
+}
+
 /// Shifts the data in the linked block from \p start + \p n to \p start.
 auto memblock::erase (const_iterator start, size_type n) noexcept -> iterator
 {
@@ -209,6 +216,11 @@ int memblock::read_file (const char* filename) noexcept
 
 //----------------------------------------------------------------------
 
+memblaz::~memblaz (void) noexcept
+{
+    wipe();
+}
+
 void memblaz::reserve (size_type cap) noexcept
 {
     if (cap <= capacity())
@@ -251,6 +263,13 @@ auto memblaz::insert (const_iterator start, size_type n) noexcept -> iterator
     assert (ip <= size());
     resize (size() + n);
     return memlink::insert (iat(ip), n);
+}
+
+auto memblaz::insert (const_iterator ip, const_pointer s, size_type n) noexcept -> iterator
+{
+    auto ipw = insert (ip,n);
+    copy_n (s, n, ipw);
+    return ipw;
 }
 
 memblaz::iterator memblaz::replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn) noexcept

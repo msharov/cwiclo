@@ -31,13 +31,11 @@ public:
     int			insertf (const_iterator ip, const char* fmt, ...) noexcept PRINTFARGS(3,4);
 			using memblock::append;
     inline void	   	append (const_pointer s)			{ append (s, strlen(s)); }
-    inline void		append (const string& s)			{ append (s.begin(), s.size()); }
     inline void		append (const_iterator i1, const_iterator i2)	{ assert (i1<=i2); append (i1, i2-i1); }
     int			appendv (const char* fmt, va_list args) noexcept;
     int			appendf (const char* fmt, ...) noexcept PRINTFARGS(2,3);
 			using memblock::assign;
     inline void	    	assign (const_pointer s)			{ assign (s, strlen(s)); }
-    inline void		assign (const string& s)			{ assign (s.begin(), s.size()); }
     inline void		assign (const_iterator i1, const_iterator i2)	{ assert (i1<=i2); assign (i1, i2-i1); }
     int			assignv (const char* fmt, va_list args) noexcept;
     int			assignf (const char* fmt, ...) noexcept PRINTFARGS(2,3);
@@ -55,7 +53,7 @@ public:
     inline auto&	operator+= (const string& s)			{ append (s); return *this; }
     inline auto&	operator+= (const_pointer s)			{ append (s); return *this; }
     inline auto&	operator+= (const_reference c)			{ push_back (c); return *this; }
-    inline auto		operator+ (const string& s) const		{ auto result (*this); result += s; return result; }
+    inline auto		operator+ (const string& s) const		{ auto r (*this); r += s; return r; }
     inline bool		operator== (const string& s) const		{ return memblock::operator== (s); }
     bool		operator== (const_pointer s) const noexcept;
     inline bool		operator== (const_reference c) const		{ return size() == 1 && c == at(0); }
