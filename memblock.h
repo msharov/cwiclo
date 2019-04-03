@@ -249,9 +249,10 @@ public:
 				    { return insert (ip, b.data(), b.size()); }
     auto			insert (const_iterator ip, const memblaz& b)
 				    { return insert (ip, b.data(), b.size()); }
-    void		   	append (const_pointer s, size_type n)	{ insert (end(), s, n); }
-    void		   	append (const cmemlink& b)		{ insert (end(), b); }
-    void		   	append (const memblaz& b)		{ insert (end(), b); }
+    auto		   	append (size_type n)			{ return insert (end(), n); }
+    auto		   	append (const_pointer s, size_type n)	{ return insert (end(), s, n); }
+    auto		   	append (const cmemlink& b)		{ return insert (end(), b); }
+    auto		   	append (const memblaz& b)		{ return insert (end(), b); }
     inline auto&		operator+= (const cmemlink& b)		{ append (b); return *this; }
     inline auto&		operator+= (const memblaz& b)		{ append (b); return *this; }
     auto			operator+ (const cmemlink& b) const	{ memblaz r (*this); r += b; return r; }

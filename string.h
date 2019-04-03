@@ -30,8 +30,8 @@ public:
     int			insertv (const_iterator ip, const char* fmt, va_list args) noexcept;
     int			insertf (const_iterator ip, const char* fmt, ...) noexcept PRINTFARGS(3,4);
 			using memblock::append;
-    inline void	   	append (const_pointer s)			{ append (s, strlen(s)); }
-    inline void		append (const_iterator i1, const_iterator i2)	{ assert (i1<=i2); append (i1, i2-i1); }
+    inline auto	   	append (const_pointer s)			{ return append (s, strlen(s)); }
+    inline auto		append (const_iterator i1, const_iterator i2)	{ assert (i1<=i2); return append (i1, i2-i1); }
     int			appendv (const char* fmt, va_list args) noexcept;
     int			appendf (const char* fmt, ...) noexcept PRINTFARGS(2,3);
 			using memblock::assign;
