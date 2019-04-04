@@ -141,7 +141,8 @@ public:
     template <typename T = char>
     inline auto			ptr (void) __restrict__			{ return reinterpret_cast<T*>(begin()); }
     inline void			seek (pointer p) __restrict__		{ assert (p <= end()); _p = p; }
-    inline void			skip (streamsize sz) __restrict__	{ seek (fill_n (begin(), sz, 0)); }
+    inline void			skip (streamsize sz) __restrict__	{ seek (begin()+sz); }
+    inline void			zero (streamsize sz) __restrict__	{ seek (fill_n (begin(), sz, 0)); }
     inline void			align (streamsize g) __restrict__ {
 				    pointer __restrict__ p = begin();
 				    while (uintptr_t(p) % g) {
@@ -221,6 +222,7 @@ public:
     inline constexpr auto	size (void) const	{ return _sz; }
     inline constexpr streamsize	remaining (void) const	{ return numeric_limits<size_type>::max(); }
     inline void			skip (streamsize sz)	{ _sz += sz; }
+    inline void			zero (streamsize sz)	{ _sz += sz; }
     inline void			align (streamsize g)	{ _sz = Align (_sz, g); }
     inline constexpr streamsize	alignsz (streamsize g) const	{ return Align(_sz,g) - _sz; }
     inline constexpr bool	can_align (streamsize) const	{ return true; }
@@ -306,8 +308,20 @@ private:
     const streamsize	_n;
 };
 
+/// Stream functor to allow inline zero() calls.
+class zero {
+public:
+    constexpr explicit 	zero (streamsize n)		: _n(n) {}
+    inline void		read (istream& is) const	{ is.skip (_n); }
+    inline void		write (ostream& os) const	{ os.zero (_n); }
+    inline void		write (sstream& ss) const	{ ss.zero (_n); }
+private:
+    const streamsize	_n;
+};
+
 inline static auto& operator>> (istream& is, const align& v) { v.read (is); return is; }
 inline static auto& operator>> (istream& is, const skip& v) { v.read (is); return is; }
+inline static auto& operator>> (istream& is, const zero& v) { v.read (is); return is; }
 
 } // namespace ios
 } // namespace cwiclo
