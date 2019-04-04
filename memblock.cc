@@ -41,7 +41,7 @@ void cmemlink::write (ostream& os, size_type elsize) const noexcept
 
 int cmemlink::write_file (const char* filename) const noexcept
 {
-    int fd = open (filename, O_WRONLY| O_TRUNC| O_CREAT| O_CLOEXEC);
+    int fd = open (filename, O_WRONLY| O_TRUNC| O_CREAT| O_CLOEXEC, S_IRWXU);
     if (fd < 0)
 	return -1;
     int r = complete_write (fd, data(), size());
