@@ -636,12 +636,7 @@ void LibTestApp::TestStreams (void) // static
 
     if (isatty (STDIN_FILENO)) {
 	printf ("\nBinary dump:\n");
-	for (auto bi = 0u; bi < b.size(); ++bi) {
-	    if (bi && !(bi % 8))
-		putchar ('\n');
-	    printf ("%02hhx ", (unsigned char) b[bi]);
-	}
-	putchar ('\n');
+	hexdump (b);
     }
 }
 //}}}-------------------------------------------------------------------
