@@ -32,6 +32,9 @@ ${LIBA}:	${OBJS}
 $O%.o:	%.cc
 	@echo "    Compiling $< ..."
 	@${CXX} ${CXXFLAGS} -MMD -MT "$(<:.cc=.s) $@" -o $@ -c $<
+ifndef DEBUG
+	@strip -d -R .eh_frame $@
+endif
 
 %.s:	%.cc
 	@echo "    Compiling $< to assembly ..."
