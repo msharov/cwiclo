@@ -210,10 +210,10 @@ template <typename T>
 [[nodiscard]] inline constexpr auto Round (T n, remove_reference_t<T> grain)
     { return Floor<T> (n + MultBySign<T> (grain/2, n), grain); }
 template <typename T>
-[[nodiscard]] inline constexpr auto DivRU (T n1, remove_reference_t<T> n2)
+[[nodiscard]] inline constexpr T DivRU (T n1, remove_reference_t<T> n2)
     { return (n1 + MultBySign<T> (n2-1, n1)) / n2; }
 template <typename T>
-[[nodiscard]] inline constexpr auto DivRound (T n1, remove_reference_t<T> n2)
+[[nodiscard]] inline constexpr T DivRound (T n1, remove_reference_t<T> n2)
     { return (n1 + MultBySign<T> (n2/2, n1)) / n2; }
 template <typename T>
 [[nodiscard]] inline constexpr make_unsigned_t<T> Square (T n)
