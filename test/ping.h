@@ -1,7 +1,7 @@
 // This file is part of the cwiclo project
 //
 // Copyright (c) 2018 by Mike Sharov <msharov@users.sourceforge.net>
-// This file is free software, distributed under the MIT License.
+// This file is free software, distributed under the ISC License.
 
 // You would normally include cwiclo.h this way
 //#include <cwiclo.h>
