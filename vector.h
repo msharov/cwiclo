@@ -23,7 +23,7 @@ public:
     using difference_type	= memblock::difference_type;
     using initlist_t		= std::initializer_list<value_type>;
 public:
-    constexpr			vector (void)			: _data() { }
+    inline constexpr		vector (void)			: _data() { }
     inline explicit		vector (size_type n)		: _data() { uninitialized_default_construct_n (insert_hole(begin(),n), n); }
     inline			vector (size_type n, const T& v): _data() { uninitialized_fill_n (insert_hole(begin(),n), n, v); }
     inline			vector (const vector& v)	: _data() { uninitialized_copy_n (v.begin(), v.size(), iterator(_data.insert(_data.begin(),v.bsize()))); }
@@ -31,7 +31,7 @@ public:
     template <size_type N>
     inline			vector (const T (&a)[N])	: vector (VectorRange(a)) {}
     inline			vector (initlist_t v) noexcept;
-    constexpr			vector (vector&& v)		: _data (move(v._data)) {}
+    inline constexpr		vector (vector&& v)		: _data (move(v._data)) {}
     inline			~vector (void) noexcept		{ if (!is_linked()) destroy (begin(), end()); }
     inline auto&		operator= (const vector& v)	{ assign (v); return *this; }
     inline auto&		operator= (vector&& v)		{ assign (move(v)); return *this; }
@@ -46,7 +46,7 @@ public:
     constexpr size_type		size (void) const		{ return _data.size() / sizeof(T);	}
     constexpr auto		bsize (void) const		{ return _data.size();			}
     constexpr size_type		max_size (void) const		{ return _data.max_size() / sizeof(T);	}
-    [[nodiscard]] constexpr bool	empty (void) const	{ return _data.empty();			}
+    [[nodiscard]]constexpr bool	empty (void) const		{ return _data.empty();			}
     constexpr auto		data (void)			{ return pointer (_data.data());	}
     constexpr auto		data (void) const		{ return const_pointer (_data.data());	}
     constexpr auto		begin (void)			{ return iterator (_data.begin());	}
@@ -71,8 +71,8 @@ public:
     constexpr auto&		front (void) const		{ assert (!empty()); return at(0); }
     constexpr auto&		back (void)			{ assert (!empty()); return *iback(); }
     constexpr auto&		back (void) const		{ assert (!empty()); return *iback(); }
-    constexpr void		clear (void)			{ if (!is_linked()) destroy (begin(), end()); _data.clear(); }
-    constexpr void		swap (vector&& v)		{ _data.swap (move(v._data)); }
+    inline constexpr void	clear (void)			{ if (!is_linked()) destroy (begin(), end()); _data.clear(); }
+    inline constexpr void	swap (vector&& v)		{ _data.swap (move(v._data)); }
     inline void			deallocate (void) noexcept	{ assert (!is_linked()); destroy (begin(), end()); _data.deallocate(); }
     inline void			shrink_to_fit (void) noexcept	{ _data.shrink_to_fit(); }
     inline void			assign (const vector& v)	{ assign (v.begin(), v.end()); }
@@ -104,12 +104,12 @@ public:
     inline auto			append (initlist_t v)			{ return append (v.begin(), v.end()); }
     inline void			pop_back (void)				{ auto ns = _data.size() - sizeof(T); auto b = iback(); _data.memlink::resize (ns); destroy_at (b); }
     inline void			manage (pointer p, size_type n)		{ _data.manage (p, n * sizeof(T)); }
-    constexpr bool		is_linked (void) const			{ return !_data.capacity(); }
-    constexpr void		unlink (void)				{ _data.unlink(); }
+    inline constexpr bool	is_linked (void) const			{ return !_data.capacity(); }
+    inline constexpr void	unlink (void)				{ _data.unlink(); }
     inline void			copy_link (void) noexcept;
-    constexpr void		link (pointer p, size_type n)		{ _data.link (memblock::pointer(p), n*sizeof(T)); }
-    constexpr void		link (const vector& v)			{ _data.link (v); }
-    constexpr void		link (pointer f, pointer l)		{ link (f, l-f); }
+    inline constexpr void	link (pointer p, size_type n)		{ _data.link (memblock::pointer(p), n*sizeof(T)); }
+    inline constexpr void	link (const vector& v)			{ _data.link (v); }
+    inline constexpr void	link (pointer f, pointer l)		{ link (f, l-f); }
     void			read (istream& is) noexcept {
 				    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
 					return _data.read (is, sizeof(T));

@@ -31,7 +31,7 @@ public:
     template <size_type N>
     inline		multiset (const T (&a)[N])	: vecbase(a) { sort(*this); }
     inline		multiset (initlist_t v)		: vecbase(v) { sort(*this); }
-    constexpr		multiset (multiset&& v)		: vecbase(move(v)) {}
+    inline constexpr	multiset (multiset&& v)		: vecbase(move(v)) {}
     inline		multiset (const_iterator i1, const_iterator i2)	: vecbase(i1,i2) { sort(*this); }
     inline void		assign (const_iterator i1, const_iterator i2)	{ vecbase::assign(i1,i2); sort(*this); }
     inline void		assign (const multiset& v)	{ vecbase::assign(v); }

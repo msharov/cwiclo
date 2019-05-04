@@ -12,11 +12,11 @@ class string_view;
 
 class string : public memblock {
 public:
-    constexpr		string (void)					: memblock() { set_zero_terminated(); }
+    inline constexpr	string (void)					: memblock() { set_zero_terminated(); }
     inline		string (const_pointer s, size_type len)		: memblock (s,len,true) {}
     inline		string (const_pointer s1, const_pointer s2)	: string (s1,s2-s1) {}
     inline		string (const_pointer s)			: memblock (s, __builtin_strlen(s), true) {}
-    constexpr		string (string&& s)				: memblock (move(s)) {}
+    inline constexpr	string (string&& s)				: memblock (move(s)) {}
     inline		string (const string& s)			: string (s.data(), s.size()) {}
     constexpr auto	c_str (void) const				{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
     constexpr auto&	back (void) const				{ return at(size()-1); }
@@ -46,7 +46,7 @@ public:
     auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
     auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
     auto		compare (const_reference c) const		{ return compare (begin(), end(), &c, &c+1); }
-    constexpr void	swap (string&& s)				{ memblock::swap (move(s)); }
+    inline constexpr void	swap (string&& s)			{ memblock::swap (move(s)); }
     inline auto&	operator= (const string& s)			{ assign (s); return *this; }
     inline auto&	operator= (const_pointer s)			{ assign (s); return *this; }
     inline auto&	operator= (const_reference c)			{ resize (1); back() = c; return *this; }
@@ -75,8 +75,8 @@ public:
     inline		operator const string_view& (void) const	{ return reinterpret_cast<const string_view&>(*this); }
     inline auto		erase (const_iterator ep, size_type n = 1)	{ return memblock::erase (ep, n); }
     inline auto		erase (const_iterator f, const_iterator l)	{ assert (f<=l); return erase (f, l-f); }
-    constexpr void	pop_back (void)					{ assert (capacity() && "modifying a const linked string"); assert (size() && "pop_back called on empty string"); memlink::resize (size()-1); *end() = 0; }
-    constexpr void	clear (void)					{ memlink::resize (0); auto e = end(); if (e) { assert (capacity() && "modifying a const linked string"); *e = 0; }}
+    inline constexpr void	pop_back (void)				{ assert (capacity() && "modifying a const linked string"); assert (size() && "pop_back called on empty string"); memlink::resize (size()-1); *end() = 0; }
+    inline constexpr void	clear (void)				{ memlink::resize (0); auto e = end(); if (e) { assert (capacity() && "modifying a const linked string"); *e = 0; }}
 
     inline auto		replace (const_iterator f, const_iterator l, const_pointer s, size_type slen)	{ return memblock::replace (f, l-f, s, slen); }
     inline auto		replace (const_iterator f, const_iterator l, const_pointer s)			{ return replace (f, l, s, strlen(s)); }
@@ -127,28 +127,28 @@ public:
 
 class string_view : public cmemlink {
 public:
-    constexpr		string_view (void)				: cmemlink () { set_zero_terminated(); }
-    constexpr		string_view (const_pointer s, size_type len)	: cmemlink (s, len, true) {}
-    constexpr		string_view (const_pointer s1, const_pointer s2): string_view (s1, s2-s1) {}
-    constexpr		string_view (const_pointer s)			: string_view (s, __builtin_strlen(s)) {}
-    constexpr		string_view (string_view&& s)			: cmemlink (move(s)) {}
-    constexpr		string_view (const string_view& s)		: cmemlink (s) {}
-    constexpr		string_view (const string& s)			: cmemlink (s) {}
-    constexpr void	swap (string_view&& s)				{ cmemlink::swap (move(s)); }
-    constexpr auto&	operator= (const string& s)			{ cmemlink::operator= (s); return *this; }
-    constexpr auto&	operator= (string_view&& s)			{ cmemlink::operator= (move(s)); return *this; }
+    inline constexpr		string_view (void)			: cmemlink () { set_zero_terminated(); }
+    inline constexpr		string_view (const_pointer s, size_type len)	: cmemlink (s, len, true) {}
+    inline constexpr		string_view (const_pointer s1, const_pointer s2): string_view (s1, s2-s1) {}
+    inline constexpr		string_view (const_pointer s)		: string_view (s, __builtin_strlen(s)) {}
+    inline constexpr		string_view (string_view&& s)		: cmemlink (move(s)) {}
+    inline constexpr		string_view (const string_view& s)	: cmemlink (s) {}
+    inline constexpr		string_view (const string& s)		: cmemlink (s) {}
+    inline constexpr void	swap (string_view&& s)			{ cmemlink::swap (move(s)); }
+    inline constexpr auto&	operator= (const string& s)		{ cmemlink::operator= (s); return *this; }
+    inline constexpr auto&	operator= (string_view&& s)		{ cmemlink::operator= (move(s)); return *this; }
 
-    constexpr auto&	str (void) const				{ return reinterpret_cast<const string&>(*this); }
-    constexpr		operator const string& (void) const		{ return str(); }
+    inline constexpr auto&	str (void) const			{ return reinterpret_cast<const string&>(*this); }
+    inline constexpr		operator const string& (void) const	{ return str(); }
 
-    constexpr auto	c_str (void) const				{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
-    constexpr auto&	back (void) const				{ return at(size()-1); }
+    inline constexpr auto	c_str (void) const			{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
+    inline constexpr auto&	back (void) const			{ return at(size()-1); }
 
     inline static int	compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2)
 									{ return string::compare (f1,l1,f2,l2); }
-    auto		compare (const string_view& s) const		{ return compare (begin(), end(), s.begin(), s.end()); }
-    auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
-    auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
+    inline auto		compare (const string_view& s) const		{ return compare (begin(), end(), s.begin(), s.end()); }
+    inline auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
+    inline auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
 
     inline bool		operator== (const string& s) const		{ return str() == s; }
     inline bool		operator== (const_pointer s) const		{ return str() == s; }

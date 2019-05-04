@@ -111,7 +111,7 @@ move(T&& v) noexcept { return static_cast<remove_reference_t<T>&&>(v); }
 /// Assigns the contents of a to b and the contents of b to a.
 /// This is used as a primitive operation by many other algorithms.
 template <typename T>
-constexpr void swap (T& a, T& b)
+inline constexpr void swap (T& a, T& b)
     { auto t = move(a); a = move(b); b = move(t); }
 
 template <typename T, size_t N>
@@ -122,7 +122,7 @@ constexpr void swap (T (&a)[N], T (&b)[N])
 }
 
 template <typename T, typename U = T>
-constexpr auto exchange (T& o, U&& nv)
+inline constexpr auto exchange (T& o, U&& nv)
 {
     auto ov = move(o);
     o = forward<T>(nv);
@@ -130,7 +130,7 @@ constexpr auto exchange (T& o, U&& nv)
 }
 
 template <typename I>
-constexpr void iter_swap (I a, I b)
+inline constexpr void iter_swap (I a, I b)
     { swap (*a, *b); }
 
 //}}}-------------------------------------------------------------------
@@ -195,31 +195,31 @@ public:
     using pointer		= element_type*;
     using reference		= element_type&;
 public:
-    constexpr		unique_ptr (void)		: _p (nullptr) {}
-    constexpr explicit	unique_ptr (pointer p)		: _p (p) {}
-    constexpr		unique_ptr (unique_ptr&& p)	: _p (p.release()) {}
-    inline		~unique_ptr (void)		{ delete _p; }
-    constexpr auto	get (void) const		{ return _p; }
-    constexpr auto	release (void)			{ return exchange (_p, nullptr); }
-    constexpr void	reset (pointer p = nullptr)	{ assert (p != _p || !p); delete exchange (_p, p); }
-    constexpr void	swap (unique_ptr&& v)		{ ::cwiclo::swap (_p, v._p); }
-    constexpr explicit	operator bool (void) const	{ return _p != nullptr; }
-    constexpr auto&	operator= (pointer p)		{ reset (p); return *this; }
-    constexpr auto&	operator= (unique_ptr&& p)	{ reset (p.release()); return *this; }
-    constexpr auto&	operator* (void) const		{ return *get(); }
-    constexpr auto	operator-> (void) const		{ return get(); }
-    constexpr bool	operator== (const pointer p) const	{ return _p == p; }
-    constexpr bool	operator== (const unique_ptr& p) const	{ return _p == p._p; }
-    constexpr bool	operator!= (const pointer p) const	{ return _p != p; }
-    constexpr bool	operator!= (const unique_ptr& p) const	{ return _p != p._p; }
-    constexpr bool	operator< (const pointer p) const	{ return _p < p; }
-    constexpr bool	operator< (const unique_ptr& p) const	{ return _p < p._p; }
-    constexpr bool	operator<= (const pointer p) const	{ return _p <= p; }
-    constexpr bool	operator<= (const unique_ptr& p) const	{ return _p <= p._p; }
-    constexpr bool	operator> (const pointer p) const	{ return _p > p; }
-    constexpr bool	operator> (const unique_ptr& p) const	{ return _p > p._p; }
-    constexpr bool	operator>= (const pointer p) const	{ return _p >= p; }
-    constexpr bool	operator>= (const unique_ptr& p) const	{ return _p >= p._p; }
+    inline constexpr		unique_ptr (void)		: _p (nullptr) {}
+    inline constexpr explicit	unique_ptr (pointer p)		: _p (p) {}
+    inline constexpr		unique_ptr (unique_ptr&& p)	: _p (p.release()) {}
+    inline			~unique_ptr (void)		{ delete _p; }
+    inline constexpr auto	get (void) const		{ return _p; }
+    inline constexpr auto	release (void)			{ return exchange (_p, nullptr); }
+    inline constexpr void	reset (pointer p = nullptr)	{ assert (p != _p || !p); delete exchange (_p, p); }
+    inline constexpr void	swap (unique_ptr&& v)		{ ::cwiclo::swap (_p, v._p); }
+    inline constexpr explicit	operator bool (void) const	{ return _p != nullptr; }
+    inline constexpr auto&	operator= (pointer p)		{ reset (p); return *this; }
+    inline constexpr auto&	operator= (unique_ptr&& p)	{ reset (p.release()); return *this; }
+    inline constexpr auto&	operator* (void) const		{ return *get(); }
+    inline constexpr auto	operator-> (void) const		{ return get(); }
+    inline constexpr bool	operator== (const pointer p) const	{ return _p == p; }
+    inline constexpr bool	operator== (const unique_ptr& p) const	{ return _p == p._p; }
+    inline constexpr bool	operator!= (const pointer p) const	{ return _p != p; }
+    inline constexpr bool	operator!= (const unique_ptr& p) const	{ return _p != p._p; }
+    inline constexpr bool	operator< (const pointer p) const	{ return _p < p; }
+    inline constexpr bool	operator< (const unique_ptr& p) const	{ return _p < p._p; }
+    inline constexpr bool	operator<= (const pointer p) const	{ return _p <= p; }
+    inline constexpr bool	operator<= (const unique_ptr& p) const	{ return _p <= p._p; }
+    inline constexpr bool	operator> (const pointer p) const	{ return _p > p; }
+    inline constexpr bool	operator> (const unique_ptr& p) const	{ return _p > p._p; }
+    inline constexpr bool	operator>= (const pointer p) const	{ return _p >= p; }
+    inline constexpr bool	operator>= (const unique_ptr& p) const	{ return _p >= p._p; }
 private:
     pointer			_p;
 };
@@ -265,17 +265,17 @@ inline void hexdump (const C& c)
 
 /// Calls the placement new on \p p.
 template <typename T>
-constexpr auto construct_at (T* p)
+inline constexpr auto construct_at (T* p)
     { return new (p) T; }
 
 /// Calls the placement new on \p p.
 template <typename T>
-constexpr auto construct_at (T* p, const T& value)
+inline constexpr auto construct_at (T* p, const T& value)
     { return new (p) T (value); }
 
 /// Calls the placement new on \p p with \p args.
 template <typename T, typename... Args>
-constexpr auto construct_at (T* p, Args&&... args)
+inline constexpr auto construct_at (T* p, Args&&... args)
     { return new (p) T (forward<Args>(args)...); }
 
 /// Calls the destructor of \p p without calling delete.
@@ -654,28 +654,28 @@ constexpr void sort (I f, I l)
 }
 
 template <typename C, typename T>
-constexpr auto find (C& c, const T& v)
+inline constexpr auto find (C& c, const T& v)
     { return find (begin(c), end(c), v); }
 template <typename C, typename P>
-constexpr auto find_if (C& c, P p)
+inline constexpr auto find_if (C& c, P p)
     { return find_if (begin(c), end(c), move(p)); }
 template <typename C, typename T>
-constexpr auto linear_search (C& c, const T& v)
+inline constexpr auto linear_search (C& c, const T& v)
     { return linear_search (begin(c), end(c), v); }
 template <typename C, typename P>
-constexpr auto linear_search_if (C& c, P p)
+inline constexpr auto linear_search_if (C& c, P p)
     { return linear_search_if (begin(c), end(c), move(p)); }
 template <typename C, typename T>
-constexpr auto lower_bound (C& c, const T& v)
+inline constexpr auto lower_bound (C& c, const T& v)
     { return lower_bound (begin(c), end(c), v); }
 template <typename C, typename T>
-constexpr auto upper_bound (C& c, const T& v)
+inline constexpr auto upper_bound (C& c, const T& v)
     { return upper_bound (begin(c), end(c), v); }
 template <typename C, typename T>
-constexpr auto binary_search (C& c, const T& v)
+inline constexpr auto binary_search (C& c, const T& v)
     { return binary_search (begin(c), end(c), v); }
 template <typename C>
-constexpr void sort (C& c)
+inline constexpr void sort (C& c)
     { sort (begin(c), end(c)); }
 
 template <typename I1, typename I2>
@@ -703,18 +703,18 @@ bool equal_n (I1 i1, size_t n, I2 i2)
 }
 
 template <typename I1, typename I2>
-bool equal_n (I1 i1, size_t n1, I2 i2, size_t n2)
+inline bool equal_n (I1 i1, size_t n1, I2 i2, size_t n2)
     { return n1 == n2 && equal_n (i1, n1, i2); }
 
 template <typename I1, typename I2>
-bool equal (I1 i1f, I1 i1l, I2 i2)
+inline bool equal (I1 i1f, I1 i1l, I2 i2)
     { return equal_n (i1f, i1l-i1f, i2); }
 template <typename I1, typename I2>
-bool equal (I1 i1f, I1 i1l, I2 i2f, I2 i2l)
+inline bool equal (I1 i1f, I1 i1l, I2 i2f, I2 i2l)
     { return equal_n (i1f, i1l-i1f, i2f, i2l-i2f); }
 
 template <typename C, typename I>
-bool equal (const C& c, I i)
+inline bool equal (const C& c, I i)
     { return equal_n (begin(c), size(c), i); }
 
 //}}}-------------------------------------------------------------------
