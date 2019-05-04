@@ -35,15 +35,15 @@ using iid_t = const char*;
 using methodid_t = const char*;
 
 // Methods are preceded by indexes to interface and next method
-inline static constexpr auto MethodInterfaceOffset (methodid_t mid)
+static constexpr auto MethodInterfaceOffset (methodid_t mid)
     { return uint8_t(mid[-1]); }
-inline static constexpr auto MethodNextOffset (methodid_t mid)
+static constexpr auto MethodNextOffset (methodid_t mid)
     { return uint8_t(mid[-2]); }
 
 // Interface name and methods are packed together for easy lookup
-inline static constexpr iid_t InterfaceOfMethod (methodid_t __restrict__ mid)
+static constexpr iid_t InterfaceOfMethod (methodid_t __restrict__ mid)
     { return mid-MethodInterfaceOffset(mid); }
-inline static constexpr auto InterfaceNameSize (iid_t iid)
+static constexpr auto InterfaceNameSize (iid_t iid)
     { return uint8_t(iid[-1]); }
 
 // Signatures immediately follow the method in the pack
@@ -56,7 +56,7 @@ methodid_t LookupInterfaceMethod (iid_t iid, const char* __restrict__ mname, siz
 class Msger;
 
 // Helpers for efficiently unmarshalling string_views
-inline auto string_view_from_const_stream (const istream& is)
+constexpr auto string_view_from_const_stream (const istream& is)
 {
     auto ssz = *is.ptr<uint32_t>();
     auto scp = is.ptr<char>()+sizeof(ssz)-!ssz;
@@ -65,7 +65,7 @@ inline auto string_view_from_const_stream (const istream& is)
     return string_view (scp, ssz);
 }
 
-inline auto string_view_from_stream (istream& is)
+constexpr auto string_view_from_stream (istream& is)
 {
     auto ssz = is.read<uint32_t>();
     auto scp = is.ptr<char>()-!ssz;
@@ -142,7 +142,7 @@ public:
     struct Alignment {
 	static constexpr streamsize Header = 8;
 	static constexpr streamsize Body = Header;
-	static constexpr streamsize Fd = alignof(int);
+	static constexpr streamsize Fd = alignof(fd_t);
     };
 public:
 			Msg (const Link& l, methodid_t mid, streamsize size, fdoffset_t fdo = NoFdIncluded) noexcept;
@@ -277,7 +277,7 @@ protected:
     explicit constexpr	Msger (mrid_t id)		:_link{id,id},_flags(BitMask(f_Static)) {}
 			Msger (const Msger&) = delete;
     void		operator= (const Msger&) = delete;
-    void		SetFlag (unsigned f, bool v = true)	{ SetBit(_flags,f,v); }
+    constexpr void	SetFlag (unsigned f, bool v = true)	{ SetBit(_flags,f,v); }
 private:
     Msg::Link		_link;
     uint32_t		_flags;

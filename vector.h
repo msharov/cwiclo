@@ -62,17 +62,17 @@ public:
     constexpr auto		p2i (const_pointer p) const	{ assert (begin() <= p && end() >= p); return begin() + (p - data()); }
     constexpr auto		iback (void)			{ return iterator(_data.end()-sizeof(T)); }
     constexpr auto		iback (void) const		{ return const_iterator(_data.end()-sizeof(T)); }
-    inline auto&		at (size_type i)		{ assert (i < size()); return begin()[i]; }
+    constexpr auto&		at (size_type i)		{ assert (i < size()); return begin()[i]; }
     constexpr auto&		at (size_type i) const		{ assert (i < size()); return begin()[i]; }
     constexpr auto&		cat (size_type i) const		{ assert (i < size()); return cbegin()[i]; }
-    inline auto&		operator[] (size_type i)	{ return at (i); }
+    constexpr auto&		operator[] (size_type i)	{ return at (i); }
     constexpr auto&		operator[] (size_type i) const	{ return at (i); }
-    inline auto&		front (void)			{ assert (!empty()); return at(0); }
+    constexpr auto&		front (void)			{ assert (!empty()); return at(0); }
     constexpr auto&		front (void) const		{ assert (!empty()); return at(0); }
-    inline auto&		back (void)			{ assert (!empty()); return *iback(); }
+    constexpr auto&		back (void)			{ assert (!empty()); return *iback(); }
     constexpr auto&		back (void) const		{ assert (!empty()); return *iback(); }
-    inline void			clear (void)			{ if (!is_linked()) destroy (begin(), end()); _data.clear(); }
-    inline void			swap (vector&& v)		{ _data.swap (move(v._data)); }
+    constexpr void		clear (void)			{ if (!is_linked()) destroy (begin(), end()); _data.clear(); }
+    constexpr void		swap (vector&& v)		{ _data.swap (move(v._data)); }
     inline void			deallocate (void) noexcept	{ assert (!is_linked()); destroy (begin(), end()); _data.deallocate(); }
     inline void			shrink_to_fit (void) noexcept	{ _data.shrink_to_fit(); }
     inline void			assign (const vector& v)	{ assign (v.begin(), v.end()); }
@@ -105,11 +105,11 @@ public:
     inline void			pop_back (void)				{ auto ns = _data.size() - sizeof(T); auto b = iback(); _data.memlink::resize (ns); destroy_at (b); }
     inline void			manage (pointer p, size_type n)		{ _data.manage (p, n * sizeof(T)); }
     constexpr bool		is_linked (void) const			{ return !_data.capacity(); }
-    inline void			unlink (void)				{ _data.unlink(); }
+    constexpr void		unlink (void)				{ _data.unlink(); }
     inline void			copy_link (void) noexcept;
-    inline void			link (pointer p, size_type n)		{ _data.link (memblock::pointer(p), n*sizeof(T)); }
-    inline void			link (const vector& v)			{ _data.link (v); }
-    inline void			link (pointer f, pointer l)		{ link (f, l-f); }
+    constexpr void		link (pointer p, size_type n)		{ _data.link (memblock::pointer(p), n*sizeof(T)); }
+    constexpr void		link (const vector& v)			{ _data.link (v); }
+    constexpr void		link (pointer f, pointer l)		{ link (f, l-f); }
     void			read (istream& is) noexcept {
 				    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
 					return _data.read (is, sizeof(T));

@@ -22,16 +22,16 @@ public:
 private:
     // This object can only be constructed by the compiler when the
     // {1,2,3} syntax is used, so the constructor must be private
-    inline constexpr		initializer_list (const_iterator p, size_type sz) noexcept : _data(p), _size(sz) {}
+    constexpr		initializer_list (const_iterator p, size_type sz) noexcept : _data(p), _size(sz) {}
 public:
-    inline constexpr		initializer_list (void)noexcept	: _data(nullptr), _size(0) {}
-    inline constexpr auto	size (void) const noexcept	{ return _size; }
-    inline constexpr auto	begin (void) const noexcept	{ return _data; }
-    inline constexpr auto	end (void) const noexcept	{ return begin()+size(); }
-    inline constexpr auto&	operator[] (size_type i) const	{ return begin()[i]; }
+    constexpr		initializer_list (void)noexcept	: _data(nullptr), _size(0) {}
+    constexpr auto	size (void) const noexcept	{ return _size; }
+    constexpr auto	begin (void) const noexcept	{ return _data; }
+    constexpr auto	end (void) const noexcept	{ return begin()+size(); }
+    constexpr auto&	operator[] (size_type i) const	{ return begin()[i]; }
 private:
-    iterator			_data;
-    size_type			_size;
+    iterator		_data;
+    size_type		_size;
 };
 
 } // namespace std
@@ -56,12 +56,12 @@ inline void  operator delete (void* p, size_t) noexcept	{ free(p); }
 inline void  operator delete[] (void* p, size_t) noexcept { free(p); }
 
 // Default placement versions of operator new.
-[[nodiscard]] inline void* operator new (size_t, void* p)	{ return p; }
-[[nodiscard]] inline void* operator new[] (size_t, void* p)	{ return p; }
+[[nodiscard]] constexpr void* operator new (size_t, void* p)	{ return p; }
+[[nodiscard]] constexpr void* operator new[] (size_t, void* p)	{ return p; }
 
 // Default placement versions of operator delete.
-inline void  operator delete  (void*, void*)	{ }
-inline void  operator delete[](void*, void*)	{ }
+constexpr void  operator delete  (void*, void*)	{ }
+constexpr void  operator delete[](void*, void*)	{ }
 
 //}}}-------------------------------------------------------------------
 //{{{ Additional C++ ABI support
@@ -111,18 +111,18 @@ move(T&& v) noexcept { return static_cast<remove_reference_t<T>&&>(v); }
 /// Assigns the contents of a to b and the contents of b to a.
 /// This is used as a primitive operation by many other algorithms.
 template <typename T>
-inline void swap (T& a, T& b)
+constexpr void swap (T& a, T& b)
     { auto t = move(a); a = move(b); b = move(t); }
 
 template <typename T, size_t N>
-inline void swap (T (&a)[N], T (&b)[N])
+constexpr void swap (T (&a)[N], T (&b)[N])
 {
     for (size_t i = 0; i < N; ++i)
 	swap (a[i], b[i]);
 }
 
 template <typename T, typename U = T>
-inline constexpr auto exchange (T& o, U&& nv)
+constexpr auto exchange (T& o, U&& nv)
 {
     auto ov = move(o);
     o = forward<T>(nv);
@@ -130,7 +130,7 @@ inline constexpr auto exchange (T& o, U&& nv)
 }
 
 template <typename I>
-inline void iter_swap (I a, I b)
+constexpr void iter_swap (I a, I b)
     { swap (*a, *b); }
 
 //}}}-------------------------------------------------------------------
@@ -195,31 +195,31 @@ public:
     using pointer		= element_type*;
     using reference		= element_type&;
 public:
-    inline constexpr		unique_ptr (void)		: _p (nullptr) {}
-    inline constexpr explicit	unique_ptr (pointer p)		: _p (p) {}
-    inline constexpr		unique_ptr (unique_ptr&& p)	: _p (p.release()) {}
-    inline			~unique_ptr (void)		{ delete _p; }
-    inline constexpr auto	get (void) const		{ return _p; }
-    inline constexpr auto	release (void)			{ return exchange (_p, nullptr); }
-    inline void			reset (pointer p = nullptr)	{ assert (p != _p || !p); delete exchange (_p, p); }
-    inline void			swap (unique_ptr&& v)		{ ::cwiclo::swap (_p, v._p); }
-    inline constexpr explicit	operator bool (void) const	{ return _p != nullptr; }
-    inline auto&		operator= (pointer p)		{ reset (p); return *this; }
-    inline auto&		operator= (unique_ptr&& p)	{ reset (p.release()); return *this; }
-    inline constexpr auto&	operator* (void) const		{ return *get(); }
-    inline constexpr auto	operator-> (void) const		{ return get(); }
-    inline constexpr bool	operator== (const pointer p) const	{ return _p == p; }
-    inline constexpr bool	operator== (const unique_ptr& p) const	{ return _p == p._p; }
-    inline constexpr bool	operator!= (const pointer p) const	{ return _p != p; }
-    inline constexpr bool	operator!= (const unique_ptr& p) const	{ return _p != p._p; }
-    inline constexpr bool	operator< (const pointer p) const	{ return _p < p; }
-    inline constexpr bool	operator< (const unique_ptr& p) const	{ return _p < p._p; }
-    inline constexpr bool	operator<= (const pointer p) const	{ return _p <= p; }
-    inline constexpr bool	operator<= (const unique_ptr& p) const	{ return _p <= p._p; }
-    inline constexpr bool	operator> (const pointer p) const	{ return _p > p; }
-    inline constexpr bool	operator> (const unique_ptr& p) const	{ return _p > p._p; }
-    inline constexpr bool	operator>= (const pointer p) const	{ return _p >= p; }
-    inline constexpr bool	operator>= (const unique_ptr& p) const	{ return _p >= p._p; }
+    constexpr		unique_ptr (void)		: _p (nullptr) {}
+    constexpr explicit	unique_ptr (pointer p)		: _p (p) {}
+    constexpr		unique_ptr (unique_ptr&& p)	: _p (p.release()) {}
+    inline		~unique_ptr (void)		{ delete _p; }
+    constexpr auto	get (void) const		{ return _p; }
+    constexpr auto	release (void)			{ return exchange (_p, nullptr); }
+    constexpr void	reset (pointer p = nullptr)	{ assert (p != _p || !p); delete exchange (_p, p); }
+    constexpr void	swap (unique_ptr&& v)		{ ::cwiclo::swap (_p, v._p); }
+    constexpr explicit	operator bool (void) const	{ return _p != nullptr; }
+    constexpr auto&	operator= (pointer p)		{ reset (p); return *this; }
+    constexpr auto&	operator= (unique_ptr&& p)	{ reset (p.release()); return *this; }
+    constexpr auto&	operator* (void) const		{ return *get(); }
+    constexpr auto	operator-> (void) const		{ return get(); }
+    constexpr bool	operator== (const pointer p) const	{ return _p == p; }
+    constexpr bool	operator== (const unique_ptr& p) const	{ return _p == p._p; }
+    constexpr bool	operator!= (const pointer p) const	{ return _p != p; }
+    constexpr bool	operator!= (const unique_ptr& p) const	{ return _p != p._p; }
+    constexpr bool	operator< (const pointer p) const	{ return _p < p; }
+    constexpr bool	operator< (const unique_ptr& p) const	{ return _p < p._p; }
+    constexpr bool	operator<= (const pointer p) const	{ return _p <= p; }
+    constexpr bool	operator<= (const unique_ptr& p) const	{ return _p <= p._p; }
+    constexpr bool	operator> (const pointer p) const	{ return _p > p; }
+    constexpr bool	operator> (const unique_ptr& p) const	{ return _p > p._p; }
+    constexpr bool	operator>= (const pointer p) const	{ return _p >= p; }
+    constexpr bool	operator>= (const unique_ptr& p) const	{ return _p >= p._p; }
 private:
     pointer			_p;
 };
@@ -233,9 +233,9 @@ inline auto make_unique (Args&&... args) { return unique_ptr<T> (new T (forward<
 template <typename F>
 class scope_exit {
 public:
-    inline explicit	scope_exit (F&& f) noexcept		: _f(move(f)),_enabled(true) {}
-    inline		scope_exit (scope_exit&& f) noexcept	: _f(move(f._f)),_enabled(f._enabled) { f.release(); }
-    inline void		release (void) noexcept			{ _enabled = false; }
+    constexpr explicit	scope_exit (F&& f) noexcept		: _f(move(f)),_enabled(true) {}
+    constexpr		scope_exit (scope_exit&& f) noexcept	: _f(move(f._f)),_enabled(f._enabled) { f.release(); }
+    constexpr void	release (void) noexcept			{ _enabled = false; }
     inline		~scope_exit (void) noexcept (noexcept (declval<F>()))	{ if (_enabled) _f(); }
     scope_exit&		operator= (scope_exit&&) = delete;
 private:
@@ -244,7 +244,7 @@ private:
 };
 
 template <typename F>
-auto make_scope_exit (F&& f) noexcept
+constexpr auto make_scope_exit (F&& f) noexcept
     { return scope_exit<remove_reference_t<F>>(forward<F>(f)); }
 
 extern "C" void print_backtrace (void) noexcept;
@@ -253,7 +253,7 @@ extern "C" void hexdump (const void* vp, size_t n) noexcept;
 #endif
 
 template <typename C>
-void hexdump (const C& c)
+inline void hexdump (const C& c)
 {
     auto ii = begin(c);
     using value_type = typename iterator_traits<decltype(ii)>::value_type;
@@ -265,17 +265,17 @@ void hexdump (const C& c)
 
 /// Calls the placement new on \p p.
 template <typename T>
-inline auto construct_at (T* p)
+constexpr auto construct_at (T* p)
     { return new (p) T; }
 
 /// Calls the placement new on \p p.
 template <typename T>
-inline auto construct_at (T* p, const T& value)
+constexpr auto construct_at (T* p, const T& value)
     { return new (p) T (value); }
 
 /// Calls the placement new on \p p with \p args.
 template <typename T, typename... Args>
-inline auto construct_at (T* p, Args&&... args)
+constexpr auto construct_at (T* p, Args&&... args)
     { return new (p) T (forward<Args>(args)...); }
 
 /// Calls the destructor of \p p without calling delete.
@@ -285,11 +285,11 @@ inline void destroy_at (T* p) noexcept
 
 /// Calls the placement new on \p p.
 template <typename I>
-auto uninitialized_default_construct (I f, I l)
+constexpr auto uninitialized_default_construct (I f, I l)
 {
     if constexpr (is_trivially_constructible<typename iterator_traits<I>::value_type>::value) {
 	if (f < l)
-	    memset (static_cast<void*>(f), 0, (l-f)*sizeof(*f));
+	    __builtin_memset (static_cast<void*>(f), 0, (l-f)*sizeof(*f));
     } else for (; f < l; ++f)
 	construct_at (f);
     return f;
@@ -297,7 +297,7 @@ auto uninitialized_default_construct (I f, I l)
 
 /// Calls the placement new on \p p.
 template <typename I>
-auto uninitialized_default_construct_n (I f, size_t n)
+constexpr auto uninitialized_default_construct_n (I f, size_t n)
     { return uninitialized_default_construct (f, f+n); }
 
 /// Calls the destructor on elements in range [f, l) without calling delete.
@@ -380,7 +380,7 @@ auto copy_backward_n (II f, size_t n, OI r)
     #if __x86__
 	if constexpr (compile_constant(n))
     #endif
-	    memmove (&*r, &*f, n*sizeof(ovalue_type));
+	    __builtin_memmove (&*r, &*f, n*sizeof(ovalue_type));
     #if __x86__
 	else {
 	    __asm__ volatile ("std":::"cc");
@@ -572,7 +572,7 @@ inline auto uninitialized_fill_n (I f, size_t n, const T& v)
 //{{{ Searching algorithms
 
 template <typename I, typename T>
-auto find (I f, I l, const T& v)
+constexpr auto find (I f, I l, const T& v)
 {
     while (f < l && !(*f == v))
 	++f;
@@ -580,7 +580,7 @@ auto find (I f, I l, const T& v)
 }
 
 template <typename I, typename P>
-auto find_if (I f, I l, P p)
+constexpr auto find_if (I f, I l, P p)
 {
     while (f < l && !p(*f))
 	++f;
@@ -588,7 +588,7 @@ auto find_if (I f, I l, P p)
 }
 
 template <typename I, typename T>
-I linear_search (I f, I l, const T& v)
+constexpr I linear_search (I f, I l, const T& v)
 {
     for (; f < l; ++f)
 	if (*f == v)
@@ -597,7 +597,7 @@ I linear_search (I f, I l, const T& v)
 }
 
 template <typename I, typename P>
-I linear_search_if (I f, I l, P p)
+constexpr I linear_search_if (I f, I l, P p)
 {
     for (; f < l; ++f)
 	if (p(*f))
@@ -606,7 +606,7 @@ I linear_search_if (I f, I l, P p)
 }
 
 template <typename I, typename T>
-auto lower_bound (I f, I l, const T& v)
+constexpr auto lower_bound (I f, I l, const T& v)
 {
     while (f < l) {
 	auto m = f + uintptr_t(l - f)/2;
@@ -619,14 +619,14 @@ auto lower_bound (I f, I l, const T& v)
 }
 
 template <typename I, typename T>
-inline auto binary_search (I f, I l, const T& v)
+constexpr auto binary_search (I f, I l, const T& v)
 {
     auto b = lower_bound (f, l, v);
     return (b < l && *b == v) ? b : nullptr;
 }
 
 template <typename I, typename T>
-auto upper_bound (I f, I l, const T& v)
+constexpr auto upper_bound (I f, I l, const T& v)
 {
     while (f < l) {
 	auto m = f + uintptr_t(l - f)/2;
@@ -639,7 +639,7 @@ auto upper_bound (I f, I l, const T& v)
 }
 
 template <typename T>
-int c_compare (const void* p1, const void* p2)
+constexpr int c_compare (const void* p1, const void* p2)
 {
     auto& v1 = *static_cast<const T*>(p1);
     auto& v2 = *static_cast<const T*>(p2);
@@ -647,35 +647,35 @@ int c_compare (const void* p1, const void* p2)
 }
 
 template <typename I>
-void sort (I f, I l)
+constexpr void sort (I f, I l)
 {
     using value_type = typename iterator_traits<I>::value_type;
     qsort (f, l-f, sizeof(value_type), c_compare<value_type>);
 }
 
 template <typename C, typename T>
-auto find (C& c, const T& v)
+constexpr auto find (C& c, const T& v)
     { return find (begin(c), end(c), v); }
 template <typename C, typename P>
-auto find_if (C& c, P p)
+constexpr auto find_if (C& c, P p)
     { return find_if (begin(c), end(c), move(p)); }
 template <typename C, typename T>
-auto linear_search (C& c, const T& v)
+constexpr auto linear_search (C& c, const T& v)
     { return linear_search (begin(c), end(c), v); }
 template <typename C, typename P>
-auto linear_search_if (C& c, P p)
+constexpr auto linear_search_if (C& c, P p)
     { return linear_search_if (begin(c), end(c), move(p)); }
 template <typename C, typename T>
-auto lower_bound (C& c, const T& v)
+constexpr auto lower_bound (C& c, const T& v)
     { return lower_bound (begin(c), end(c), v); }
 template <typename C, typename T>
-auto upper_bound (C& c, const T& v)
+constexpr auto upper_bound (C& c, const T& v)
     { return upper_bound (begin(c), end(c), v); }
 template <typename C, typename T>
-auto binary_search (C& c, const T& v)
+constexpr auto binary_search (C& c, const T& v)
     { return binary_search (begin(c), end(c), v); }
 template <typename C>
-void sort (C& c)
+constexpr void sort (C& c)
     { sort (begin(c), end(c)); }
 
 template <typename I1, typename I2>
@@ -693,7 +693,7 @@ bool equal_n (I1 i1, size_t n, I2 i2)
 	    __asm__("repz\tcmpsb":"+D"(i1),"+S"(i2),"+c"(n),"=@cce"(e),"=@ccl"(l)::"memory");
 	    return e;
 	#else
-	    return 0 == memcmp (i1, i2, n);
+	    return 0 == __builtin_memcmp (i1, i2, n);
 	#endif
     }
     while (n--)
@@ -729,11 +729,11 @@ public:
     using const_reference	= const char&;
     using difference_type	= unsigned;
 public:
-    inline		zstri (pointer s, difference_type n = UINT_MAX) NONNULL()
+    constexpr		zstri (pointer s, difference_type n = UINT_MAX) NONNULL()
 			    :_s(s),_n(n) {}
     template <difference_type N>
-    inline		zstri (value_type (&a)[N]) :zstri(begin(a),N) {}
-			zstri (const zstri& i) = default;
+    constexpr		zstri (value_type (&a)[N]) :zstri(begin(a),N) {}
+    constexpr		zstri (const zstri& i) = default;
     inline static auto	next (pointer s, difference_type& n) NONNULL() {
 			    #if __x86__
 			    if (!compile_constant(strlen(s)) || !compile_constant(n))
@@ -749,20 +749,20 @@ public:
 			    { difference_type n = UINT_MAX; return next(s,n); }
     inline static auto	next (const_pointer s) NONNULL()
 			    { difference_type n = UINT_MAX; return next(s,n); }
-    inline auto		remaining (void) const	{ return _n; }
-    inline auto		base (void) const	{ return _s; }
-    inline auto&	operator* (void) const	{ return _s; }
+    constexpr auto	remaining (void) const	{ return _n; }
+    constexpr auto	base (void) const	{ return _s; }
+    constexpr auto&	operator* (void) const	{ return _s; }
     inline auto&	operator++ (void)	{ _s = next(_s,_n); return *this; }
     inline auto		operator++ (int)	{ auto o(*this); ++*this; return o; }
     inline auto&	operator+= (unsigned n)	{ while (n--) ++*this;  return *this; }
     inline auto		operator+ (unsigned n) const	{ auto r(*this); r += n; return r; }
-    inline		operator bool (void) const	{ return remaining(); }
-    inline bool		operator== (const zstri& i) const	{ return base() == i.base(); }
-    inline bool		operator!= (const zstri& i) const	{ return base() != i.base(); }
-    inline bool		operator< (const zstri& i) const	{ return base() < i.base(); }
-    inline bool		operator<= (const zstri& i) const	{ return base() <= i.base(); }
-    inline bool		operator> (const zstri& i) const	{ return i < *this; }
-    inline bool		operator>= (const zstri& i) const	{ return i <= *this; }
+    constexpr		operator bool (void) const	{ return remaining(); }
+    constexpr bool	operator== (const zstri& i) const	{ return base() == i.base(); }
+    constexpr bool	operator!= (const zstri& i) const	{ return base() != i.base(); }
+    constexpr bool	operator< (const zstri& i) const	{ return base() < i.base(); }
+    constexpr bool	operator<= (const zstri& i) const	{ return base() <= i.base(); }
+    constexpr bool	operator> (const zstri& i) const	{ return i < *this; }
+    constexpr bool	operator>= (const zstri& i) const	{ return i <= *this; }
 private:
     pointer		_s;
     difference_type	_n;
@@ -777,28 +777,28 @@ public:
     using reference		= const_reference;
     using difference_type	= zstri::difference_type;
 public:
-    inline		czstri (pointer s, difference_type n = UINT_MAX) NONNULL()
+    constexpr		czstri (pointer s, difference_type n = UINT_MAX) NONNULL()
 			    :_s(s),_n(n) {}
     template <difference_type N>
-    inline		czstri (const value_type (&a)[N]) : czstri (begin(a),N) {}
-    inline		czstri (const zstri& i) : czstri (i.base(),i.remaining()) {}
-			czstri (const czstri& i) = default;
+    constexpr		czstri (const value_type (&a)[N]) : czstri (begin(a),N) {}
+    constexpr		czstri (const zstri& i) : czstri (i.base(),i.remaining()) {}
+    constexpr		czstri (const czstri& i) = default;
     inline static auto	next (pointer s, difference_type& n) NONNULL()
 			    { return zstri::next (s,n); }
-    inline auto		remaining (void) const	{ return _n; }
-    inline auto		base (void) const	{ return _s; }
-    inline auto&	operator* (void) const	{ return _s; }
+    constexpr auto	remaining (void) const	{ return _n; }
+    constexpr auto	base (void) const	{ return _s; }
+    constexpr auto&	operator* (void) const	{ return _s; }
     inline auto&	operator++ (void)	{ _s = next(_s,_n); return *this; }
     inline auto		operator++ (int)	{ auto o(*this); ++*this; return o; }
     inline auto&	operator+= (unsigned n)	{ while (n--) ++*this; return *this; }
     inline auto		operator+ (unsigned n) const	{ auto r(*this); r += n; return r; }
-    inline		operator bool (void) const	{ return remaining(); }
-    inline bool		operator== (const czstri& i) const	{ return base() == i.base(); }
-    inline bool		operator!= (const czstri& i) const	{ return base() != i.base(); }
-    inline bool		operator< (const czstri& i) const	{ return base() < i.base(); }
-    inline bool		operator<= (const czstri& i) const	{ return base() <= i.base(); }
-    inline bool		operator> (const czstri& i) const	{ return i < *this; }
-    inline bool		operator>= (const czstri& i) const	{ return i <= *this; }
+    constexpr		operator bool (void) const	{ return remaining(); }
+    constexpr bool	operator== (const czstri& i) const	{ return base() == i.base(); }
+    constexpr bool	operator!= (const czstri& i) const	{ return base() != i.base(); }
+    constexpr bool	operator< (const czstri& i) const	{ return base() < i.base(); }
+    constexpr bool	operator<= (const czstri& i) const	{ return base() <= i.base(); }
+    constexpr bool	operator> (const czstri& i) const	{ return i < *this; }
+    constexpr bool	operator>= (const czstri& i) const	{ return i <= *this; }
 private:
     pointer		_s;
     difference_type	_n;
@@ -826,13 +826,13 @@ inline void random_shuffle (C& c)
     { random_shuffle (begin(c), end(c)); }
 
 template <typename I, typename T>
-inline void iota (I f, I l, T v)
+constexpr void iota (I f, I l, T v)
 {
     for (; f < l; ++f,++v)
 	*f = v;
 }
 template <typename C, typename T>
-inline void iota (C& c, T v)
+constexpr void iota (C& c, T v)
     { iota (begin(c), end(c), move(v)); }
 
 } // namespace cwiclo

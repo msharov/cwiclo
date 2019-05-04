@@ -30,18 +30,18 @@ template <typename T> struct remove_reference<T&>	{ using type = T; };
 template <typename T> struct remove_reference<T&&>	{ using type = T; };
 template <typename T> using remove_reference_t = typename remove_reference<T>::type;
 
-template <typename T> struct remove_const { using type = T; };
-template <typename T> struct remove_const<const T> { using type = T; };
-template <typename T> struct remove_const<const T*> { using type = T*; };
-template <typename T> struct remove_const<const T&> { using type = T&; };
+template <typename T> struct remove_const		{ using type = T; };
+template <typename T> struct remove_const<const T>	{ using type = T; };
+template <typename T> struct remove_const<const T*>	{ using type = T*; };
+template <typename T> struct remove_const<const T&>	{ using type = T&; };
 template <typename T> using remove_const_t = typename remove_const<T>::type;
 
-template <typename T> struct add_const { using type = const T; };
+template <typename T> struct add_const		{ using type = const T; };
 template <typename T> struct add_const<const T> { using type = const T; };
-template <typename T> struct add_const<const T*> { using type = const T*; };
-template <typename T> struct add_const<const T&> { using type = const T&; };
-template <typename T> struct add_const<T*> { using type = const T*; };
-template <typename T> struct add_const<T&> { using type = const T&; };
+template <typename T> struct add_const<const T*>{ using type = const T*; };
+template <typename T> struct add_const<const T&>{ using type = const T&; };
+template <typename T> struct add_const<T*>	{ using type = const T*; };
+template <typename T> struct add_const<T&>	{ using type = const T&; };
 template <typename T> using add_const_t = typename add_const<T>::type;
 
 template <typename T> T&& declval (void) noexcept;
@@ -84,13 +84,13 @@ class numeric_limits {
 public:
     static constexpr const bool is_signed = ::cwiclo::is_signed<T>::value;	///< True if the type is signed.
     static constexpr const bool is_integral = is_trivial<T>::value;	///< True if fixed size and cast-copyable.
-    inline static constexpr auto min (void) {
+    static constexpr auto min (void) {
 	if constexpr (is_signed)
 	    return base_type(1)<<(bits_in_type<base_type>::value-1);
 	else
 	    return base_type(0);
     }
-    inline static constexpr auto max (void) {
+    static constexpr auto max (void) {
 	if constexpr (is_signed)
 	    return base_type(make_unsigned_t<base_type>(min())-1);
 	else
@@ -101,20 +101,20 @@ public:
 //}}}-------------------------------------------------------------------
 //{{{ Array macros
 
-template <typename T> inline constexpr decltype(auto) begin (T& c) { return c.begin(); }
-template <typename T> inline constexpr decltype(auto) begin (const T& c) { return c.begin(); }
-template <typename T, size_t N> inline constexpr auto begin (T (&a)[N]) noexcept { return &a[0]; }
-template <typename T> inline constexpr decltype(auto) cbegin (const T& c) { return begin(c); }
-template <typename T> inline constexpr decltype(auto) end (T& c) { return c.end(); }
-template <typename T> inline constexpr decltype(auto) end (const T& c) { return c.end(); }
-template <typename T, size_t N> inline constexpr auto end (T (&c)[N]) noexcept { return &c[N]; }
-template <typename T> inline constexpr decltype(auto) cend (const T& c) { return end(c); }
-template <typename T> inline constexpr auto size (const T& c) { return c.size(); }
-template <typename T, size_t N> inline constexpr auto size (const T (&)[N]) noexcept { return N; }
-template <typename T> [[nodiscard]] inline constexpr bool empty (const T& c) { return !c.size(); }
-template <typename T> inline constexpr decltype(auto) data (T& c) { return c.data(); }
-template <typename T> inline constexpr decltype(auto) data (const T& c) { return c.data(); }
-template <typename T, size_t N> inline constexpr auto data(T (&c)[N]) noexcept { return &c[0]; }
+template <typename T> constexpr decltype(auto) begin (T& c) { return c.begin(); }
+template <typename T> constexpr decltype(auto) begin (const T& c) { return c.begin(); }
+template <typename T, size_t N> constexpr auto begin (T (&a)[N]) noexcept { return &a[0]; }
+template <typename T> constexpr decltype(auto) cbegin (const T& c) { return begin(c); }
+template <typename T> constexpr decltype(auto) end (T& c) { return c.end(); }
+template <typename T> constexpr decltype(auto) end (const T& c) { return c.end(); }
+template <typename T, size_t N> constexpr auto end (T (&c)[N]) noexcept { return &c[N]; }
+template <typename T> constexpr decltype(auto) cend (const T& c) { return end(c); }
+template <typename T> constexpr auto size (const T& c) { return c.size(); }
+template <typename T, size_t N> constexpr auto size (const T (&)[N]) noexcept { return N; }
+template <typename T> [[nodiscard]] constexpr bool empty (const T& c) { return !c.size(); }
+template <typename T> constexpr decltype(auto) data (T& c) { return c.data(); }
+template <typename T> constexpr decltype(auto) data (const T& c) { return c.data(); }
+template <typename T, size_t N> constexpr auto data(T (&c)[N]) noexcept { return &c[0]; }
 
 /// Expands into a ptr,size expression for the given static vector; useful as link arguments.
 #define ArrayBlock(v)	::cwiclo::data(v), ::cwiclo::size(v)
@@ -131,16 +131,14 @@ template <typename T, size_t N> inline constexpr auto data(T (&c)[N]) noexcept {
 //}}}----------------------------------------------------------------------
 //{{{ bswap
 
-template <typename T>
-[[nodiscard]] inline constexpr T bswap (T v) { assert (!"Only integer types are swappable"); return v; }
-template <> [[nodiscard]] inline constexpr uint8_t bswap (uint8_t v)	{ return v; }
-template <> [[nodiscard]] inline constexpr uint16_t bswap (uint16_t v){ return __builtin_bswap16 (v); }
-template <> [[nodiscard]] inline constexpr uint32_t bswap (uint32_t v){ return __builtin_bswap32 (v); }
-template <> [[nodiscard]] inline constexpr uint64_t bswap (uint64_t v){ return __builtin_bswap64 (v); }
-template <> [[nodiscard]] inline constexpr int8_t bswap (int8_t v)	{ return v; }
-template <> [[nodiscard]] inline constexpr int16_t bswap (int16_t v)	{ return __builtin_bswap16 (v); }
-template <> [[nodiscard]] inline constexpr int32_t bswap (int32_t v)	{ return __builtin_bswap32 (v); }
-template <> [[nodiscard]] inline constexpr int64_t bswap (int64_t v)	{ return __builtin_bswap64 (v); }
+[[nodiscard]] constexpr uint8_t bswap (uint8_t v)	{ return v; }
+[[nodiscard]] constexpr uint16_t bswap (uint16_t v)	{ return __builtin_bswap16 (v); }
+[[nodiscard]] constexpr uint32_t bswap (uint32_t v)	{ return __builtin_bswap32 (v); }
+[[nodiscard]] constexpr uint64_t bswap (uint64_t v)	{ return __builtin_bswap64 (v); }
+[[nodiscard]] constexpr int8_t bswap (int8_t v)		{ return v; }
+[[nodiscard]] constexpr int16_t bswap (int16_t v)	{ return __builtin_bswap16 (v); }
+[[nodiscard]] constexpr int32_t bswap (int32_t v)	{ return __builtin_bswap32 (v); }
+[[nodiscard]] constexpr int64_t bswap (int64_t v)	{ return __builtin_bswap64 (v); }
 
 enum class endian {
     little	= __ORDER_LITTLE_ENDIAN__,
@@ -148,48 +146,48 @@ enum class endian {
     native	= __BYTE_ORDER__
 };
 
-template <typename T> [[nodiscard]] inline constexpr T le_to_native (const T& v) {
+template <typename T> [[nodiscard]] constexpr T le_to_native (const T& v) {
     if constexpr (endian::native == endian::big)
 	return bswap(v);
     else
 	return v;
 }
-template <typename T> [[nodiscard]] inline constexpr T be_to_native (const T& v) {
+template <typename T> [[nodiscard]] constexpr T be_to_native (const T& v) {
     if constexpr (endian::native == endian::little)
 	return bswap(v);
     else
 	return v;
 }
-template <typename T> [[nodiscard]] inline constexpr T native_to_le (const T& v) { return le_to_native(v); }
-template <typename T> [[nodiscard]] inline constexpr T native_to_be (const T& v) { return be_to_native(v); }
+template <typename T> [[nodiscard]] constexpr T native_to_le (const T& v) { return le_to_native(v); }
+template <typename T> [[nodiscard]] constexpr T native_to_be (const T& v) { return be_to_native(v); }
 
 //}}}----------------------------------------------------------------------
 //{{{ min and max
 
 template <typename T>
-inline constexpr auto min (const T& a, const remove_reference_t<T>& b)
+constexpr const T& min (const T& a, const remove_reference_t<T>& b)
     { return a < b ? a : b; }
 template <typename T>
-inline constexpr auto max (const T& a, const remove_reference_t<T>& b)
+constexpr const T& max (const T& a, const remove_reference_t<T>& b)
     { return b < a ? a : b; }
 
 //}}}----------------------------------------------------------------------
 //{{{ sign and absv
 
 template <typename T>
-inline constexpr bool is_negative (const T& v) {
+constexpr bool is_negative (const T& v) {
     if constexpr (!is_signed<T>::value)
 	return false;
     return v < 0;
 }
 template <typename T>
-inline constexpr auto sign (T v)
+constexpr auto sign (T v)
     { return (0 < v) - is_negative(v); }
 template <typename T>
-inline constexpr make_unsigned_t<T> absv (T v)
+constexpr make_unsigned_t<T> absv (T v)
     { return is_negative(v) ? -v : v; }
 template <typename T>
-inline constexpr T MultBySign (T a, remove_reference_t<T> b)
+constexpr T MultBySign (T a, remove_reference_t<T> b)
     { return is_negative<T>(b) ? -a : a; }
 
 //}}}----------------------------------------------------------------------
@@ -198,48 +196,48 @@ inline constexpr T MultBySign (T a, remove_reference_t<T> b)
 enum { c_DefaultAlignment = alignof(void*) };
 
 template <typename T>
-[[nodiscard]] inline constexpr T Floor (T n, remove_reference_t<T> grain = c_DefaultAlignment)
+[[nodiscard]] constexpr T Floor (T n, remove_reference_t<T> grain = c_DefaultAlignment)
     { return n - n % grain; }
 template <typename T>
-[[nodiscard]] inline constexpr auto Align (T n, remove_reference_t<T> grain = c_DefaultAlignment)
+[[nodiscard]] constexpr auto Align (T n, remove_reference_t<T> grain = c_DefaultAlignment)
     { return Floor<T> (n + MultBySign<T> (grain-1, n), grain); }
 template <typename T>
-inline constexpr bool IsAligned (T n, remove_reference_t<T> grain = c_DefaultAlignment)
+constexpr bool IsAligned (T n, remove_reference_t<T> grain = c_DefaultAlignment)
     { return !(n % grain); }
 template <typename T>
-[[nodiscard]] inline constexpr auto Round (T n, remove_reference_t<T> grain)
+[[nodiscard]] constexpr auto Round (T n, remove_reference_t<T> grain)
     { return Floor<T> (n + MultBySign<T> (grain/2, n), grain); }
 template <typename T>
-[[nodiscard]] inline constexpr T DivRU (T n1, remove_reference_t<T> n2)
+[[nodiscard]] constexpr T DivRU (T n1, remove_reference_t<T> n2)
     { return (n1 + MultBySign<T> (n2-1, n1)) / n2; }
 template <typename T>
-[[nodiscard]] inline constexpr T DivRound (T n1, remove_reference_t<T> n2)
+[[nodiscard]] constexpr T DivRound (T n1, remove_reference_t<T> n2)
     { return (n1 + MultBySign<T> (n2/2, n1)) / n2; }
 template <typename T>
-[[nodiscard]] inline constexpr make_unsigned_t<T> Square (T n)
+[[nodiscard]] constexpr make_unsigned_t<T> Square (T n)
     { return n*n; }
 
 //}}}----------------------------------------------------------------------
 //{{{ Bit manipulation
 
 template <typename T>
-inline constexpr bool GetBit (T v, unsigned i)
+constexpr bool GetBit (T v, unsigned i)
     { return (v>>i)&1; }
 template <typename T = unsigned>
-inline constexpr T BitMask (unsigned i)
+constexpr T BitMask (unsigned i)
     { return T(1)<<i; }
 template <typename T>
-inline constexpr void SetBit (T& v, unsigned i, bool b=true)
+constexpr void SetBit (T& v, unsigned i, bool b=true)
     { auto m = BitMask<T>(i); v=b?(v|m):(v&~m); }
 template <typename T>
-[[nodiscard]] inline constexpr auto Rol (T v, remove_reference_t<T> n)
+[[nodiscard]] constexpr auto Rol (T v, remove_reference_t<T> n)
     { return (v << n) | (v >> (bits_in_type<T>::value-n)); }
 template <typename T>
-[[nodiscard]] inline constexpr auto Ror (T v, remove_reference_t<T> n)
+[[nodiscard]] constexpr auto Ror (T v, remove_reference_t<T> n)
     { return (v >> n) | (v << (bits_in_type<T>::value-n)); }
 
 template <typename T>
-inline constexpr unsigned log2p1 (T v)
+constexpr unsigned log2p1 (T v)
 {
     if constexpr (sizeof(T) <= sizeof(int))
 	return bits_in_type<int>::value-__builtin_clz(v);
@@ -248,11 +246,11 @@ inline constexpr unsigned log2p1 (T v)
 }
 
 template <typename T>
-inline constexpr T ceil2 (T v)
+constexpr T ceil2 (T v)
     { return T(1)<<log2p1(v-1); }
 
 template <typename T>
-inline constexpr bool ispow2 (T v)
+constexpr bool ispow2 (T v)
     { return !(v&(v-1)); }
 
 //}}}----------------------------------------------------------------------
@@ -270,7 +268,7 @@ enum class memory_order : int {
 namespace {
 
 // Use in lock wait loops to relax the CPU load
-inline static void tight_loop_pause (void)
+static constexpr void tight_loop_pause (void)
 {
     #if __x86__
 	__builtin_ia32_pause();
@@ -280,25 +278,25 @@ inline static void tight_loop_pause (void)
 }
 
 template <typename T>
-[[nodiscard]] inline static T kill_dependency (T v) noexcept
+[[nodiscard]] static constexpr T kill_dependency (T v) noexcept
     { return T(v); }
-inline static void atomic_thread_fence (memory_order order) noexcept
+static constexpr void atomic_thread_fence (memory_order order) noexcept
     { __atomic_thread_fence (int(order)); }
-inline static void atomic_signal_fence (memory_order order) noexcept
+static constexpr void atomic_signal_fence (memory_order order) noexcept
     { __atomic_signal_fence (int(order)); }
 
 } // namespace
 
 class atomic_flag {
-    bool		_v;
+    bool		_v = false;
 public:
-			atomic_flag (void) = default;
-    inline constexpr	atomic_flag (bool v)	: _v(v) {}
-			atomic_flag (const atomic_flag&) = delete;
-    atomic_flag&	operator= (const atomic_flag&) = delete;
-    void		clear (memory_order order = memory_order::release)
+    constexpr		atomic_flag (void) = default;
+    constexpr		atomic_flag (bool v)	: _v(v) {}
+    constexpr		atomic_flag (const atomic_flag&) = delete;
+    void		operator= (const atomic_flag&) = delete;
+    constexpr void	clear (memory_order order = memory_order::release)
 			    { __atomic_clear (&_v, int(order)); }
-    bool		test_and_set (memory_order order = memory_order::acq_rel)
+    constexpr bool	test_and_set (memory_order order = memory_order::acq_rel)
 			    { return __atomic_test_and_set (&_v, int(order)); }
 };
 #define ATOMIC_FLAG_INIT	{false}
@@ -344,7 +342,7 @@ union alignas(16) simd16_t {
     float	asf [4];
     double	asd [2];
 
-    [[nodiscard]] inline static CONST constexpr auto zero (void) noexcept
+    [[nodiscard]] CONST static constexpr auto zero (void) noexcept
 	{ return simd16_t {0,0,0,0}; }
 };
 

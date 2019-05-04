@@ -31,7 +31,7 @@ public:
     template <size_type N>
     inline		multiset (const T (&a)[N])	: vecbase(a) { sort(*this); }
     inline		multiset (initlist_t v)		: vecbase(v) { sort(*this); }
-    inline		multiset (multiset&& v)		: vecbase(move(v)) {}
+    constexpr		multiset (multiset&& v)		: vecbase(move(v)) {}
     inline		multiset (const_iterator i1, const_iterator i2)	: vecbase(i1,i2) { sort(*this); }
     inline void		assign (const_iterator i1, const_iterator i2)	{ vecbase::assign(i1,i2); sort(*this); }
     inline void		assign (const multiset& v)	{ vecbase::assign(v); }
@@ -46,17 +46,17 @@ public:
     inline auto&	operator= (vecbase&& v)		{ assign (move(v)); return *this; }
     inline auto&	operator= (initlist_t v)	{ assign (v); return *this; }
     template <typename U>
-    inline auto		find (const U& v) const		{ return binary_search (this->begin(), this->end(), v); }
+    constexpr auto	find (const U& v) const		{ return binary_search (this->begin(), this->end(), v); }
     template <typename U>
-    inline auto		lower_bound (const U& v) const	{ return ::cwiclo::lower_bound (this->begin(), this->end(), v); }
+    constexpr auto	lower_bound (const U& v) const	{ return ::cwiclo::lower_bound (this->begin(), this->end(), v); }
     template <typename U>
-    inline auto		upper_bound (const U& v) const	{ return ::cwiclo::upper_bound (this->begin(), this->end(), v); }
+    constexpr auto	upper_bound (const U& v) const	{ return ::cwiclo::upper_bound (this->begin(), this->end(), v); }
     template <typename U>
-    inline auto		find (const U& v)		{ return UNCONST_MEMBER_FN (find,v); }
+    constexpr auto	find (const U& v)		{ return UNCONST_MEMBER_FN (find,v); }
     template <typename U>
-    inline auto		lower_bound (const U& v)	{ return UNCONST_MEMBER_FN (lower_bound,v); }
+    constexpr auto	lower_bound (const U& v)	{ return UNCONST_MEMBER_FN (lower_bound,v); }
     template <typename U>
-    inline auto		upper_bound (const U& v)	{ return UNCONST_MEMBER_FN (upper_bound,v); }
+    constexpr auto	upper_bound (const U& v)	{ return UNCONST_MEMBER_FN (upper_bound,v); }
     auto		insert (const_reference v)	{ return vecbase::insert (lower_bound(v), v); }
     auto		insert (T&& v)			{ return vecbase::insert (lower_bound(v), move(v)); }
     inline void		insert (const_iterator i1, const_iterator i2)	{ for (; i1 < i2; ++i1) insert (*i1); }
