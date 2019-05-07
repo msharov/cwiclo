@@ -121,10 +121,11 @@ public:
     inline void		ForwardMsg (Msg&& msg, Msg::Link& l) noexcept;
     static iid_t	InterfaceByName (const char* iname, streamsize inamesz) noexcept;
     msgq_t::size_type	HasMessagesFor (mrid_t mid) const noexcept;
-    auto		HasTimers (void) const		{ return _timers.size(); }
+    constexpr auto	HasTimers (void) const		{ return _timers.size(); }
     bool		ValidMsgerId (mrid_t id) const	{ assert (_msgers.size() == _creators.size()); return id <= _msgers.size(); }
-    void		Quit (void)			{ SetFlag (f_Quitting); }
-    void		Quit (int ec)			{ s_ExitCode = ec; Quit(); }
+    constexpr void	Quit (void)			{ SetFlag (f_Quitting); }
+    constexpr void	Quit (int ec)			{ s_ExitCode = ec; Quit(); }
+    auto		ExitCode (void) const		{ return s_ExitCode; }
     auto&		Errors (void) const		{ return _errors; }
     void		FreeMrid (mrid_t id) noexcept;
     void		MessageLoopOnce (void) noexcept;
@@ -162,7 +163,7 @@ public:
 	bool		Dispatch (Msg& msg) noexcept override
 			    { return PTimer::Dispatch(this,msg) || Msger::Dispatch(msg); }
 	inline void	Timer_Watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms) noexcept;
-	void		Stop (void)		{ SetFlag (f_Unused); _cmd = PTimer::WatchCmd::Stop; _fd = -1; _nextfire = PTimer::TimerNone; }
+	constexpr void	Stop (void)		{ SetFlag (f_Unused); _cmd = PTimer::WatchCmd::Stop; _fd = -1; _nextfire = PTimer::TimerNone; }
 	void		Fire (void)		{ _reply.Timer (_fd); Stop(); }
 	auto		Fd (void) const		{ return _fd; }
 	auto		Cmd (void) const	{ return _cmd; }
@@ -178,13 +179,12 @@ public:
 private:
     mrid_t		AllocateMrid (mrid_t creator) noexcept;
     auto		MsgerpById (mrid_t id)	{ return _msgers[id]; }
-    inline static auto	MsgerFactoryFor (iid_t id) {
+    constexpr static auto MsgerFactoryFor (iid_t id) {
 			    auto mii = s_MsgerImpls;
 			    while (mii->iface && mii->iface != id)
 				++mii;
 			    return mii->factory;
 			}
-    inline void		SwapQueues (void) noexcept;
     [[nodiscard]] inline static Msger*	CreateMsgerWith (const Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept;
     [[nodiscard]] inline static auto	CreateMsger (const Msg::Link& l, iid_t iid) noexcept;
     inline void		ProcessInputQueue (void) noexcept;
@@ -231,7 +231,7 @@ int App::Run (void) noexcept
 	MessageLoopOnce();
 	RunTimers();
     }
-    return s_ExitCode;
+    return ExitCode();
 }
 
 void App::RunTimers (void) noexcept

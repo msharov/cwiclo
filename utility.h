@@ -346,54 +346,5 @@ union alignas(16) simd16_t {
 	{ return simd16_t {0,0,0,0}; }
 };
 
-//}}}-------------------------------------------------------------------
-//{{{ File utility functions
-
-// Read ntr bytes from fd, accounting for partial reads and EINTR
-inline int complete_read (int fd, char* p, size_t ntr) noexcept
-{
-    int nr = 0;
-    while (ntr) {
-	auto r = read (fd, p, ntr);
-	if (r <= 0) {
-	    if (errno == EINTR)
-		continue;
-	    return -1;
-	}
-	ntr -= r;
-	nr += r;
-	p += r;
-    }
-    return nr;
-}
-
-// Write ntw bytes to fd, accounting for partial writes and EINTR
-inline int complete_write (int fd, const char* p, size_t ntw) noexcept
-{
-    int nw = 0;
-    while (ntw) {
-	auto r = write (fd, p, ntw);
-	if (r <= 0) {
-	    if (errno == EINTR)
-		continue;
-	    return -1;
-	}
-	ntw -= r;
-	nw += r;
-	p += r;
-    }
-    return nw;
-}
-
-#ifndef UC_VERSION
-extern "C" const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexcept NONNULL();
-extern "C" int mkpath (const char* path, mode_t mode) noexcept NONNULL();
-extern "C" int rmpath (const char* path) noexcept NONNULL();
-#endif
-
-enum { SD_LISTEN_FDS_START = STDERR_FILENO+1 };
-extern "C" unsigned sd_listen_fds (void) noexcept;
-extern "C" int sd_listen_fd_by_name (const char* name) noexcept;
-
 } // namespace cwiclo
 //}}}-------------------------------------------------------------------

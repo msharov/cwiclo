@@ -293,6 +293,9 @@ void LibTestApp::TestVector (void) // static
     auto s42 = binary_search (v, 42);
     if (s42)
 	printf ("binary_search(42): %tu\n", s42-v.begin());
+    printf ("count(1): %u\n", count(v,1));
+    printf ("count(11): %u\n", count(v,11));
+    printf ("count_if(odd): %u\n", count_if(v,[](auto e){return e%2;}));
     iota (v.begin(), v.end(), 2);
     printf ("iota(2): ");
     PrintVector (v);
@@ -634,7 +637,7 @@ void LibTestApp::TestStreams (void) // static
 	static_cast<int>(c), static_cast<int>(uc), static_cast<int>(bv),
 	i, ui, li, uli, f, d, static_cast<int>(si), static_cast<int>(usi), rhello);
 
-    if (isatty (STDIN_FILENO)) {
+    if (isatty (STDOUT_FILENO)) {
 	printf ("\nBinary dump:\n");
 	hexdump (b);
     }

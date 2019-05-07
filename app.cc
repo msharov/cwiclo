@@ -167,9 +167,7 @@ void App::FreeMrid (mrid_t id) noexcept
 
 Msger* App::CreateMsgerWith (const Msg::Link& l, iid_t iid [[maybe_unused]], Msger::pfn_factory_t fac) noexcept // static
 {
-    Msger* r = nullptr;
-    if (fac)
-	r = (*fac)(l);
+    Msger* r = fac ? (*fac)(l) : nullptr;
     #ifndef NDEBUG	// Log failure to create in debug mode
 	if (!r && (!iid || !iid[0] || iid[iid[-1]-1] != 'R')) { // reply messages do not recreate dead Msgers
 	    if (!fac) {
@@ -223,8 +221,7 @@ void App::DeleteMsger (mrid_t mid) noexcept
 
     // Notify creator, if it exists
     if (crid < _msgers.size()) {
-	auto cr = _msgers[crid];
-	if (cr)
+	if (auto cr = _msgers[crid]; cr)
 	    cr->OnMsgerDestroyed (mid);
 	else // or free mrid if creator is already deleted
 	    FreeMrid (mid);
@@ -249,17 +246,12 @@ void App::DeleteUnusedMsgers (void) noexcept
 
 void App::MessageLoopOnce (void) noexcept
 {
-    SwapQueues();
-    ProcessInputQueue();
-    // End-of-iteration housekeeping
-    DeleteUnusedMsgers();
-    ForwardReceivedSignals();
-}
-
-void App::SwapQueues (void) noexcept
-{
     _inq.clear();		// input queue was processed on the last iteration
     _inq.swap (move(_outq));	// output queue now becomes the input queue
+
+    ProcessInputQueue();
+    DeleteUnusedMsgers();
+    ForwardReceivedSignals();
 }
 
 void App::ProcessInputQueue (void) noexcept
@@ -287,10 +279,10 @@ void App::ProcessInputQueue (void) noexcept
 	    if (!msger)
 		continue; // errors for msger creation failures were reported in CreateMsger; here just try to continue
 
-	    auto accepted = msger->Dispatch(msg);
+	    auto accepted = msger->Dispatch (msg);
 
 	    if (!accepted && msg.Dest() != mrid_Broadcast)
-		DEBUG_PRINTF ("Error: message delivered, but not accepted by the destination Msger. Did you forget to add the interface to the Dispatch override?\n");
+		DEBUG_PRINTF ("Error: message delivered, but not accepted by the destination Msger.\nDid you forget to add the interface to the Dispatch override?\n");
 
 	    // Check for errors generated during this dispatch
 	    if (!Errors().empty() && !ForwardError (mg, mg))
@@ -314,11 +306,7 @@ void App::ForwardReceivedSignals (void) noexcept
 
 App::msgq_t::size_type App::HasMessagesFor (mrid_t mid) const noexcept
 {
-    App::msgq_t::size_type n = 0;
-    for (auto& msg : _outq)
-	if (msg.Dest() == mid)
-	    ++n;
-    return n;
+    return count_if (_outq, [=](auto& msg){ return msg.Dest() == mid; });
 }
 
 //}}}-------------------------------------------------------------------

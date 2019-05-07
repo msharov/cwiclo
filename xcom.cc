@@ -329,14 +329,6 @@ void Extern::ExtMsg::WriteIOVecs (iovec* iov, streamsize bw) noexcept
     iov[1].iov_len = _h.sz - bw;
 }
 
-auto Extern::ExtMsg::PassedFd (void) const noexcept -> fd_t
-{
-    if (!HasFd())
-	return -1;
-    istream fdis (_body.iat(_h.fdoffset), sizeof(int));
-    return fdis.read<int>();
-}
-
 methodid_t Extern::ExtMsg::ParseMethod (void) const noexcept
 {
     czstri mi (_hbuf, _h.hsz-sizeof(_h));

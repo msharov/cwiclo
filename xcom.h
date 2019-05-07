@@ -93,9 +93,9 @@ struct ExternInfo {
     SocketSide		side;
     bool		isUnixSocket;
 public:
-    auto IsImporting (iid_t iid) const
+    constexpr auto IsImporting (iid_t iid) const
 	{ return linear_search (imported, iid); }
-    bool IsExporting (iid_t iid) const {
+    constexpr bool IsExporting (iid_t iid) const {
 	for (auto e = exported; e && *e; ++e)
 	    if (*e == iid)
 		return true;
@@ -213,19 +213,23 @@ private:
 	constexpr auto		FdOffset (void) const	{ return _h.fdoffset; }
 	constexpr streamsize	Size (void) const	{ return BodySize() + HeaderSize(); }
 	constexpr bool		HasFd (void) const	{ return FdOffset() != Msg::NoFdIncluded; }
-	void			SetHeader (const Header& h)	{ _h = h; }
+	constexpr void		SetHeader (const Header& h)	{ _h = h; }
 	void			AllocateBody (streamsize sz)	{ _body.allocate (sz); }
-	void			TrimBody (streamsize sz)	{ _body.shrink (sz); }
+	constexpr void		TrimBody (streamsize sz)	{ _body.shrink (sz); }
 	constexpr auto&&	MoveBody (void)		{ return move(_body); }
-	void			SetPassedFd (fd_t fd)	{ assert (HasFd()); ostream(_body.iat(_h.fdoffset), sizeof(fd)) << fd; }
-	fd_t			PassedFd (void) const noexcept;
+	constexpr void		SetPassedFd (fd_t fd)	{ assert (HasFd()); ostream(_body.iat(_h.fdoffset), sizeof(fd)) << fd; }
+	constexpr fd_t		PassedFd (void) const noexcept {
+				    if (!HasFd()) return -1;
+				    istream fdis (_body.iat(_h.fdoffset), sizeof(int));
+				    return fdis.read<int>();
+				}
 	void			WriteIOVecs (iovec* iov, streamsize bw) noexcept;
 	constexpr auto		Read (void) const	{ return istream (_body.data(), _body.size()); }
 	methodid_t		ParseMethod (void) const noexcept;
 	inline void		DebugDump (void) const noexcept;
     private:
 	constexpr auto		HeaderPtr (void) const	{ auto hp = _hbuf; return hp-sizeof(_h); }
-	auto			HeaderPtr (void)	{ return UNCONST_MEMBER_FN (HeaderPtr,); }
+	constexpr auto		HeaderPtr (void)	{ return UNCONST_MEMBER_FN (HeaderPtr,); }
 	uint8_t			WriteHeaderStrings (methodid_t method) noexcept;
     private:
 	Msg::Body		_body;
@@ -288,7 +292,7 @@ public:
     using fd_t = PExtern::fd_t;
     enum class WhenEmpty : bool { Remain, Close };
 public:
-		PExternServer (mrid_t caller)	: Proxy(caller),_sockname() {}
+    constexpr	PExternServer (mrid_t caller)	: Proxy(caller),_sockname() {}
 		~PExternServer (void) noexcept;
     void	Close (void)			{ Send (M_Close()); }
     void	Open (fd_t fd, const iid_t* eifaces, WhenEmpty closeWhenEmpty = WhenEmpty::Close)
@@ -323,11 +327,12 @@ private:
 //{{{ ExternServer
 
 class ExternServer : public Msger {
-    enum { f_CloseWhenEmpty = Msger::f_Last, f_Last };
 public:
     using fd_t = PExternServer::fd_t;
+    enum { f_CloseWhenEmpty = Msger::f_Last, f_Last };
 public:
-    explicit constexpr	ExternServer (const Msg::Link& l) noexcept;
+    explicit constexpr	ExternServer (const Msg::Link& l) noexcept
+			    : Msger(l),_conns(),_eifaces(),_timer (l.dest),_reply (l),_sockfd (-1) {}
     bool		OnError (mrid_t eid, const string& errmsg) noexcept override;
     void		OnMsgerDestroyed (mrid_t mid) noexcept override;
     bool		Dispatch (Msg& msg) noexcept override;
@@ -342,16 +347,6 @@ private:
     PExternR		_reply;
     fd_t		_sockfd;
 };
-
-constexpr ExternServer::ExternServer (const Msg::Link& l) noexcept
-: Msger(l)
-,_conns()
-,_eifaces()
-,_timer (l.dest)
-,_reply (l)
-,_sockfd (-1)
-{
-}
 
 } // namespace cwiclo
 //}}}-------------------------------------------------------------------

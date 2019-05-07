@@ -156,17 +156,17 @@ public:
     constexpr auto	Extid (void) const	{ return _extid; }
     constexpr auto	FdOffset (void) const	{ return _fdoffset; }
     constexpr auto&&	MoveBody (void)		{ return move(_body); }
-    constexpr auto	Read (void) const	{ return istream (_body.data(),_body.size()); }
+  inline constexpr auto	Read (void) const	{ return istream (_body.data(),_body.size()); }
     constexpr auto	Write (void)		{ return ostream (_body.data(),_body.size()); }
     static streamsize	ValidateSignature (istream& is, const char* sig) noexcept;
     auto		Verify (void) const noexcept	{ auto is = Read(); return ValidateSignature (is, Signature()); }
-    constexpr		Msg (const Link& l, methodid_t mid) noexcept
+    inline constexpr	Msg (const Link& l, methodid_t mid) noexcept
 			    :_method (mid),_link (l),_extid(0),_fdoffset (NoFdIncluded),_body() {}
-    constexpr		Msg (const Link& l, methodid_t mid, Body&& body, fdoffset_t fdo = NoFdIncluded, mrid_t extid = 0) noexcept
+    inline constexpr	Msg (const Link& l, methodid_t mid, Body&& body, fdoffset_t fdo = NoFdIncluded, mrid_t extid = 0) noexcept
 			    :_method (mid),_link (l),_extid (extid),_fdoffset (fdo),_body (move (body)) {}
-    constexpr		Msg (Msg&& msg, const Link& l) noexcept
+    inline constexpr	Msg (Msg&& msg, const Link& l) noexcept
 			    : Msg (l,msg.Method(),msg.MoveBody(),msg.FdOffset(),msg.Extid()) {}
-    constexpr		Msg (Msg&& msg) noexcept
+    inline constexpr	Msg (Msg&& msg) noexcept
 			    : Msg (move(msg), msg.GetLink()) {}
 			Msg (const Msg&) = delete;
     Msg&		operator= (const Msg&) = delete;

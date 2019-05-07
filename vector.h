@@ -32,7 +32,7 @@ public:
     inline			vector (const T (&a)[N])	: vector (VectorRange(a)) {}
     inline			vector (initlist_t v) noexcept;
     inline constexpr		vector (vector&& v)		: _data (move(v._data)) {}
-    inline			~vector (void) noexcept		{ if (!is_linked()) destroy (begin(), end()); }
+    inline			~vector (void) noexcept		{ destroy_all(); }
     inline auto&		operator= (const vector& v)	{ assign (v); return *this; }
     inline auto&		operator= (vector&& v)		{ assign (move(v)); return *this; }
     inline auto&		operator= (initlist_t v)	{ assign (v); return *this; }
@@ -71,9 +71,9 @@ public:
     constexpr auto&		front (void) const		{ assert (!empty()); return at(0); }
     constexpr auto&		back (void)			{ assert (!empty()); return *iback(); }
     constexpr auto&		back (void) const		{ assert (!empty()); return *iback(); }
-    inline constexpr void	clear (void)			{ if (!is_linked()) destroy (begin(), end()); _data.clear(); }
+    inline constexpr void	clear (void)			{ destroy_all(); _data.clear(); }
     inline constexpr void	swap (vector&& v)		{ _data.swap (move(v._data)); }
-    inline void			deallocate (void) noexcept	{ assert (!is_linked()); destroy (begin(), end()); _data.deallocate(); }
+    inline void			deallocate (void) noexcept	{ assert (!is_linked()); destroy_all(); _data.deallocate(); }
     inline void			shrink_to_fit (void) noexcept	{ _data.shrink_to_fit(); }
     inline void			assign (const vector& v)	{ assign (v.begin(), v.end()); }
     inline void			assign (vector&& v)		{ swap (v); }
@@ -148,6 +148,8 @@ public:
 protected:
     inline auto			insert_hole (const_iterator ip, size_type n)
 				    { return iterator (_data.insert (memblock::const_iterator(ip), n*sizeof(T))); }
+    constexpr void		destroy_all (void)
+				    { if (!is_linked()) destroy (begin(), end()); }
 private:
     memblock			_data;	///< Raw element data, consecutively stored.
 };

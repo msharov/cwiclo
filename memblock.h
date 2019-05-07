@@ -4,7 +4,7 @@
 // This file is free software, distributed under the ISC License.
 
 #pragma once
-#include "memory.h"
+#include "algo.h"
 
 namespace cwiclo {
 
