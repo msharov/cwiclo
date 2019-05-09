@@ -13,7 +13,7 @@ template <typename I, typename T>
 constexpr auto find (I f, I l, const T& v)
 {
     while (f < l && !(*f == v))
-	++f;
+	advance(f);
     return f;
 }
 
@@ -21,14 +21,14 @@ template <typename I, typename P>
 constexpr auto find_if (I f, I l, P p)
 {
     while (f < l && !p(*f))
-	++f;
+	advance(f);
     return f;
 }
 
 template <typename I, typename T>
 constexpr I linear_search (I f, I l, const T& v)
 {
-    for (; f < l; ++f)
+    for (; f < l; advance(f))
 	if (*f == v)
 	    return f;
     return nullptr;
@@ -37,7 +37,7 @@ constexpr I linear_search (I f, I l, const T& v)
 template <typename I, typename P>
 constexpr I linear_search_if (I f, I l, P p)
 {
-    for (; f < l; ++f)
+    for (; f < l; advance(f))
 	if (p(*f))
 	    return f;
     return nullptr;
@@ -47,9 +47,9 @@ template <typename I, typename T>
 constexpr auto lower_bound (I f, I l, const T& v)
 {
     while (f < l) {
-	auto m = f + uintptr_t(l - f)/2;
+	auto m = next (f, uintptr_t(distance(f,l))/2);
 	if (*m < v)
-	    f = m + 1;
+	    f = next(m);
 	else
 	    l = m;
     }
@@ -67,11 +67,11 @@ template <typename I, typename T>
 constexpr auto upper_bound (I f, I l, const T& v)
 {
     while (f < l) {
-	auto m = f + uintptr_t(l - f)/2;
+	auto m = next (f, uintptr_t(distance(f,l))/2);
 	if (v < *m)
 	    l = m;
 	else
-	    f = m + 1;
+	    f = next(m);
     }
     return l;
 }
@@ -88,7 +88,7 @@ template <typename I>
 constexpr void sort (I f, I l)
 {
     using value_type = typename iterator_traits<I>::value_type;
-    qsort (f, l-f, sizeof(value_type), c_compare<value_type>);
+    qsort (f, distance(f,l), sizeof(value_type), c_compare<value_type>);
 }
 
 template <typename C, typename T>
@@ -276,8 +276,8 @@ void remove_if (C& c, P p)
 template <typename I>
 void random_shuffle (I f, I l)
 {
-    for (; f < l; ++f)
-	iter_swap (f, f + (rand() % size_t(l-f)));
+    for (; f < l; advance(f))
+	iter_swap (f, next (f,(rand() % size_t(distance(f,l)))));
 }
 template <typename C>
 inline void random_shuffle (C& c)
@@ -285,7 +285,7 @@ inline void random_shuffle (C& c)
 
 template <typename I, typename T>
 constexpr void iota (I f, I l, T v)
-    { for (; f < l; ++f,++v) *f = v; }
+    { for (; f < l; advance(f),advance(v)) *f = v; }
 template <typename C, typename T>
 constexpr void iota (C& c, T v)
     { iota (begin(c), end(c), move(v)); }
@@ -294,8 +294,9 @@ template <typename I, typename T>
 constexpr auto count (I f, I l, const T& v)
 {
     auto r = 0u;
-    for (; f < l; ++f)
-	r += (*f == v);
+    for (; f < l; advance(f))
+	if (*f == v)
+	    ++r;
     return r;
 }
 template <typename C, typename T>
@@ -319,7 +320,7 @@ constexpr auto count_if (const C& c, P p)
 //{{{ C utility functions
 
 // Read ntr bytes from fd, accounting for partial reads and EINTR
-inline int complete_read (int fd, char* p, size_t ntr) noexcept
+inline int complete_read (int fd, void* p, size_t ntr) noexcept
 {
     int nr = 0;
     while (ntr) {
@@ -331,13 +332,13 @@ inline int complete_read (int fd, char* p, size_t ntr) noexcept
 	}
 	ntr -= r;
 	nr += r;
-	p += r;
+	advance (p, r);
     }
     return nr;
 }
 
 // Write ntw bytes to fd, accounting for partial writes and EINTR
-inline int complete_write (int fd, const char* p, size_t ntw) noexcept
+inline int complete_write (int fd, const void* p, size_t ntw) noexcept
 {
     int nw = 0;
     while (ntw) {
@@ -349,7 +350,7 @@ inline int complete_write (int fd, const char* p, size_t ntw) noexcept
 	}
 	ntw -= r;
 	nw += r;
-	p += r;
+	advance (p, r);
     }
     return nw;
 }

@@ -50,7 +50,7 @@ public:
     inline constexpr streamsize	alignsz (streamsize g) const		{ return alignptr(g) - begin(); }
     inline constexpr bool	can_align (streamsize g) const		{ return alignptr(g) <= end(); }
     inline constexpr bool	aligned (streamsize g) const		{ return alignptr(g) == begin(); }
-    inline void			read (void* __restrict__ p, streamsize sz) __restrict__ {
+    inline constexpr void	read (void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
 				    copy_n (begin(), sz, p);
 				    skip (sz);
@@ -84,15 +84,14 @@ public:
 					return readt<T>();
 				    else { T v; v.read (*this); return v; }
 				}
-    template <typename T> inline
+    template <typename T>
     #if __x86__			// x86 can do direct unaligned reads, albeit slower
-    constexpr void		readtu (T& v) __restrict__ { readt (v); }
-    template <typename T> constexpr
+    inline constexpr void	readtu (T& v) __restrict__ { readt (v); }
     #else
-    void			readtu (T& v) __restrict__ { read (&v, sizeof(v)); }
-    template <typename T> inline
+    inline constexpr void	readtu (T& v) __restrict__ { read (&v, sizeof(v)); }
     #endif
-    decltype(auto)		readu (void) __restrict__ {
+    template <typename T>
+    constexpr decltype(auto)	readu (void) __restrict__ {
 				    T v;
 				    if constexpr (is_trivial<T>::value)
 					readtu<T>(v);
@@ -144,7 +143,7 @@ public:
     inline constexpr auto	ptr (void) __restrict__			{ return reinterpret_cast<T*>(begin()); }
     inline constexpr void	seek (pointer p) __restrict__		{ assert (p <= end()); _p = p; }
     inline constexpr void	skip (streamsize sz) __restrict__	{ seek (begin()+sz); }
-    inline void			zero (streamsize sz) __restrict__	{ seek (fill_n (begin(), sz, 0)); }
+    inline constexpr void	zero (streamsize sz) __restrict__	{ seek (zero_fill_n (begin(), sz)); }
     inline constexpr void	align (streamsize g) __restrict__ {
 				    assert (can_align(g));
 				    pointer __restrict__ p = begin();
@@ -155,11 +154,11 @@ public:
     inline constexpr streamsize	alignsz (streamsize g) const	{ return alignptr(g) - begin(); }
     inline constexpr bool	can_align (streamsize g) const	{ return alignptr(g) <= end(); }
     inline constexpr bool	aligned (streamsize g) const	{ return alignptr(g) == begin(); }
-    inline void			write (const void* __restrict__ p, streamsize sz) __restrict__ {
+    inline constexpr void	write (const void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
 				    seek (copy_n (p, sz, begin()));
 				}
-    inline void			write_strz (const char* s)	{ write (s, strlen(s)+1); }
+    inline constexpr void	write_strz (const char* s)	{ write (s, __builtin_strlen(s)+1); }
     template <typename T>
     inline constexpr void	writet (const T& v) __restrict__ {
 				    assert(remaining() >= sizeof(T));
@@ -173,15 +172,14 @@ public:
 				    else
 					v.write (*this);
 				}
-    template <typename T> inline
+    template <typename T>
     #if __x86__			// x86 can do direct unaligned writes, albeit slower
-    constexpr void		writetu (const T& v) __restrict__ { writet (v); }
-    template <typename T> constexpr
+    inline constexpr void	writetu (const T& v) __restrict__ { writet (v); }
     #else
-    void			writetu (const T& v) __restrict__ { write (&v, sizeof(v)); }
-    template <typename T> inline
+    inline constexpr void	writetu (const T& v) __restrict__ { write (&v, sizeof(v)); }
     #endif
-    void			writeu (const T& v) __restrict__ {
+    template <typename T>
+    inline constexpr void	writeu (const T& v) __restrict__ {
 				    if constexpr (is_trivial<T>::value)
 					writetu (v);
 				    else
@@ -314,7 +312,7 @@ class zero {
 public:
     constexpr explicit 	zero (streamsize n)		: _n(n) {}
     constexpr void	read (istream& is) const	{ is.skip (_n); }
-    inline void		write (ostream& os) const	{ os.zero (_n); }
+    constexpr void	write (ostream& os) const	{ os.zero (_n); }
     constexpr void	write (sstream& ss) const	{ ss.zero (_n); }
 private:
     const streamsize	_n;

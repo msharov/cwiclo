@@ -153,6 +153,45 @@ struct iterator_traits<const void*> {
 };
 
 //}}}-------------------------------------------------------------------
+//{{{ Iterator-pointer utilities
+
+template <typename T>
+constexpr T* to_address (T* p)
+    { return p; }
+template <typename P>
+constexpr auto to_address (const P& p)
+    { return to_address (p.operator->()); }
+
+template <typename I>
+constexpr I next (I f, size_t n = 1)
+    { return f+n; }
+template <> constexpr void* next (void* f, size_t n)
+    { return next (static_cast<char*>(f), n); }
+template <> constexpr const void* next (const void* f, size_t n)
+    { return next (static_cast<const char*>(f), n); }
+
+template <typename I>
+constexpr I prev (I f, size_t n = 1)
+    { return f-n; }
+template <> constexpr void* prev (void* f, size_t n)
+    { return prev (static_cast<char*>(f), n); }
+template <> constexpr const void* prev (const void* f, size_t n)
+    { return prev (static_cast<const char*>(f), n); }
+
+template <typename I>
+constexpr auto distance (I f, I l)
+    { return l-f; }
+template <> constexpr auto distance (void* f, void* l)
+    { return distance (static_cast<char*>(f), static_cast<char*>(l)); }
+template <> constexpr auto distance (const void* f, const void* l)
+    { return distance (static_cast<const char*>(f), static_cast<const char*>(l)); }
+
+template <typename T>
+constexpr void advance (T*& f, size_t n = 1) { f = next(f,n); }
+template <typename I> constexpr void advance (I& f) { ++f; }
+template <typename I> constexpr void advance (I& f, size_t n) { f += n; }
+
+//}}}-------------------------------------------------------------------
 //{{{ unique_ptr
 
 /// \brief A smart pointer.
@@ -200,6 +239,193 @@ template <typename T, typename... Args>
 inline auto make_unique (Args&&... args) { return unique_ptr<T> (new T (forward<Args>(args)...)); }
 
 //}}}-------------------------------------------------------------------
+//{{{ copy and fill
+
+template <typename II, typename OI>
+constexpr auto copy_n (II f, size_t n, OI r)
+{
+    using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
+	return OI (__builtin_mempcpy (to_address(r), to_address(f), n*sizeof(ovalue_type)));
+    else for (auto l = next(f,n); f < l; advance(r), advance(f))
+	*r = *f;
+    return r;
+}
+
+template <typename II, typename OI>
+constexpr auto copy (II f, II l, OI r)
+{
+    using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
+	return copy_n (f, distance(f,l), r);
+    for (; f < l; advance(r), advance(f))
+	*r = *f;
+    return r;
+}
+
+template <typename C, typename OI>
+constexpr auto copy (const C& c, OI r)
+    { return copy_n (begin(c), size(c), r); }
+
+template <typename II, typename OI>
+auto copy_backward_n (II f, size_t n, OI r)
+{
+    using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
+    #if __x86__
+	if constexpr (compile_constant(n))
+    #endif
+	    __builtin_memmove (to_address(r), to_address(f), n*sizeof(ovalue_type));
+    #if __x86__
+	else {
+	    __asm__ volatile ("std":::"cc");
+	#if __x86_64__
+	    if constexpr (!(sizeof(ovalue_type)%8)) {
+		auto ef = reinterpret_cast<const uint64_t*>(to_address(next(f,n)))-1;
+		auto er = reinterpret_cast<uint64_t*>(to_address(next(r,n)))-1;
+		n *= sizeof(ovalue_type)/8;
+		__asm__ volatile ("rep movsq":"+S"(ef),"+D"(er),"+c"(n)::"cc","memory");
+	    }
+	#endif
+	    else if constexpr (!(sizeof(ovalue_type)%4)) {
+		auto ef = reinterpret_cast<const uint32_t*>(to_address(next(f,n)))-1;
+		auto er = reinterpret_cast<uint32_t*>(to_address(next(r,n)))-1;
+		n *= sizeof(ovalue_type)/4;
+		__asm__ volatile ("rep movsl":"+S"(ef),"+D"(er),"+c"(n)::"cc","memory");
+	    } else if constexpr (!(sizeof(ovalue_type)%2)) {
+		auto ef = reinterpret_cast<const uint16_t*>(to_address(next(f,n)))-1;
+		auto er = reinterpret_cast<uint16_t*>(to_address(next(r,n)))-1;
+		n *= sizeof(ovalue_type)/2;
+		__asm__ volatile ("rep movsw":"+S"(ef),"+D"(er),"+c"(n)::"cc","memory");
+	    } else {
+		auto ef = reinterpret_cast<const uint8_t*>(to_address(next(f,n)))-1;
+		auto er = reinterpret_cast<uint8_t*>(to_address(next(r,n)))-1;
+		n *= sizeof(ovalue_type);
+		 __asm__ volatile ("rep movsb":"+S"(ef),"+D"(er),"+c"(n)::"cc","memory");
+	    }
+	    __asm__ volatile ("cld":::"cc");
+	}
+    #endif // !__x86__
+    } else while (n--)
+	r[n] = f[n];
+    return r;
+}
+
+template <typename II, typename OI>
+auto copy_backward (II f, II l, OI r)
+{
+    using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
+	return copy_backward_n (f, distance(f,l), r);
+    while (f < l)
+	*--r = *--l;
+    return r;
+}
+
+template <typename C, typename OI>
+auto copy_backward (const C& c, OI r)
+    { return copy_backward_n (begin(c), size(c), r); }
+
+template <typename I, typename T>
+auto fill_n (I f, size_t n, const T& v)
+{
+    using ivalue_type = make_unsigned_t<remove_const_t<T>>;
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
+    constexpr bool canstos = is_trivial<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value;
+    if constexpr (canstos && sizeof(ovalue_type) == 1)
+	{ __builtin_memset (to_address(f), bit_cast<uint8_t>(v), n); advance(f,n); }
+#if __x86__
+    else if constexpr (canstos && sizeof(ovalue_type) == 2)
+	__asm__ volatile ("rep stosw":"+D"(f),"+c"(n):"a"(bit_cast<uint16_t>(v)):"cc","memory");
+    else if constexpr (canstos && sizeof(ovalue_type) == 4)
+	__asm__ volatile ("rep stosl":"+D"(f),"+c"(n):"a"(bit_cast<uint32_t>(v)):"cc","memory");
+#if __x86_64__
+    else if constexpr (canstos && sizeof(ovalue_type) == 8)
+	__asm__ volatile ("rep stosq":"+D"(f),"+c"(n):"a"(bit_cast<uint64_t>(v)):"cc","memory");
+#endif
+#endif
+    else for (auto l = next(f,n); f < l; advance(f))
+	*f = v;
+    return f;
+}
+
+template <typename I, typename T>
+auto fill (I f, I l, const T& v)
+{
+    using ivalue_type = make_unsigned_t<remove_const_t<T>>;
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
+    if constexpr (is_trivial<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
+	return fill_n (f, distance(f,l), v);
+    for (; f < l; advance(f))
+	*f = v;
+    return f;
+}
+
+template <typename C, typename T>
+auto fill (C& c, const T& v)
+    { return fill_n (begin(c), size(c), v); }
+
+template <typename I>
+inline constexpr auto zero_fill_n (I f, size_t n)
+{
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
+    if constexpr (is_trivial<ovalue_type>::value)
+	{ __builtin_memset (to_address(f), 0, n*sizeof(ovalue_type)); advance(f,n); }
+    else for (auto l = next(f,n); f < l; advance(f))
+	*f = 0;
+    return f;
+}
+
+template <typename I>
+inline constexpr auto zero_fill (I f, I l)
+{
+    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
+    if constexpr (is_trivial<ovalue_type>::value)
+	return zero_fill_n (f, distance(f,l));
+    for (; f < l; advance(f))
+	*f = 0;
+    return f;
+}
+
+template <typename C>
+inline constexpr auto zero_fill (C& c)
+    { return zero_fill_n (begin(c), size(c)); }
+
+template <typename I>
+constexpr auto shift_left (I f, I l, size_t n)
+{
+    auto m = next(f,n);
+    assert (m >= f && m <= l);
+    return copy_n (m, distance(m,l), f);
+}
+
+template <typename C, typename T>
+constexpr auto shift_left (C& c, size_t n)
+    { return shift_left (begin(c), end(c), n); }
+
+template <typename I>
+auto shift_right (I f, I l, size_t n)
+{
+    auto m = next(f,n);
+    assert (m >= f && m <= l);
+    return copy_backward_n (f, distance(m,l), m);
+}
+
+template <typename C, typename T>
+auto shift_right (C& c, size_t n)
+    { return shift_right (begin(c), end(c), n); }
+
+extern "C" void brotate (void* vf, void* vm, void* vl) noexcept;
+
+template <typename T>
+T* rotate (T* f, T* m, T* l)
+    { brotate (f, m, l); return f; }
+
+//}}}-------------------------------------------------------------------
 //{{{ construct and destroy
 
 /// Calls the placement new on \p p.
@@ -228,8 +454,8 @@ constexpr auto uninitialized_default_construct (I f, I l)
 {
     if constexpr (is_trivially_constructible<typename iterator_traits<I>::value_type>::value) {
 	if (f < l)
-	    __builtin_memset (static_cast<void*>(f), 0, (l-f)*sizeof(*f));
-    } else for (; f < l; ++f)
+	    zero_fill (f, l);
+    } else for (; f < l; advance(f))
 	construct_at (f);
     return f;
 }
@@ -237,215 +463,46 @@ constexpr auto uninitialized_default_construct (I f, I l)
 /// Calls the placement new on \p p.
 template <typename I>
 constexpr auto uninitialized_default_construct_n (I f, size_t n)
-    { return uninitialized_default_construct (f, f+n); }
+    { return uninitialized_default_construct (f, next(f,n)); }
 
 /// Calls the destructor on elements in range [f, l) without calling delete.
 template <typename I>
 constexpr void destroy (I f [[maybe_unused]], I l [[maybe_unused]]) noexcept
 {
     if constexpr (!is_trivially_destructible<typename iterator_traits<I>::value_type>::value) {
-	for (; f < l; ++f)
+	for (; f < l; advance(f))
 	    destroy_at (f);
     }
 #ifndef NDEBUG
     else if (f < l)
-	__builtin_memset (static_cast<void*>(f), 0xcd, (l-f)*sizeof(*f));
+	__builtin_memset (static_cast<void*>(to_address(f)), '\xcd', distance(f,l)*sizeof(*to_address(f)));
 #endif
 }
 
 /// Calls the destructor on elements in range [f, f+n) without calling delete.
 template <typename I>
 constexpr void destroy_n (I f, size_t n) noexcept
-    { return destroy (f, f+n); }
-
-//}}}-------------------------------------------------------------------
-//{{{ copy and fill
-
-template <typename II, typename OI>
-auto copy_n (II f, size_t n, OI r)
-{
-    using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
-    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
-    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
-    #if __x86__
-	if constexpr (compile_constant(n))
-    #endif
-	    return OI (__builtin_mempcpy (r, f, n*sizeof(ovalue_type)));
-    #if __x86__
-    #if __x86_64__
-	else if constexpr (!(sizeof(ovalue_type)%8)) {
-	    n *= sizeof(ovalue_type)/8;
-	    __asm__ volatile ("rep movsq":"+S"(f),"+D"(r),"+c"(n)::"cc","memory");
-	}
-    #endif
-	else if constexpr (!(sizeof(ovalue_type)%4)) {
-	    n *= sizeof(ovalue_type)/4;
-	    __asm__ volatile ("rep movsl":"+S"(f),"+D"(r),"+c"(n)::"cc","memory");
-	} else if constexpr (!(sizeof(ovalue_type)%2)) {
-	    n *= sizeof(ovalue_type)/2;
-	    __asm__ volatile ("rep movsw":"+S"(f),"+D"(r),"+c"(n)::"cc","memory");
-	} else {
-	    n *= sizeof(ovalue_type);
-	     __asm__ volatile ("rep movsb":"+S"(f),"+D"(r),"+c"(n)::"cc","memory");
-	}
-    #endif
-    } else for (auto l = f+n; f < l; ++r, ++f)
-	*r = *f;
-    return r;
-}
-
-template <typename II, typename OI>
-auto copy (II f, II l, OI r)
-{
-    using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
-    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
-    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
-	return copy_n (f, l-f, r);
-    for (; f < l; ++r, ++f)
-	*r = *f;
-    return r;
-}
-
-template <typename C, typename OI>
-auto copy (const C& c, OI r)
-    { return copy_n (begin(c), size(c), r); }
-
-template <typename II, typename OI>
-auto copy_backward_n (II f, size_t n, OI r)
-{
-    using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
-    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
-    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
-    #if __x86__
-	if constexpr (compile_constant(n))
-    #endif
-	    __builtin_memmove (&*r, &*f, n*sizeof(ovalue_type));
-    #if __x86__
-	else {
-	    __asm__ volatile ("std":::"cc");
-	#if __x86_64__
-	    if constexpr (!(sizeof(ovalue_type)%8))
-		copy_n (reinterpret_cast<const uint64_t*>(&*(f+n))-1, n*sizeof(ovalue_type)/8, reinterpret_cast<uint64_t*>(&*(r+n))-1);
-	    else
-	#endif
-	    if constexpr (!(sizeof(ovalue_type)%4))
-		copy_n (reinterpret_cast<const uint32_t*>(&*(f+n))-1, n*sizeof(ovalue_type)/4, reinterpret_cast<uint32_t*>(&*(r+n))-1);
-	    else if constexpr (!(sizeof(ovalue_type)%2))
-		copy_n (reinterpret_cast<const uint16_t*>(&*(f+n))-1, n*sizeof(ovalue_type)/2, reinterpret_cast<uint16_t*>(&*(r+n))-1);
-	    else
-		copy_n (reinterpret_cast<const uint8_t*>(&*(f+n))-1, n*sizeof(ovalue_type), reinterpret_cast<uint8_t*>(&*(r+n))-1);
-	    __asm__ volatile ("cld":::"cc");
-	}
-    #endif // !__x86__
-    } else while (n--)
-	r[n] = f[n];
-    return r;
-}
-
-template <typename II, typename OI>
-auto copy_backward (II f, II l, OI r)
-{
-    using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
-    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
-    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
-	return copy_backward_n (f, l-f, r);
-    while (f < l)
-	*--r = *--l;
-    return r;
-}
-
-template <typename C, typename OI>
-auto copy_backward (const C& c, OI r)
-    { return copy_backward_n (begin(c), size(c), r); }
-
-template <typename I, typename T>
-auto fill_n (I f, size_t n, const T& v)
-{
-    using ivalue_type = make_unsigned_t<remove_const_t<T>>;
-    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
-    constexpr bool canstos = is_trivial<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value;
-    if constexpr (canstos && sizeof(ovalue_type) == 1)
-	{ __builtin_memset (f, bit_cast<uint8_t>(v), n); f += n; }
-#if __x86__
-    else if constexpr (canstos && sizeof(ovalue_type) == 2)
-	__asm__ volatile ("rep stosw":"+D"(f),"+c"(n):"a"(bit_cast<uint16_t>(v)):"cc","memory");
-    else if constexpr (canstos && sizeof(ovalue_type) == 4)
-	__asm__ volatile ("rep stosl":"+D"(f),"+c"(n):"a"(bit_cast<uint32_t>(v)):"cc","memory");
-#if __x86_64__
-    else if constexpr (canstos && sizeof(ovalue_type) == 8)
-	__asm__ volatile ("rep stosq":"+D"(f),"+c"(n):"a"(bit_cast<uint64_t>(v)):"cc","memory");
-#endif
-#endif
-    else for (auto l = f+n; f < l; ++f)
-	*f = v;
-    return f;
-}
-
-template <typename I, typename T>
-auto fill (I f, I l, const T& v)
-{
-    using ivalue_type = make_unsigned_t<remove_const_t<T>>;
-    using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
-    if constexpr (is_trivial<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
-	return fill_n (f, l-f, v);
-    for (; f < l; ++f)
-	*f = v;
-    return f;
-}
-
-template <typename C, typename T>
-auto fill (C& c, const T& v)
-    { return fill_n (begin(c), size(c), v); }
-
-template <typename I>
-auto shift_left (I f, I l, size_t n)
-{
-    auto m = f+n;
-    assert (m >= f && m <= l);
-    return copy_n (m, l-m, f);
-}
-
-template <typename C, typename T>
-auto shift_left (C& c, size_t n)
-    { return shift_left (begin(c), end(c), n); }
-
-template <typename I>
-auto shift_right (I f, I l, size_t n)
-{
-    auto m = f+n;
-    assert (m >= f && m <= l);
-    return copy_backward_n (f, l-m, m);
-}
-
-template <typename C, typename T>
-auto shift_right (C& c, size_t n)
-    { return shift_right (begin(c), end(c), n); }
-
-extern "C" void brotate (void* vf, void* vm, void* vl) noexcept;
-
-template <typename T>
-T* rotate (T* f, T* m, T* l)
-    { brotate (f, m, l); return f; }
+    { return destroy (f, next(f,n)); }
 
 //}}}-------------------------------------------------------------------
 //{{{ uninitialized fill and copy
 
 /// Copies [f, l) into r by calling copy constructors in r.
 template <typename II, typename OI>
-inline auto uninitialized_copy (II f, II l, OI r)
+constexpr auto uninitialized_copy (II f, II l, OI r)
 {
     using ivalue_type = remove_const_t<typename iterator_traits<II>::value_type>;
     using ovalue_type = remove_const_t<typename iterator_traits<OI>::value_type>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return copy (f, l, r);
-    for (; f < l; ++r, ++f)
-	construct_at (&*r, *f);
+    for (; f < l; advance(r), advance(f))
+	construct_at (to_address(r), *f);
     return r;
 }
 
 /// Copies [f, f + n) into r by calling copy constructors in r.
 template <typename II, typename OI>
-inline auto uninitialized_copy_n (II f, size_t n, OI r)
+constexpr auto uninitialized_copy_n (II f, size_t n, OI r)
 {
     using ivalue_type = remove_const_t<typename iterator_traits<II>::value_type>;
     using ovalue_type = remove_const_t<typename iterator_traits<OI>::value_type>;
@@ -458,20 +515,20 @@ inline auto uninitialized_copy_n (II f, size_t n, OI r)
 
 /// Copies [f, l) into r by calling move constructors in r.
 template <typename II, typename OI>
-inline auto uninitialized_move (II f, II l, OI r)
+constexpr auto uninitialized_move (II f, II l, OI r)
 {
     using ivalue_type = remove_const_t<typename iterator_traits<II>::value_type>;
     using ovalue_type = remove_const_t<typename iterator_traits<OI>::value_type>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return copy (f, l, r);
-    for (; f < l; ++r, ++f)
-	construct_at (&*r, move(*f));
+    for (; f < l; advance(r), advance(f))
+	construct_at (to_address(r), move(*f));
     return r;
 }
 
 /// Copies [f, f + n) into r by calling move constructors in r.
 template <typename II, typename OI>
-inline auto uninitialized_move_n (II f, size_t n, OI r)
+constexpr auto uninitialized_move_n (II f, size_t n, OI r)
 {
     using ivalue_type = remove_const_t<typename iterator_traits<II>::value_type>;
     using ovalue_type = remove_const_t<typename iterator_traits<OI>::value_type>;
@@ -484,19 +541,19 @@ inline auto uninitialized_move_n (II f, size_t n, OI r)
 
 /// Calls construct on all elements in [f, l) with value \p v.
 template <typename I, typename T>
-inline void uninitialized_fill (I f, I l, const T& v)
+constexpr void uninitialized_fill (I f, I l, const T& v)
 {
     using ivalue_type = remove_const_t<T>;
     using ovalue_type = remove_const_t<typename iterator_traits<I>::value_type>;
     if constexpr (is_trivially_constructible<ovalue_type>::value && is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	fill (f, l, v);
-    else for (; f < l; ++f)
-	construct_at (&*f, v);
+    else for (; f < l; advance(f))
+	construct_at (to_address(f), v);
 }
 
 /// Calls construct on all elements in [f, f + n) with value \p v.
 template <typename I, typename T>
-inline auto uninitialized_fill_n (I f, size_t n, const T& v)
+constexpr auto uninitialized_fill_n (I f, size_t n, const T& v)
 {
     using ivalue_type = remove_const_t<T>;
     using ovalue_type = remove_const_t<typename iterator_traits<I>::value_type>;

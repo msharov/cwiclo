@@ -130,7 +130,7 @@ public:
 					is >> ios::talign<size_type>();
 				}
     template <typename Stm>
-    void			write (Stm& os) const noexcept {
+    constexpr void		write (Stm& os) const noexcept {
 				    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
 					return _data.write (os, sizeof(T));
 				    os << size();
@@ -160,7 +160,7 @@ private:
 STREAM_ALIGN (cmemlink, stream_align<cmemlink::size_type>::value)
 namespace cwiclo {
 
-void cmemlink::write (sstream& os, size_type elsize) const noexcept
+constexpr void cmemlink::write (sstream& os, size_type elsize) const noexcept
 {
     auto sz = size();
     if (sz)

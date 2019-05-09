@@ -9,27 +9,6 @@
     #include <execinfo.h>
 #endif
 
-//----------------------------------------------------------------------
-
-extern "C" void* _realloc (void* p, size_t n) noexcept
-{
-    p = realloc (p, n);
-    if (!p)
-	abort();
-    return p;
-}
-
-extern "C" void* _alloc (size_t n) noexcept
-{
-    auto p = _realloc (nullptr, n);
-    #ifndef NDEBUG
-	memset (p, 0xcd, n);
-    #endif
-    return p;
-}
-
-//----------------------------------------------------------------------
-
 namespace std {
 
 void terminate (void) noexcept { abort(); }
@@ -61,9 +40,26 @@ void __cxa_guard_abort (__guard* g) noexcept { g->clear(); }
 
 //----------------------------------------------------------------------
 
+void* _realloc (void* p, size_t n) noexcept
+{
+    p = realloc (p, n);
+    if (!p)
+	abort();
+    return p;
+}
+
+void* _alloc (size_t n) noexcept
+{
+    auto p = _realloc (nullptr, n);
+    #ifndef NDEBUG
+	cwiclo::fill_n (static_cast<char*>(p), n, '\xcd');
+    #endif
+    return p;
+}
+
 namespace cwiclo {
 
-extern "C" void brotate (void* vf, void* vm, void* vl) noexcept
+void brotate (void* vf, void* vm, void* vl) noexcept
 {
     auto f = (char*) vf, m = (char*) vm, l = (char*) vl;
     const auto lsz (m-f), hsz (l-m), hm (min (lsz, hsz));
@@ -81,7 +77,7 @@ extern "C" void brotate (void* vf, void* vm, void* vl) noexcept
     }
 }
 
-extern "C" void print_backtrace (void) noexcept
+void print_backtrace (void) noexcept
 {
 #if __has_include(<execinfo.h>)
     void* frames[32];
@@ -122,7 +118,7 @@ extern "C" void print_backtrace (void) noexcept
 }
 
 #ifndef UC_VERSION
-extern "C" void hexdump (const void* vp, size_t n) noexcept
+void hexdump (const void* vp, size_t n) noexcept
 {
     //{{{ CP437 UTF8 table
     static const char c_437table[256][4] = {

@@ -89,7 +89,7 @@ Msg::Msg (const Link& l, methodid_t mid, streamsize size, fdoffset_t fdo) noexce
 {
     auto ppade = _body.end();
     _body.shrink (size);
-    fill (_body.end(), ppade, 0);	// zero out the alignment padding
+    zero_fill (_body.end(), ppade);	// zero out the alignment padding
 }
 
 static streamsize SigelementSize (char c) noexcept

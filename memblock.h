@@ -68,7 +68,7 @@ public:
     void		link_read (istream& is, size_type elsize = sizeof(value_type)) noexcept;
     inline void		read (istream& is, size_type elsize = sizeof(value_type))	{ link_read (is, elsize); }
     void		write (ostream& os, size_type elsize = sizeof(value_type)) const noexcept;
-    inline void		write (sstream& os, size_type elsize = sizeof(value_type)) const noexcept;
+    constexpr void	write (sstream& os, size_type elsize = sizeof(value_type)) const noexcept;
     int			write_file (const char* filename) const noexcept;
     int			write_file_atomic (const char* filename) const noexcept;
 protected:
@@ -240,7 +240,7 @@ public:
     inline void			copy_link (void) noexcept		{ resize (size()); }
     void			allocate (size_type sz)	{ assert (!capacity()); memblock::resize(sz); }
     inline constexpr void	shrink (size_type sz)	{ assert (sz <= capacity()); memlink::resize(sz); }
-    inline void			wipe (void)		{ fill_n (data(), capacity(), value_type(0)); }
+    inline constexpr void	wipe (void)		{ zero_fill_n (data(), capacity()); }
     void			reserve (size_type sz) noexcept;
     void			resize (size_type sz) noexcept;
     iterator			insert (const_iterator start, size_type n) noexcept;
