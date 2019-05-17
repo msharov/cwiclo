@@ -8,34 +8,34 @@
 class TestApp : public App {
 public:
     // Apps always use the singleton pattern
-    static auto& Instance (void) noexcept { static TestApp s_App; return s_App; }
+    static auto& instance (void) noexcept { static TestApp s_app; return s_app; }
 
-    bool Dispatch (Msg& msg) noexcept override {
+    bool dispatch (Msg& msg) noexcept override {
 	//
-	// Every Msger must implement the Dispatch virtual,
+	// Every Msger must implement the dispatch virtual,
 	// listing all interfaces it responds to. Here, the
-	// TestApp receives PingR messages. PPingR::Dispatch
+	// TestApp receives PingR messages. PPingR::dispatch
 	// will accept messages for PingR interface and return
 	// true when they are handled.
 	//
-	return PPingR::Dispatch (this, msg)
+	return PPingR::dispatch (this, msg)
 	    //
-	    // The base class Dispatch will handle unrecognized
+	    // The base class dispatch will handle unrecognized
 	    // messages by returning false.
 	    //
-	    || App::Dispatch (msg);
+	    || App::dispatch (msg);
     }
-    void PingR_Ping (uint32_t v) {
+    void PingR_ping (uint32_t v) {
 	//
-	// This method is called by PPingR::Dispatch when a
+	// This method is called by PPingR::dispatch when a
 	// Ping message is received on a PingR interface.
 	// Note the naming convention.
 	//
 	LOG ("Ping %u reply received in app\n", v);
 	if (++v < 5)
-	    _pinger.Ping (v);
+	    _pinger.ping (v);
 	else
-	    Quit();
+	    quit();
     }
 private:
     TestApp (void) noexcept
@@ -49,17 +49,17 @@ private:
     //
     // Proxies require the source mrid, to tell the destination
     // Msger where the message came from and where to reply.
-    // Usually the mrid is obtained by calling MsgerId(), but
+    // Usually the mrid is obtained by calling msger_id(), but
     // the App object is always mrid_App, so it can be used directly.
     //
-    , _pinger (mrid_App)
+    ,_pinger (mrid_App)
     {
 	// When ready, simply call the desired method.
 	// All method calls are asynchonous, never blocking.
-	// Replies arrive to PingR_Ping above when sent
+	// Replies arrive to PingR_ping above when sent
 	// by the Ping server in this same manner.
 	//
-	_pinger.Ping (1);
+	_pinger.ping (1);
     }
 private:
     PPing		_pinger;

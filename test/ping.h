@@ -25,39 +25,40 @@ class PPing : public Proxy {
     // This creates the name of the interface followed by methods and
     // signatures in a continuous string. Here there is only one method;
     // when you have more than one, they are specified as a preprocessor
-    // sequence (Method1,"s")(Method2,"u")(Method3,"x"). Note the absence
+    // sequence (method1,"s")(method2,"u")(method3,"x"). Note the absence
     // of commas between parenthesis groups.
     //
-    DECLARE_INTERFACE (Ping, (Ping,"u"));
+    DECLARE_INTERFACE (Ping, (ping,"u"));
 public:
     // Proxies are constructed with the calling object's oid.
     // Reply messages sent through reply interfaces, here PingR,
     // will be delivered to the given object.
     constexpr		PPing (mrid_t caller) : Proxy (caller) {}
+
     // Methods are implemented by simple marshalling of the arguments.
-    // M_Ping() is defined by DECLARE_INTERFACE above and returns the methodid_t of the Ping call.
-    void		Ping (uint32_t v) {
-			    auto& msg = CreateMsg (M_Ping(), stream_size_of(v));
+    // m_ping() is defined by DECLARE_INTERFACE above and returns the methodid_t of the Ping call.
+    void		ping (uint32_t v) {
+			    auto& msg = create_msg (m_ping(), stream_size_of(v));
 			    // Here an expanded example is given with direct
 			    // stream access. See PingR for a simpler example
 			    // using the Send template.
-			    auto os = msg.Write();
+			    auto os = msg.write();
 			    os << v;
-			    CommitMsg (msg, os);
+			    commit_msg (msg, os);
 			}
 
-    // The Dispatch method is called from the destination object's
-    // aggregate Dispatch method. A templated implementation like
+    // The dispatch method is called from the destination object's
+    // aggregate dispatch method. A templated implementation like
     // this can be inlined for minimum overhead. The return value
     // indicates whether the message was accepted.
     //
     template <typename O>
-    inline static bool Dispatch (O* o, const Msg& msg) noexcept {
-	if (msg.Method() == M_Ping()) {
+    inline static bool dispatch (O* o, const Msg& msg) noexcept {
+	if (msg.method() == m_ping()) {
 	    // Each method unmarshals the arguments and calls the handling object
-	    auto is = msg.Read();
+	    auto is = msg.read();
 	    uint32_t v; is >> v;
-	    o->Ping_Ping (v);	// name the handlers Interface_Method by convention
+	    o->Ping_ping (v);	// name the handlers Interface_method by convention
 	} else
 	    return false;	// protocol errors are handled by caller
 	return true;
@@ -68,7 +69,7 @@ public:
 // reply interface must be implemented. This is the reply interface.
 //
 class PPingR : public ProxyR {
-    DECLARE_INTERFACE (PingR, (Ping,"u"));
+    DECLARE_INTERFACE (PingR, (ping,"u"));
 public:
     // Reply proxies are constructed from the owning object's creating
     // link, copied from the message that created it. ProxyR will reverse
@@ -76,12 +77,12 @@ public:
     constexpr		PPingR (const Msg::Link& l) : ProxyR (l) {}
 			// Using variadic Send is the easiest way to
 			// create a message that only marshals arguments.
-    void		Ping (uint32_t v) { Send (M_Ping(), v); }
+    void		ping (uint32_t v) { send (m_ping(), v); }
     template <typename O>
-    inline static bool Dispatch (O* o, const Msg& msg) noexcept {
-	if (msg.Method() != M_Ping())
+    inline static bool dispatch (O* o, const Msg& msg) noexcept {
+	if (msg.method() != m_ping())
 	    return false;
-	o->PingR_Ping (msg.Read().read<uint32_t>());
+	o->PingR_ping (msg.read().read<uint32_t>());
 	return true;
     }
 };
@@ -95,19 +96,19 @@ public:
 class PingMsger : public Msger {
 public:
     explicit		PingMsger (const Msg::Link& l)
-			    : Msger(l),_reply(l),_nPings(0)
-			    { LOG ("Created Ping%hu\n", MsgerId()); }
+			    : Msger(l),_reply(l),_npings(0)
+			    { LOG ("Created Ping%hu\n", msger_id()); }
 			~PingMsger (void) noexcept override
-			    { LOG ("Destroy Ping%hu\n", MsgerId()); }
-    inline void		Ping_Ping (uint32_t v) {
-			    LOG ("Ping%hu: %u, %u total\n", MsgerId(), v, ++_nPings);
-			    _reply.Ping (v);
+			    { LOG ("Destroy Ping%hu\n", msger_id()); }
+    inline void		Ping_ping (uint32_t v) {
+			    LOG ("Ping%hu: %u, %u total\n", msger_id(), v, ++_npings);
+			    _reply.ping (v);
 			}
-    bool		Dispatch (Msg& msg) noexcept override {
-			    return PPing::Dispatch (this, msg)
-					|| Msger::Dispatch (msg);
+    bool		dispatch (Msg& msg) noexcept override {
+			    return PPing::dispatch (this, msg)
+					|| Msger::dispatch (msg);
 			}
 private:
     PPingR		_reply;
-    uint32_t		_nPings;
+    uint32_t		_npings;
 };

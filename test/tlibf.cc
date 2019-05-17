@@ -16,30 +16,31 @@ using namespace cwiclo;
 
 class LibTestApp : public App {
 public:
-    static auto&	Instance (void) { static LibTestApp s_App; return s_App; }
-    inline int		Run (void);
+    static auto&	instance (void) { static LibTestApp s_app; return s_app; }
+    inline int		run (void);
 private:
     inline		LibTestApp (void) : App() {}
-    static void		TestML (void);
-    static void		TestMB (void);
-    static void		TestVector (void);
-    static void		TestMultiset (void);
-    static void		TestString (void);
-    static void		TestStringVector (void);
-    static void		TestStreams (void);
-    static void		WriteML (const memlink& l);
-    static void		WriteMB (const memblock& l);
-    static void		PrintVector (const vector<int>& v);
-    static vector<int>	MakeIotaVector (unsigned n);
-    static vector<int>	SubtractVector (const vector<int>& v1, const vector<int>& v2);
-    static void		PrintString (const string& str);
+    static void		test_utility (void);
+    static void		test_memlink (void);
+    static void		test_memblock (void);
+    static void		test_vector (void);
+    static void		test_multiset (void);
+    static void		test_string (void);
+    static void		test_stringVector (void);
+    static void		test_streams (void);
+    static void		write_memlink (const memlink& l);
+    static void		write_memblock (const memblock& l);
+    static void		print_vector (const vector<int>& v);
+    static vector<int>	make_iota_vector (unsigned n);
+    static vector<int>	subtract_vector (const vector<int>& v1, const vector<int>& v2);
+    static void		print_string (const string& str);
 };
 
 //}}}-------------------------------------------------------------------
-//{{{ TestUtility
+//{{{ test_utility
 
 template <typename T>
-static void TestBswap (T v)
+static void test_bswap (T v)
 {
     auto vsw (bswap(v));
     auto vbe (vsw), vle (v);
@@ -51,34 +52,34 @@ static void TestBswap (T v)
     printf ("native_to_be(%lX) = %s\n", (unsigned long) v, ok[native_to_be(v) == vbe]);
 }
 
-static void TestUtility (void)
+void LibTestApp::test_utility (void) // static
 {
-    printf ("DivRU(13,5) = %d\n", DivRU(13,5));
-    printf ("DivRU(15,5) = %d\n", DivRU(15,5));
-    printf ("DivRU(-12,5) = %d\n\n", DivRU(-12,5));
+    printf ("divide_ceil(13,5) = %d\n", divide_ceil(13,5));
+    printf ("divide_ceil(15,5) = %d\n", divide_ceil(15,5));
+    printf ("divide_ceil(-12,5) = %d\n\n", divide_ceil(-12,5));
 
-    printf ("Floor(18,8) = %d\n", Floor(18,8));
-    printf ("Floor(-26,25) = %d\n\n", Floor(-26,25));
+    printf ("floorg(18,8) = %d\n", floorg(18,8));
+    printf ("floorg(-26,25) = %d\n\n", floorg(-26,25));
 
-    printf ("Align(5) = %d\n", Align(5));
-    printf ("Align(5,2) = %d\n", Align(5,2));
-    printf ("Align(17,7) = %d\n", Align(17,7));
-    printf ("Align(14,7) = %d\n", Align(14,7));
-    printf ("Align(-26,25) = %d\n\n", Align(-26,25));
+    printf ("ceilg(5,8) = %d\n", ceilg(5,8));
+    printf ("ceilg(5,2) = %d\n", ceilg(5,2));
+    printf ("ceilg(17,7) = %d\n", ceilg(17,7));
+    printf ("ceilg(14,7) = %d\n", ceilg(14,7));
+    printf ("ceilg(-26,25) = %d\n\n", ceilg(-26,25));
 
-    printf ("Round(5,2) = %d\n", Round(5,2));
-    printf ("Round(-5,2) = %d\n", Round(-5,2));
-    printf ("Round(14,7) = %d\n", Round(14,7));
-    printf ("Round(-1,7) = %d\n", Round(-1,7));
-    printf ("Round(-14,25) = %d\n\n", Round(-14,25));
+    printf ("roundg(5,2) = %d\n", roundg(5,2));
+    printf ("roundg(-5,2) = %d\n", roundg(-5,2));
+    printf ("roundg(14,7) = %d\n", roundg(14,7));
+    printf ("roundg(-1,7) = %d\n", roundg(-1,7));
+    printf ("roundg(-14,25) = %d\n\n", roundg(-14,25));
 
-    printf ("DivRound(5,2) = %d\n", DivRound(5,2));
-    printf ("DivRound(-5,2) = %d\n", DivRound(-5,2));
-    printf ("DivRound(14,9) = %d\n", DivRound(14,9));
-    printf ("DivRound(-1,7) = %d\n\n", DivRound(-1,7));
+    printf ("divide_round(5,2) = %d\n", divide_round(5,2));
+    printf ("divide_round(-5,2) = %d\n", divide_round(-5,2));
+    printf ("divide_round(14,9) = %d\n", divide_round(14,9));
+    printf ("divide_round(-1,7) = %d\n\n", divide_round(-1,7));
 
-    printf ("Square(3) = %u\n", Square(3));
-    printf ("Square(-4) = %u\n\n", Square(-4));
+    printf ("square(3) = %u\n", square(3));
+    printf ("square(-4) = %u\n\n", square(-4));
 
     printf ("log2p1(1) = %u\n", log2p1(1));
     printf ("log2p1(4) = %u\n", log2p1(4));
@@ -103,9 +104,9 @@ static void TestUtility (void)
     printf ("size(c_Numbers[5]) = %zd\n", size(c_Numbers));
     printf ("size({1,2,3,4,5}) = %zd\n", size({1,2,3,4,5}));
 
-    TestBswap (uint16_t (0x1234));
-    TestBswap (uint32_t (0x12345678));
-    TestBswap (uint64_t (UINT64_C(0x123456789ABCDEF0)));
+    test_bswap (uint16_t (0x1234));
+    test_bswap (uint32_t (0x12345678));
+    test_bswap (uint64_t (UINT64_C(0x123456789ABCDEF0)));
 
     printf ("\nabsv(12) = %u\n", absv(12));
     printf ("absv(-12) = %u\n", absv(-12));
@@ -122,9 +123,9 @@ static void TestUtility (void)
     printf ("equal(,) = %u\n", equal("",""));
 }
 //}}}
-//{{{ TestML
+//{{{ test_memlink
 
-void LibTestApp::WriteML (const memlink& l) // static
+void LibTestApp::write_memlink (const memlink& l) // static
 {
     printf ("memlink{%u}: ", l.size());
     for (auto c : l)
@@ -132,12 +133,12 @@ void LibTestApp::WriteML (const memlink& l) // static
     putchar ('\n');
 }
 
-void LibTestApp::TestML (void) // static
+void LibTestApp::test_memlink (void) // static
 {
     char str[] = "abcdefghijklmnopqrstuvwzyz";
     memlink::const_pointer cstr = str;
 
-    memlink a (ArrayBlock(str));
+    memlink a (ARRAY_BLOCK(str));
     if (a.begin() != str)
 	printf ("begin() failed on memlink\n");
     a.static_link (str);
@@ -145,34 +146,34 @@ void LibTestApp::TestML (void) // static
 	printf ("begin() + 5 failed on memlink\n");
     if (!equal (str, a.begin()))
 	printf ("memlinks are not equal\n");
-    WriteML (a);
+    write_memlink (a);
     memlink cb;
-    cb.link (ArrayBlock(str));
+    cb.link (ARRAY_BLOCK(str));
     if (cb.data() != cstr)
 	printf ("begin() of const failed on memlink\n");
     if (cb.begin() != cstr)
 	printf ("begin() failed on memlink\n");
-    WriteML (cb);
+    write_memlink (cb);
     if (a != cb)
 	printf ("operator== failed on memlink\n");
-    memlink b (ArrayBlock(str));
+    memlink b (ARRAY_BLOCK(str));
     b.resize (size(str)-2);
     a = b;
     if (a.data() != b.data())
 	printf ("begin() after assignment failed on memlink\n");
-    a.link (ArrayBlock(str)-1);
-    WriteML (a);
+    a.link (ARRAY_BLOCK(str)-1);
+    write_memlink (a);
     a.insert (a.begin() + 5, 9);
     fill_n (a.begin() + 5, 9, '-');
-    WriteML (a);
+    write_memlink (a);
     a.erase (a.begin() + 9, 7);
     fill_n (a.end() - 7, 7, '=');
-    WriteML (a);
+    write_memlink (a);
 }
 //}}}-------------------------------------------------------------------
-//{{{ TestMB
+//{{{ test_memblock
 
-void LibTestApp::WriteMB (const memblock& l) // static
+void LibTestApp::write_memblock (const memblock& l) // static
 {
     printf ("memblock{%u}: ", l.size());
     for (auto c : l)
@@ -180,10 +181,10 @@ void LibTestApp::WriteMB (const memblock& l) // static
     putchar ('\n');
 }
 
-void LibTestApp::TestMB (void) // static
+void LibTestApp::test_memblock (void) // static
 {
     char strTest[] = "abcdefghijklmnopqrstuvwxyz";
-    const auto strTestLen = strlen(strTest);
+    const auto strTestLen = __builtin_strlen (strTest);
     const auto cstrTest = strTest;
 
     memblock a, b;
@@ -194,13 +195,13 @@ void LibTestApp::TestMB (void) // static
 	printf ("begin() + 5 failed on memblock\n");
     if (!equal (a, strTest))
 	printf ("compare failed on memblock\n");
-    WriteMB (a);
+    write_memblock (a);
     b.link (cstrTest, strTestLen);
     if (b.data() != cstrTest)
 	printf ("begin() of const failed on memblock\n");
     if (as_const(b).begin() != cstrTest)
 	printf ("begin() failed on memblock\n");
-    WriteMB (b);
+    write_memblock (b);
     if (!(a == b))
 	printf ("operator== failed on memblock\n");
     b.copy_link();
@@ -214,24 +215,24 @@ void LibTestApp::TestMB (void) // static
 	printf ("Assignment does not copy a link\n");
     a.deallocate();
     a.assign (strTest, strTestLen);
-    WriteMB (a);
+    write_memblock (a);
     a.insert (a.begin() + 5, 9);
     fill_n (a.begin() + 5, 9, '-');
-    WriteMB (a);
+    write_memblock (a);
     a.erase (a.begin() + 2, 7);
     fill_n (a.end() - 7, 7, '=');
-    WriteMB (a);
+    write_memblock (a);
     a.resize (0);
-    WriteMB (a);
+    write_memblock (a);
     a.resize (strTestLen + strTestLen / 2);
     fill_n (a.iat(strTestLen), strTestLen/2, '+');
-    WriteMB (a);
+    write_memblock (a);
 }
 
 //}}}-------------------------------------------------------------------
-//{{{ TestVector
+//{{{ test_vector
 
-void LibTestApp::PrintVector (const vector<int>& v) // static
+void LibTestApp::print_vector (const vector<int>& v) // static
 {
     putchar ('{');
     for (auto i = 0u; i < v.size(); ++i) {
@@ -242,15 +243,10 @@ void LibTestApp::PrintVector (const vector<int>& v) // static
     puts ("}");
 }
 
-vector<int> LibTestApp::MakeIotaVector (unsigned n) // static
-{
-    vector<int> r (n);
-    for (auto i = 0u; i < r.size(); ++i)
-	r[i] = i;
-    return r;
-}
+vector<int> LibTestApp::make_iota_vector (unsigned n) // static
+    { vector<int> r (n); iota (r, 0); return r; }
 
-vector<int> LibTestApp::SubtractVector (const vector<int>& v1, const vector<int>& v2) // static
+vector<int> LibTestApp::subtract_vector (const vector<int>& v1, const vector<int>& v2) // static
 {
     vector<int> r (v1.begin(), v1.iat(min(v1.size(),v2.size())));
     for (auto i = 0u; i < r.size(); ++i)
@@ -263,17 +259,17 @@ struct A {
     ~A (void) { puts ("A::~A"); }
 };
 
-void LibTestApp::TestVector (void) // static
+void LibTestApp::test_vector (void) // static
 {
     const vector<int> vstd { 8,3,1,2,5,6,1,3,4,9 };
-    PrintVector (vstd);
+    print_vector (vstd);
     auto v = vstd;
     v.resize (17);
     fill_n (v.iat(vstd.size()), v.size()-vstd.size(), 7);
     v.resize (14);
-    PrintVector (v);
-    auto dv = SubtractVector (v, MakeIotaVector (v.size()));
-    PrintVector (dv);
+    print_vector (v);
+    auto dv = subtract_vector (v, make_iota_vector (v.size()));
+    print_vector (dv);
     v.shrink_to_fit();
     printf ("v: front %d, back %d, [4] %d, capacity %u\n", v.front(), v.back(), v[4], v.capacity());
     v.insert (v.iat(4), {23,24,25});
@@ -283,10 +279,10 @@ void LibTestApp::TestVector (void) // static
     v.push_back (62);
     v.erase (v.end()-2);
     v.pop_back();
-    PrintVector (v);
+    print_vector (v);
     random_shuffle (v);
     sort (v);
-    PrintVector (v);
+    print_vector (v);
     printf ("lower_bound(7): %tu\n", lower_bound (v,7)-v.begin());
     printf ("upper_bound(7): %tu\n", upper_bound (v,7)-v.begin());
     printf ("binary_search(3): %tu\n", binary_search (v,3)-v.begin());
@@ -298,7 +294,7 @@ void LibTestApp::TestVector (void) // static
     printf ("count_if(odd): %u\n", count_if(v,[](auto e){return e%2;}));
     iota (v.begin(), v.end(), 2);
     printf ("iota(2): ");
-    PrintVector (v);
+    print_vector (v);
 
     puts ("Constructing vector<A>(3)");
     vector<A> av (3);
@@ -310,17 +306,17 @@ void LibTestApp::TestVector (void) // static
 }
 
 //}}}-------------------------------------------------------------------
-//{{{ TestMultiset
+//{{{ test_multiset
 
-void LibTestApp::TestMultiset (void) // static
+void LibTestApp::test_multiset (void) // static
 {
     multiset<int> v {1, 8, 9, 2, 3, 1, 1};
     v.insert ({4, 6, 1, 3, 4});
     printf ("multiset:\t");
-    PrintVector (v);
+    print_vector (v);
     printf ("erase(3):\t");
     v.erase (3);
-    PrintVector (v);
+    print_vector (v);
     auto f = v.find (7);
     if (f)
 	printf ("7 found at %ld\n", f-v.begin());
@@ -331,30 +327,30 @@ void LibTestApp::TestMultiset (void) // static
     printf ("upper_bound(4) at %ld\n", v.upper_bound (4)-v.begin());
     printf ("lower_bound(5) at %ld\n", v.lower_bound (5)-v.begin());
     v.insert (v.lower_bound(5), 5);
-    PrintVector (v);
+    print_vector (v);
 }
 
 //}}}-------------------------------------------------------------------
-//{{{ TestString
+//{{{ test_string
 
-static void MyFormat (const char* fmt, ...) PRINTFARGS(1,2);
-static void MyFormat (const char* fmt, ...)
+static void my_format (const char* fmt, ...) PRINTFARGS(1,2);
+static void my_format (const char* fmt, ...)
 {
     string buf;
     va_list args;
     va_start (args, fmt);
     buf.assignv (fmt, args);
-    printf ("Custom vararg MyFormat: %s\n", buf.c_str());
+    printf ("Custom vararg my_format: %s\n", buf.c_str());
     va_end (args);
 }
 
-void LibTestApp::TestString (void) // static
+void LibTestApp::test_string (void) // static
 {
     static const char c_TestString1[] = "123456789012345678901234567890";
     static const char c_TestString2[] = "abcdefghijklmnopqrstuvwxyz";
     static constexpr const string_view c_TestString3 ("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     string s1 (c_TestString1);
-    string s2 (ArrayRange (c_TestString2));
+    string s2 (ARRAY_RANGE (c_TestString2));
     auto s3 (s1);
 
     puts (s1.c_str());
@@ -377,9 +373,7 @@ void LibTestApp::TestString (void) // static
 
     s1.unlink();
     s1 = c_TestString2;
-    tight_loop_pause();
     s1 += c_TestString3;
-    tight_loop_pause();
     s1 += '$';
     puts (s1.c_str());
 
@@ -476,18 +470,18 @@ void LibTestApp::TestString (void) // static
     s2.appendf (", 0%o, appended", 012345);
     s2.insertf (s2.iat(31), "; %u, inserted", 12345);
     printf ("<%u bytes of %u> Format '%s'\n", s2.size(), s2.capacity(), s2.c_str());
-    MyFormat ("'<const] %d, %s, 0x%08X'", 42, "[rfile>", 0xDEADBEEF);
+    my_format ("'<const] %d, %s, 0x%08X'", 42, "[rfile>", 0xDEADBEEF);
 }
 
 //}}}-------------------------------------------------------------------
-//{{{ TestStringVector
+//{{{ test_stringVector
 
-void LibTestApp::PrintString (const string& str) // static
+void LibTestApp::print_string (const string& str) // static
 {
     puts (str.c_str());
 }
 
-void LibTestApp::TestStringVector (void) // static
+void LibTestApp::test_stringVector (void) // static
 {
     vector<string> v = { "Hello world!", "Hello again!", "element3", "element4", "element5_long_element5" };
 
@@ -495,7 +489,7 @@ void LibTestApp::TestStringVector (void) // static
     if (bogusi)
 	printf ("bogus found at position %td\n", bogusi - v.begin());
 
-    foreach (i,v) PrintString(*i);
+    foreach (i,v) print_string(*i);
 
     if (v[2] != "element3")
 	printf ("operator== failed\n");
@@ -511,23 +505,23 @@ void LibTestApp::TestStringVector (void) // static
     v = v2;
     v.erase (v.end(), v.end());
     printf ("After erase (end,end):\n");
-    foreach (i,v) PrintString(*i);
+    foreach (i,v) print_string(*i);
     v = v2;
     v.erase (v.begin() + 2, 2);
     printf ("After erase (2,2):\n");
-    foreach (i,v) PrintString(*i);
+    foreach (i,v) print_string(*i);
     v = v2;
     v.pop_back();
     printf ("After pop_back():\n");
-    foreach (i,v) PrintString(*i);
+    foreach (i,v) print_string(*i);
     v = v2;
     v.insert (v.begin() + 1, v2.begin() + 1, v2.begin() + 1 + 3);
     printf ("After insert(1,1,3):\n");
-    foreach (i,v) PrintString(*i);
+    foreach (i,v) print_string(*i);
     v = v2;
     sort (v);
     printf ("After sort:\n");
-    foreach (i,v) PrintString(*i);
+    foreach (i,v) print_string(*i);
     el3i = binary_search (v, "element3");
     if (el3i)
 	printf ("%s found at position %td\n", el3i->c_str(), el3i - v.begin());
@@ -536,9 +530,9 @@ void LibTestApp::TestStringVector (void) // static
 	printf ("%s found at position %td\n", bogusi->c_str(), bogusi - v.begin());
 }
 //}}}-------------------------------------------------------------------
-//{{{ TestStreams
+//{{{ test_streams
 
-void LibTestApp::TestStreams (void) // static
+void LibTestApp::test_streams (void) // static
 {
     const uint8_t magic_Char = 0x12;
     const uint16_t magic_Short = 0x1234;
@@ -565,7 +559,7 @@ void LibTestApp::TestStreams (void) // static
     ss << ios::talign<bool>() << bv;
     ss << ios::talign<int>() << i;
     ss << ui;
-    ss << ios::align() << li;
+    ss << ios::align(8) << li;
     ss << uli;
     ss << ios::talign<float>() << f;
     ss << ios::talign<double>() << d;
@@ -584,7 +578,7 @@ void LibTestApp::TestStreams (void) // static
     os << ios::talign<bool>() << bv;
     os << ios::talign<int>() << i;
     os << ui;
-    os << ios::align() << li;
+    os << ios::align(8) << li;
     os << uli;
     os << ios::talign<float>() << f;
     os << ios::talign<double>() << d;
@@ -609,7 +603,7 @@ void LibTestApp::TestStreams (void) // static
     is >> ios::talign<bool>() >> bv;
     is >> ios::talign<int>() >> i;
     is >> ui;
-    is >> ios::align() >> li;
+    is >> ios::align(8) >> li;
     is >> uli;
     is >> ios::talign<float>() >> f;
     is >> ios::talign<double>() >> d;
@@ -643,20 +637,20 @@ void LibTestApp::TestStreams (void) // static
     }
 }
 //}}}-------------------------------------------------------------------
-//{{{ Run tests
+//{{{ run tests
 
-int LibTestApp::Run (void)
+int LibTestApp::run (void)
 {
     using stdtestfunc_t	= void (*)(void);
     static const stdtestfunc_t c_Tests[] = {
-	TestUtility,
-	TestML,
-	TestMB,
-	TestVector,
-	TestMultiset,
-	TestString,
-	TestStringVector,
-	TestStreams
+	test_utility,
+	test_memlink,
+	test_memblock,
+	test_vector,
+	test_multiset,
+	test_string,
+	test_stringVector,
+	test_streams
     };
     for (auto& i : c_Tests) {
 	puts ("######################################################################");

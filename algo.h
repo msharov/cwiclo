@@ -265,6 +265,14 @@ constexpr auto make_scope_exit (F&& f) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Other algorithms
 
+template <typename C, typename T>
+void remove (C& c, const T& v)
+{
+    for (auto i = c.cbegin(); i < c.cend(); ++i)
+	if (*i == v)
+	    --(i = c.erase(i));
+}
+
 template <typename C, typename P>
 void remove_if (C& c, P p)
 {

@@ -1,30 +1,30 @@
 ######################################################################
-DivRU(13,5) = 3
-DivRU(15,5) = 3
-DivRU(-12,5) = -3
+divide_ceil(13,5) = 3
+divide_ceil(15,5) = 3
+divide_ceil(-12,5) = -3
 
-Floor(18,8) = 16
-Floor(-26,25) = -25
+floorg(18,8) = 16
+floorg(-26,25) = -25
 
-Align(5) = 8
-Align(5,2) = 6
-Align(17,7) = 21
-Align(14,7) = 14
-Align(-26,25) = -50
+ceilg(5,8) = 8
+ceilg(5,2) = 6
+ceilg(17,7) = 21
+ceilg(14,7) = 14
+ceilg(-26,25) = -50
 
-Round(5,2) = 6
-Round(-5,2) = -6
-Round(14,7) = 14
-Round(-1,7) = 0
-Round(-14,25) = -25
+roundg(5,2) = 6
+roundg(-5,2) = -6
+roundg(14,7) = 14
+roundg(-1,7) = 0
+roundg(-14,25) = -25
 
-DivRound(5,2) = 3
-DivRound(-5,2) = -3
-DivRound(14,9) = 2
-DivRound(-1,7) = 0
+divide_round(5,2) = 3
+divide_round(-5,2) = -3
+divide_round(14,9) = 2
+divide_round(-1,7) = 0
 
-Square(3) = 9
-Square(-4) = 16
+square(3) = 9
+square(-4) = 16
 
 log2p1(1) = 1
 log2p1(4) = 3
@@ -155,7 +155,7 @@ X was not rfound
 [456] found at	456789012345678901234567890
 s2 is empty [], capacity 8 bytes
 <66 bytes of 128> Format '<const] 42, [rfile>, 0xDEADBEEF; 12345, inserted, 012345, appended'
-Custom vararg MyFormat: '<const] 42, [rfile>, 0xDEADBEEF'
+Custom vararg my_format: '<const] 42, [rfile>, 0xDEADBEEF'
 ######################################################################
 Hello world!
 Hello again!

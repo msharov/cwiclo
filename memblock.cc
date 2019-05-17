@@ -15,7 +15,7 @@ void cmemlink::link_read (istream& is, size_type elsize) noexcept
 {
     assert (!capacity() && "allocated memory in cmemlink; deallocate or unlink first");
     size_type n; is >> n; n *= elsize;
-    auto nskip = Align (n, stream_align<size_type>::value);
+    auto nskip = ceilg (n, stream_align<size_type>::value);
     if (is.remaining() < nskip)
 	return;	// errors should have been reported by the message validator
     auto p = is.ptr<value_type>();
@@ -57,7 +57,7 @@ int cmemlink::write_file (const char* filename) const noexcept
 int cmemlink::write_file_atomic (const char* filename) const noexcept
 {
     char tmpfilename [PATH_MAX];
-    snprintf (ArrayBlock(tmpfilename), "%s.XXXXXX", filename);
+    snprintf (ARRAY_BLOCK(tmpfilename), "%s.XXXXXX", filename);
 
     // Create the temp file
     int ofd = mkstemp (tmpfilename);
@@ -97,11 +97,10 @@ auto memlink::erase (const_iterator ie, size_type n) noexcept -> iterator
 
 inline static auto next_capacity (memblock::size_type cap) noexcept
 {
-    using size_type = memblock::size_type;
     // Allocate to next power of 2 size block
     auto nshift = log2p1 (cap-1);
-    auto newcap = size_type(1)<<nshift;
-    constexpr auto maxshift = bits_in_type<size_type>::value-1;
+    auto newcap = memblock::size_type(1)<<nshift;
+    constexpr auto maxshift = bits_in_type<memblock::size_type>::value-1;
     if (nshift >= maxshift) {
 	assert (nshift <= maxshift && "memblock maximum allocation size exceeded");
 	if (nshift > maxshift)
@@ -191,7 +190,7 @@ memblock::iterator memblock::replace (const_iterator ip, size_type ipn, const_po
 void memblock::read (istream& is, size_type elsize) noexcept
 {
     size_type n; is >> n; n *= elsize;
-    auto nskip = Align (n, stream_align<size_type>::value);
+    auto nskip = ceilg (n, stream_align<size_type>::value);
     if (is.remaining() < nskip)
 	return;	// errors should have been reported by the message validator
     if (zero_terminated() && n)
@@ -234,7 +233,7 @@ void memblaz::reserve (size_type cap) noexcept
 void memblaz::shrink_to_fit (void) noexcept
 {
     memblaz r;
-    r.manage (static_cast<pointer>(_realloc (nullptr, size())), size());
+    r.manage (_realloc (nullptr, size()), size());
     copy (*this, r.data());
     swap (move(r));
 }

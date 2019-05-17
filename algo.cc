@@ -22,7 +22,7 @@ const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexce
     if (!penv)
 	penv = "/bin:/usr/bin:.";
     char path [PATH_MAX];
-    if (size(path) < size_t(snprintf (ArrayBlock(path), "%s/%s"+strlen("%s/"), penv)))
+    if (size(path) < size_t(snprintf (ARRAY_BLOCK(path), "%s/%s"+strlen("%s/"), penv)))
 	return nullptr;
 
     for (char *pf = path, *pl = pf; *pf; pf = pl) {
@@ -68,7 +68,7 @@ int sd_listen_fd_by_name (const char* name) noexcept
 int mkpath (const char* path, mode_t mode) noexcept
 {
     char pbuf [PATH_MAX];
-    auto n = size_t(snprintf (ArrayBlock(pbuf), "%s", path));
+    auto n = size_t(snprintf (ARRAY_BLOCK(pbuf), "%s", path));
     if (n > size(pbuf))
 	return -1;
     for (auto f = begin(pbuf), l = f+n; f < l; ++f) {
@@ -84,7 +84,7 @@ int mkpath (const char* path, mode_t mode) noexcept
 int rmpath (const char* path) noexcept
 {
     char pbuf [PATH_MAX];
-    if (size(pbuf) < size_t(snprintf (ArrayBlock(pbuf), "%s", path)))
+    if (size(pbuf) < size_t(snprintf (ARRAY_BLOCK(pbuf), "%s", path)))
 	return -1;
     while (pbuf[0]) {
 	if (0 > rmdir (pbuf))

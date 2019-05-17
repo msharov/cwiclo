@@ -105,7 +105,7 @@ public:
     inline constexpr auto&	operator>> (T&& v) { read(v); return *this; }
 protected:
     inline constexpr const_pointer alignptr (streamsize g) const __restrict__
-				    { return const_pointer (Align (uintptr_t(_p), g)); }
+				    { return const_pointer (ceilg (uintptr_t(_p), g)); }
 private:
     const_pointer		_p;
     const const_pointer		_e;
@@ -189,7 +189,7 @@ public:
     inline constexpr auto&	operator<< (const T& v) { write(v); return *this; }
 private:
     inline constexpr const_pointer alignptr (streamsize g) const __restrict__
-				    { return const_pointer (Align (uintptr_t(_p), g)); }
+				    { return const_pointer (ceilg (uintptr_t(_p), g)); }
 private:
     pointer			_p;
     const const_pointer		_e;
@@ -221,10 +221,10 @@ public:
     inline constexpr streamsize	remaining (void) const	{ return numeric_limits<size_type>::max(); }
     inline constexpr void	skip (streamsize sz)	{ _sz += sz; }
     inline constexpr void	zero (streamsize sz)	{ _sz += sz; }
-    inline constexpr void	align (streamsize g)	{ _sz = Align (_sz, g); }
-    inline constexpr streamsize	alignsz (streamsize g) const	{ return Align(_sz,g) - _sz; }
+    inline constexpr void	align (streamsize g)	{ _sz = ceilg (_sz, g); }
+    inline constexpr streamsize	alignsz (streamsize g) const	{ return ceilg(_sz,g) - _sz; }
     inline constexpr bool	can_align (streamsize) const	{ return true; }
-    inline constexpr bool	aligned (streamsize g) const	{ return Align(_sz,g) == _sz; }
+    inline constexpr bool	aligned (streamsize g) const	{ return ceilg(_sz,g) == _sz; }
     inline constexpr void	write (const void*, streamsize sz) { skip (sz); }
     inline constexpr void	write_strz (const char* s)	{ write (s, __builtin_strlen(s)+1); }
     template <typename T>
@@ -281,7 +281,7 @@ namespace ios {
 /// Stream functor to allow inline align() calls.
 class align {
 public:
-    constexpr explicit	align (streamsize grain = c_DefaultAlignment) : _grain(grain) {}
+    constexpr explicit	align (streamsize grain)	: _grain(grain) {}
     constexpr void	read (istream& is) const	{ is.align (_grain); }
     constexpr void	write (ostream& os) const	{ os.align (_grain); }
     constexpr void	write (sstream& ss) const	{ ss.align (_grain); }

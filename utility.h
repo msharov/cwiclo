@@ -70,6 +70,12 @@ template <typename T, typename F> constexpr decltype(auto) bit_cast (F& v) noexc
     { union FTU { F f; T t; }; return reinterpret_cast<FTU&>(v).t; }
 template <typename T, typename F> constexpr decltype(auto) bit_cast (const F& v) noexcept
     { union FTU { F f; T t; }; return reinterpret_cast<const FTU&>(v).t; }
+template <typename T, typename F> constexpr void bit_cast (F&& v) = delete;
+
+template <typename T, typename F> constexpr T* pointer_cast (F* p)
+    { return static_cast<T*>(static_cast<void*>(p)); }
+template <typename T, typename F> constexpr const T* pointer_cast (const F* p)
+    { return static_cast<const T*>(static_cast<const void*>(p)); }
 
 // Create a passthrough non-const member function from a call to a const member function
 #define UNCONST_MEMBER_FN(f,...)	\
@@ -117,11 +123,11 @@ template <typename T> constexpr decltype(auto) data (const T& c) { return c.data
 template <typename T, size_t N> constexpr auto data(T (&c)[N]) noexcept { return &c[0]; }
 
 /// Expands into a ptr,size expression for the given static vector; useful as link arguments.
-#define ArrayBlock(v)	::cwiclo::data(v), ::cwiclo::size(v)
+#define ARRAY_BLOCK(v)	::cwiclo::data(v), ::cwiclo::size(v)
 /// Expands into a begin,end expression for the given static vector; useful for algorithm arguments.
-#define ArrayRange(v)	::cwiclo::begin(v), ::cwiclo::end(v)
+#define ARRAY_RANGE(v)	::cwiclo::begin(v), ::cwiclo::end(v)
 /// Expands into a ptr,sizeof expression for the given static data block
-#define DataBlock(v)	::cwiclo::data(v), sizeof(v)
+#define DATA_BLOCK(v)	::cwiclo::data(v), sizeof(v)
 
 /// Shorthand for container iteration.
 #define foreach(i,ctr)	for (auto i = ::cwiclo::begin(ctr); i < ::cwiclo::end(ctr); ++i)
@@ -187,53 +193,51 @@ template <typename T>
 constexpr make_unsigned_t<T> absv (T v)
     { return is_negative(v) ? -v : v; }
 template <typename T>
-constexpr T MultBySign (T a, remove_reference_t<T> b)
-    { return is_negative<T>(b) ? -a : a; }
+[[nodiscard]] constexpr T copy_sign (T f, remove_reference_t<T> t)
+    { return is_negative<T>(f) ? -t : t; }
 
 //}}}----------------------------------------------------------------------
 //{{{ Align
 
-enum { c_DefaultAlignment = alignof(void*) };
-
 template <typename T>
-[[nodiscard]] constexpr T Floor (T n, remove_reference_t<T> grain = c_DefaultAlignment)
-    { return n - n % grain; }
+[[nodiscard]] constexpr T floorg (T n, remove_reference_t<T> g)
+    { return n - n % g; }
 template <typename T>
-[[nodiscard]] constexpr auto Align (T n, remove_reference_t<T> grain = c_DefaultAlignment)
-    { return Floor<T> (n + MultBySign<T> (grain-1, n), grain); }
+[[nodiscard]] constexpr auto ceilg (T n, remove_reference_t<T> g)
+    { return floorg<T>(n + copy_sign<T>(n, g-1), g); }
 template <typename T>
-constexpr bool IsAligned (T n, remove_reference_t<T> grain = c_DefaultAlignment)
-    { return !(n % grain); }
+constexpr bool divisible_by (T n, remove_reference_t<T> g)
+    { return !(n % g); }
 template <typename T>
-[[nodiscard]] constexpr auto Round (T n, remove_reference_t<T> grain)
-    { return Floor<T> (n + MultBySign<T> (grain/2, n), grain); }
+[[nodiscard]] constexpr auto roundg (T n, remove_reference_t<T> g)
+    { return floorg<T>(n + copy_sign<T>(n, g/2), g); }
 template <typename T>
-[[nodiscard]] constexpr T DivRU (T n1, remove_reference_t<T> n2)
-    { return (n1 + MultBySign<T> (n2-1, n1)) / n2; }
+[[nodiscard]] constexpr T divide_ceil (T n1, remove_reference_t<T> n2)
+    { return (n1 + copy_sign<T>(n1,n2-1)) / n2; }
 template <typename T>
-[[nodiscard]] constexpr T DivRound (T n1, remove_reference_t<T> n2)
-    { return (n1 + MultBySign<T> (n2/2, n1)) / n2; }
+[[nodiscard]] constexpr T divide_round (T n1, remove_reference_t<T> n2)
+    { return (n1 + copy_sign<T>(n1,n2/2)) / n2; }
 template <typename T>
-[[nodiscard]] constexpr make_unsigned_t<T> Square (T n)
+[[nodiscard]] constexpr make_unsigned_t<T> square (T n)
     { return n*n; }
 
 //}}}----------------------------------------------------------------------
 //{{{ Bit manipulation
 
 template <typename T>
-constexpr bool GetBit (T v, unsigned i)
+constexpr bool get_bit (T v, unsigned i)
     { return (v>>i)&1; }
 template <typename T = unsigned>
-constexpr T BitMask (unsigned i)
+constexpr T bit_mask (unsigned i)
     { return T(1)<<i; }
 template <typename T>
-constexpr void SetBit (T& v, unsigned i, bool b=true)
-    { auto m = BitMask<T>(i); v=b?(v|m):(v&~m); }
+constexpr void set_bit (T& v, unsigned i, bool b=true)
+    { auto m = bit_mask<T>(i); v=b?(v|m):(v&~m); }
 template <typename T>
-[[nodiscard]] constexpr auto Rol (T v, remove_reference_t<T> n)
+[[nodiscard]] constexpr auto bit_rol (T v, remove_reference_t<T> n)
     { return (v << n) | (v >> (bits_in_type<T>::value-n)); }
 template <typename T>
-[[nodiscard]] constexpr auto Ror (T v, remove_reference_t<T> n)
+[[nodiscard]] constexpr auto bit_ror (T v, remove_reference_t<T> n)
     { return (v >> n) | (v << (bits_in_type<T>::value-n)); }
 
 template <typename T>

@@ -146,6 +146,7 @@ public:
     inline constexpr		memblock (memblock&& v)			: memlink(move(v)) {}
     inline			~memblock (void) noexcept		{ deallocate(); }
     inline constexpr void	manage (pointer p, size_type n)		{ assert(!capacity() && "unlink or deallocate first"); link (p, n); set_capacity(n); }
+    inline constexpr void	manage (void* p, size_type n)		{ manage (static_cast<pointer>(p), n); }
     void			assign (const_pointer p, size_type n) noexcept;
     inline void			assign (const cmemlink& v) noexcept	{ assign (v.data(), v.size()); }
     inline constexpr void	assign (memblock&& v) noexcept		{ swap (move(v)); }
@@ -231,7 +232,7 @@ public:
     constexpr auto&		operator[] (size_type i) const		{ return at (i); }
     inline auto&		operator= (const cmemlink& v) noexcept	{ assign (v); return *this; }
     inline auto&		operator= (const memblaz& v) noexcept	{ assign (v); return *this; }
-    inline auto&		operator= (memblaz&& v) noexcept	{ assign (move(v)); return *this; }
+    inline constexpr auto&	operator= (memblaz&& v) noexcept	{ assign (move(v)); return *this; }
     inline bool			operator== (const cmemlink& v) const	{ return v == *this; }
     inline bool			operator== (const memblaz& v) const	{ return memblock::operator== (v); }
     inline bool			operator!= (const cmemlink& v) const	{ return v != *this; }
@@ -273,7 +274,7 @@ public:
 //----------------------------------------------------------------------
 
 /// Use with memlink-derived classes to link to a static array
-#define static_link(v)	link (ArrayBlock(v))
+#define static_link(v)	link (ARRAY_BLOCK(v))
 /// Use with memlink-derived classes to allocate and link to stack space.
 #define alloca_link(n)	link (alloca(n), (n))
 

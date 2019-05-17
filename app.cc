@@ -15,13 +15,13 @@ DEFINE_INTERFACE (Timer)
 DEFINE_INTERFACE (TimerR)
 DEFINE_INTERFACE (Signal)
 
-int PTimer::MakeNonblocking (fd_t fd) noexcept // static
+int PTimer::make_nonblocking (fd_t fd) noexcept // static
 {
     auto f = fcntl (fd, F_GETFL);
     return f < 0 ? f : fcntl (fd, F_SETFL, f| O_NONBLOCK| O_CLOEXEC);
 }
 
-auto PTimer::Now (void) noexcept -> mstime_t // static
+auto PTimer::now (void) noexcept -> mstime_t // static
 {
     struct timespec t;
     if (0 > clock_gettime (CLOCK_REALTIME, &t))
@@ -33,22 +33,22 @@ auto PTimer::Now (void) noexcept -> mstime_t // static
 //{{{ App
 
 App*	App::s_pApp		= nullptr;	// static
-int	App::s_ExitCode		= EXIT_SUCCESS;	// static
-uint32_t App::s_ReceivedSignals	= 0;		// static
+int	App::s_exit_code	= EXIT_SUCCESS;	// static
+uint32_t App::s_received_signals = 0;		// static
 
 App::~App (void) noexcept
 {
     // Delete Msgers in reverse order of creation
     for (mrid_t mid = _msgers.size(); mid--;)
-	DeleteMsger (mid);
+	delete_msger (mid);
     if (!_errors.empty())
 	fprintf (stderr, "Error: %s\n", _errors.c_str());
 }
 
-iid_t App::InterfaceByName (const char* iname, streamsize inamesz) noexcept // static
+iid_t App::interface_by_name (const char* iname, streamsize inamesz) noexcept // static
 {
-    for (auto mii = s_MsgerImpls; mii->iface; ++mii)
-	if (equal_n (iname, inamesz, mii->iface, InterfaceNameSize(mii->iface)))
+    for (auto mii = s_msger_factories; mii->iface; ++mii)
+	if (equal_n (iname, inamesz, mii->iface, interface_name_size (mii->iface)))
 	    return mii->iface;
     return nullptr;
 }
@@ -56,7 +56,7 @@ iid_t App::InterfaceByName (const char* iname, streamsize inamesz) noexcept // s
 //}}}-------------------------------------------------------------------
 //{{{ Signal and error handling
 
-#define M(s) BitMask(s)
+#define M(s) bit_mask(s)
 enum {
     sigset_Die	= M(SIGILL)|M(SIGABRT)|M(SIGBUS)|M(SIGFPE)|M(SIGSYS)|M(SIGSEGV)|M(SIGALRM)|M(SIGXCPU),
     sigset_Quit	= M(SIGINT)|M(SIGQUIT)|M(SIGTERM)|M(SIGPWR),
@@ -65,17 +65,17 @@ enum {
 #undef M
 enum { qc_ShellSignalQuitOffset = 128 };
 
-void App::InstallSignalHandlers (void) noexcept // static
+void App::install_signal_handlers (void) noexcept // static
 {
     for (auto sig = 0u; sig < NSIG; ++sig) {
-	if (GetBit (sigset_Msg, sig))
-	    signal (sig, MsgSignalHandler);
-	else if (GetBit (sigset_Die, sig))
-	    signal (sig, FatalSignalHandler);
+	if (get_bit (sigset_Msg, sig))
+	    signal (sig, msg_signal_handler);
+	else if (get_bit (sigset_Die, sig))
+	    signal (sig, fatal_signal_handler);
     }
 }
 
-void App::FatalSignalHandler (int sig) noexcept // static
+void App::fatal_signal_handler (int sig) noexcept // static
 {
     static atomic_flag doubleSignal = ATOMIC_FLAG_INIT;
     if (!doubleSignal.test_and_set (memory_order::relaxed)) {
@@ -89,17 +89,17 @@ void App::FatalSignalHandler (int sig) noexcept // static
     _Exit (qc_ShellSignalQuitOffset+sig);
 }
 
-void App::MsgSignalHandler (int sig) noexcept // static
+void App::msg_signal_handler (int sig) noexcept // static
 {
-    SetBit (s_ReceivedSignals, sig);
-    if (GetBit (sigset_Quit, sig)) {
-	App::Instance().Quit();
+    set_bit (s_received_signals, sig);
+    if (get_bit (sigset_Quit, sig)) {
+	App::instance().quit();
 	alarm (1);
     }
 }
 
 #ifndef NDEBUG
-void App::Errorv (const char* fmt, va_list args) noexcept
+void App::errorv (const char* fmt, va_list args) noexcept
 {
     bool isFirst = _errors.empty();
     _errors.appendv (fmt, args);
@@ -108,34 +108,34 @@ void App::Errorv (const char* fmt, va_list args) noexcept
 }
 #endif
 
-bool App::ForwardError (mrid_t oid, mrid_t eoid) noexcept
+bool App::forward_error (mrid_t oid, mrid_t eoid) noexcept
 {
-    auto m = MsgerpById (oid);
+    auto m = msgerp_by_id (oid);
     if (!m)
 	return false;
-    if (m->OnError (eoid, Errors())) {
+    if (m->on_error (eoid, errors())) {
 	_errors.clear();	// error handled; clear message
 	return true;
     }
-    auto nextoid = m->CreatorId();
-    if (nextoid == oid || !ValidMsgerId(nextoid))
+    auto nextoid = m->creator_id();
+    if (nextoid == oid || !valid_msger_id(nextoid))
 	return false;
-    return ForwardError (nextoid, oid);
+    return forward_error (nextoid, oid);
 }
 
 //}}}-------------------------------------------------------------------
 //{{{ Msger lifecycle
 
-mrid_t App::AllocateMrid (mrid_t creator) noexcept
+mrid_t App::allocate_mrid (mrid_t creator) noexcept
 {
-    assert (ValidMsgerId (creator));
+    assert (valid_msger_id (creator));
     mrid_t id = 0;
     for (; id < _creators.size(); ++id)
 	if (_creators[id] == id && !_msgers[id])
 	    break;
     if (id > mrid_Last) {
 	assert (id <= mrid_Last && "mrid_t address space exhausted; please ensure somebody is freeing them");
-	Error ("no more mrids");
+	error ("no more mrids");
 	return id;
     } else if (id >= _creators.size()) {
 	_msgers.push_back (nullptr);
@@ -147,25 +147,25 @@ mrid_t App::AllocateMrid (mrid_t creator) noexcept
     return id;
 }
 
-void App::FreeMrid (mrid_t id) noexcept
+void App::free_mrid (mrid_t id) noexcept
 {
-    assert (ValidMsgerId(id));
+    assert (valid_msger_id(id));
     auto m = _msgers[id];
     if (!m && id == _msgers.size()-1) {
-	DEBUG_PRINTF ("MsgerId %hu deallocated\n", id);
+	DEBUG_PRINTF ("mrid %hu deallocated\n", id);
 	_msgers.pop_back();
 	_creators.pop_back();
     } else if (auto crid = _creators[id]; crid != id) {
-	DEBUG_PRINTF ("MsgerId %hu released\n", id);
+	DEBUG_PRINTF ("mrid %hu released\n", id);
 	_creators[id] = id;
 	if (m) { // act as if the creator was destroyed
-	    assert (m->CreatorId() == crid);
-	    m->OnMsgerDestroyed (crid);
+	    assert (m->creator_id() == crid);
+	    m->on_msger_destroyed (crid);
 	}
     }
 }
 
-Msger* App::CreateMsgerWith (const Msg::Link& l, iid_t iid [[maybe_unused]], Msger::pfn_factory_t fac) noexcept // static
+Msger* App::create_msger_with (const Msg::Link& l, iid_t iid [[maybe_unused]], Msger::pfn_factory_t fac) noexcept // static
 {
     Msger* r = fac ? (*fac)(l) : nullptr;
     #ifndef NDEBUG	// Log failure to create in debug mode
@@ -183,38 +183,46 @@ Msger* App::CreateMsgerWith (const Msg::Link& l, iid_t iid [[maybe_unused]], Msg
     return r;
 }
 
-auto App::CreateMsger (const Msg::Link& l, iid_t iid) noexcept // static
-    { return CreateMsgerWith (l, iid, MsgerFactoryFor (iid)); }
-
-Msg::Link& App::CreateLink (Msg::Link& l, iid_t iid) noexcept
+auto App::msger_factory_for (iid_t id) noexcept // static
 {
-    assert (l.src <= mrid_Last && "You may only create links originating from an existing Msger");
-    assert ((l.dest == mrid_New || l.dest == mrid_Broadcast || ValidMsgerId(l.dest)) && "Invalid link destination requested");
+    auto mii = s_msger_factories;
+    while (mii->iface && mii->iface != id)
+	++mii;
+    return mii->factory;
+}
+
+auto App::create_msger (const Msg::Link& l, iid_t iid) noexcept // static
+    { return create_msger_with (l, iid, msger_factory_for (iid)); }
+
+Msg::Link& App::create_link (Msg::Link& l, iid_t iid) noexcept
+{
+    assert (valid_msger_id (l.src) && "You may only create links originating from an existing Msger");
+    assert ((l.dest == mrid_New || l.dest == mrid_Broadcast || valid_msger_id(l.dest)) && "Invalid link destination requested");
     if (l.dest == mrid_Broadcast)
 	return l;
     if (l.dest == mrid_New)
-	l.dest = AllocateMrid (l.src);
+	l.dest = allocate_mrid (l.src);
     if (l.dest < _msgers.size() && !_msgers[l.dest])
-	_msgers[l.dest] = CreateMsger (l, iid);
+	_msgers[l.dest] = create_msger (l, iid);
     return l;
 }
 
-Msg::Link& App::CreateLinkWith (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept
+Msg::Link& App::create_link_with (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept
 {
-    assert (l.src <= mrid_Last && "You may only create links originating from an existing Msger");
-    assert (l.dest == mrid_New && "CreateLinkWith can only be used to create new links");
-    l.dest = AllocateMrid (l.src);
+    assert (valid_msger_id (l.src) && "You may only create links originating from an existing Msger");
+    assert (l.dest == mrid_New && "create_link_with can only be used to create new links");
+    l.dest = allocate_mrid (l.src);
     if (l.dest < _msgers.size() && !_msgers[l.dest])
-	_msgers[l.dest] = CreateMsgerWith (l, iid, fac);
+	_msgers[l.dest] = create_msger_with (l, iid, fac);
     return l;
 }
 
-void App::DeleteMsger (mrid_t mid) noexcept
+void App::delete_msger (mrid_t mid) noexcept
 {
-    assert (ValidMsgerId(mid) && ValidMsgerId(_creators[mid]));
+    assert (valid_msger_id(mid) && valid_msger_id(_creators[mid]));
     auto m = exchange (_msgers[mid], nullptr);
     auto crid = _creators[mid];
-    if (m && !m->Flag (f_Static)) {
+    if (m && !m->flag (f_Static)) {
 	delete m;
 	DEBUG_PRINTF ("Msger %hu deleted\n", mid);
     }
@@ -222,97 +230,97 @@ void App::DeleteMsger (mrid_t mid) noexcept
     // Notify creator, if it exists
     if (crid < _msgers.size()) {
 	if (auto cr = _msgers[crid]; cr)
-	    cr->OnMsgerDestroyed (mid);
+	    cr->on_msger_destroyed (mid);
 	else // or free mrid if creator is already deleted
-	    FreeMrid (mid);
+	    free_mrid (mid);
     }
 
     // Notify connected Msgers of this one's destruction
-    for (mrid_t i = 0; i < _creators.size(); ++i)
+    for (auto i = 0u; i < _creators.size(); ++i)
 	if (_creators[i] == mid)
-	    FreeMrid (i);
+	    free_mrid (i);
 }
 
-void App::DeleteUnusedMsgers (void) noexcept
+void App::delete_unused_msgers (void) noexcept
 {
     // A Msger is unused if it has f_Unused flag set and has no pending messages in _outq
     for (auto m : _msgers)
-	if (m && m->Flag(f_Unused) && !HasMessagesFor (m->MsgerId()))
-	    DeleteMsger (m->MsgerId());
+	if (m && m->flag (f_Unused) && !has_messages_for (m->msger_id()))
+	    delete_msger (m->msger_id());
 }
 
 //}}}-------------------------------------------------------------------
 //{{{ Message loop
 
-void App::MessageLoopOnce (void) noexcept
+void App::message_loop_once (void) noexcept
 {
     _inq.clear();		// input queue was processed on the last iteration
     _inq.swap (move(_outq));	// output queue now becomes the input queue
 
-    ProcessInputQueue();
-    DeleteUnusedMsgers();
-    ForwardReceivedSignals();
+    process_input_queue();
+    delete_unused_msgers();
+    forward_received_signals();
 }
 
-void App::ProcessInputQueue (void) noexcept
+void App::process_input_queue (void) noexcept
 {
     for (auto& msg : _inq) {
 	// Dump the message if tracing
 	if (DEBUG_MSG_TRACE) {
-	    DEBUG_PRINTF ("Msg: %hu -> %hu.%s.%s [%u] = {""{{\n", msg.Src(), msg.Dest(), msg.Interface(), msg.Method(), msg.Size());
-	    hexdump (msg.Read());
+	    DEBUG_PRINTF ("Msg: %hu -> %hu.%s.%s [%u] = {""{{\n", msg.src(), msg.dest(), msg.interface(), msg.method(), msg.size());
+	    hexdump (msg.read());
 	    DEBUG_PRINTF ("}""}}\n");
 	}
 
 	// Create the dispatch range. Broadcast messages go to all, the rest go to one.
 	auto mg = 0u, mgend = _msgers.size();
-	if (msg.Dest() != mrid_Broadcast) {
-	    if (!ValidMsgerId (msg.Dest())) {
-		DEBUG_PRINTF ("Error: invalid message destination %hu. Ignoring message.\n", msg.Dest());
-		continue; // Error was reported in AllocateMrid
+	if (msg.dest() != mrid_Broadcast) {
+	    if (!valid_msger_id (msg.dest())) {
+		DEBUG_PRINTF ("Error: invalid message destination %hu. Ignoring message.\n", msg.dest());
+		continue; // Error was reported in allocate_mrid
 	    }
-	    mg = msg.Dest();
+	    mg = msg.dest();
 	    mgend = mg+1;
 	}
 	for (; mg < mgend; ++mg) {
 	    auto msger = _msgers[mg];
 	    if (!msger)
-		continue; // errors for msger creation failures were reported in CreateMsger; here just try to continue
+		continue; // errors for msger creation failures were reported in create_msger; here just try to continue
 
-	    auto accepted = msger->Dispatch (msg);
+	    auto accepted = msger->dispatch (msg);
 
-	    if (!accepted && msg.Dest() != mrid_Broadcast)
-		DEBUG_PRINTF ("Error: message delivered, but not accepted by the destination Msger.\nDid you forget to add the interface to the Dispatch override?\n");
+	    if (!accepted && msg.dest() != mrid_Broadcast)
+		DEBUG_PRINTF ("Error: message delivered, but not accepted by the destination Msger.\nDid you forget to add the interface to the dispatch override?\n");
 
 	    // Check for errors generated during this dispatch
-	    if (!Errors().empty() && !ForwardError (mg, mg))
-		return Quit (EXIT_FAILURE);
+	    if (!errors().empty() && !forward_error (mg, mg))
+		return quit (EXIT_FAILURE);
 	}
     }
 }
 
-void App::ForwardReceivedSignals (void) noexcept
+void App::forward_received_signals (void) noexcept
 {
-    auto oldrs = s_ReceivedSignals;
+    auto oldrs = s_received_signals;
     if (!oldrs)
 	return;
     PSignal psig (mrid_App);
-    for (auto i = 0u; i < sizeof(s_ReceivedSignals)*8; ++i)
-	if (GetBit (oldrs, i))
-	    psig.Signal (i);
+    for (auto i = 0u; i < sizeof(s_received_signals)*8; ++i)
+	if (get_bit (oldrs, i))
+	    psig.signal (i);
     // clear only the signal bits processed, in case new signals arrived during the loop
-    s_ReceivedSignals ^= oldrs;
+    s_received_signals ^= oldrs;
 }
 
-App::msgq_t::size_type App::HasMessagesFor (mrid_t mid) const noexcept
+App::msgq_t::size_type App::has_messages_for (mrid_t mid) const noexcept
 {
-    return count_if (_outq, [=](auto& msg){ return msg.Dest() == mid; });
+    return count_if (_outq, [=](auto& msg){ return msg.dest() == mid; });
 }
 
 //}}}-------------------------------------------------------------------
 //{{{ Timers
 
-unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const noexcept
+unsigned App::get_poll_timer_list (pollfd* pfd, unsigned pfdsz, int& timeout) const noexcept
 {
     // Put all valid fds into the pfd list and calculate the nearest timeout
     // Note that there may be a timeout without any fds
@@ -320,14 +328,14 @@ unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const
     auto npfd = 0u;
     auto nearest = PTimer::TimerMax;
     for (auto t : _timers) {
-	if (t->Cmd() == PTimer::WatchCmd::Stop)
+	if (t->cmd() == PTimer::WatchCmd::Stop)
 	    continue;
-	nearest = min (nearest, t->NextFire());
-	if (t->Fd() >= 0) {
+	nearest = min (nearest, t->next_fire());
+	if (t->fd() >= 0) {
 	    if (npfd >= pfdsz)
 		break;
-	    pfd[npfd].fd = t->Fd();
-	    pfd[npfd].events = int(t->Cmd());
+	    pfd[npfd].fd = t->fd();
+	    pfd[npfd].events = int(t->cmd());
 	    pfd[npfd++].revents = 0;
 	}
     }
@@ -336,26 +344,26 @@ unsigned App::GetPollTimerList (pollfd* pfd, unsigned pfdsz, int& timeout) const
     else if (nearest == PTimer::TimerMax)	// wait indefinitely
 	timeout = -!!npfd;	// if no fds, then don't wait at all
     else // get current time and compute timeout to nearest
-	timeout = max (nearest - PTimer::Now(), 0);
+	timeout = max (nearest - PTimer::now(), 0);
     return npfd;
 }
 
-void App::CheckPollTimers (const pollfd* fds) noexcept
+void App::check_poll_timers (const pollfd* fds) noexcept
 {
     // Poll errors are checked for each fd with POLLERR. Other errors are ignored.
     // poll will exit when there are fds available or when the timer expires
-    auto now = PTimer::Now();
+    auto now = PTimer::now();
     const auto* cfd = fds;
     for (auto t : _timers) {
-	bool timerExpired = t->NextFire() <= now,
-	    hasFd = (t->Fd() >= 0 && t->Cmd() != PTimer::WatchCmd::Stop),
-	    fdFired = hasFd && (cfd->revents & (POLLERR| int(t->Cmd())));
+	bool expired = t->next_fire() <= now,
+	    hasfd = (t->fd() >= 0 && t->cmd() != PTimer::WatchCmd::Stop),
+	    fdon = hasfd && (cfd->revents & (POLLERR| int(t->cmd())));
 
 	// Log the firing if tracing
 	if (DEBUG_MSG_TRACE) {
-	    if (timerExpired)
-		DEBUG_PRINTF("[T]\tTimer %lu fired at %lu\n", t->NextFire(), now);
-	    if (fdFired) {
+	    if (expired)
+		DEBUG_PRINTF("[T]\tTimer %lu fired at %lu\n", t->next_fire(), now);
+	    if (fdon) {
 		DEBUG_PRINTF("[T]\tFile descriptor %d ", cfd->fd);
 		if (cfd->revents & POLLIN)	DEBUG_PRINTF("can be read\n");
 		if (cfd->revents & POLLOUT)	DEBUG_PRINTF("can be written\n");
@@ -365,9 +373,9 @@ void App::CheckPollTimers (const pollfd* fds) noexcept
 	}
 
 	// Firing the timer will remove it (on next idle)
-	if (timerExpired || fdFired)
-	    t->Fire();
-	cfd += hasFd;
+	if (expired || fdon)
+	    t->fire();
+	cfd += hasfd;
     }
 }
 

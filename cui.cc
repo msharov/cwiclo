@@ -13,7 +13,7 @@ namespace cwiclo {
 //{{{ CursesWindow -----------------------------------------------------
 
 mrid_t CursesWindow::s_focused = 0;
-uint8_t CursesWindow::s_nWindows = 0;
+uint8_t CursesWindow::s_nwins = 0;
 
 //----------------------------------------------------------------------
 
@@ -22,9 +22,9 @@ CursesWindow::CursesWindow (const Msg::Link& l) noexcept
 ,_winput()
 ,_uiinput (l.dest)
 {
-    if (!s_nWindows++) {
+    if (!s_nwins++) {
 	if (!initscr()) {
-	    Error ("unable to initialize terminal output");
+	    error ("unable to initialize terminal output");
 	    return;
 	}
 	start_color();
@@ -39,94 +39,80 @@ CursesWindow::CursesWindow (const Msg::Link& l) noexcept
 
 CursesWindow::~CursesWindow (void) noexcept
 {
-    if (!--s_nWindows) {
+    if (!--s_nwins) {
 	flushinp();
 	endwin();
     }
 }
 
-void CursesWindow::SetInputCtrl (Ctrl& c) noexcept
+void CursesWindow::set_input_ctrl (Ctrl& c) noexcept
 {
-    _winput = c.W();
+    _winput = c.w();
     if (_winput) {
 	keypad (_winput, true);
 	meta (_winput, true);
 	nodelay (_winput, true);
-	s_focused = MsgerId();
-	TimerR_Timer (STDIN_FILENO);
+	s_focused = msger_id();
+	TimerR_timer (STDIN_FILENO);
     }
 }
 
-void CursesWindow::OnMsgerDestroyed (mrid_t mid) noexcept
+void CursesWindow::on_msger_destroyed (mrid_t mid) noexcept
 {
-    Msger::OnMsgerDestroyed (mid);
+    Msger::on_msger_destroyed (mid);
     // Check if a child modal dialog closed
     if (mid == s_focused && _winput) {
-	curs_set (Flag (f_CaretOn));
-	s_focused = MsgerId();
-	TimerR_Timer (STDIN_FILENO);
+	curs_set (flag (f_CaretOn));
+	s_focused = msger_id();
+	TimerR_timer (STDIN_FILENO);
     }
 }
 
-void CursesWindow::OnKey (key_t k) noexcept
+void CursesWindow::on_key (key_t k) noexcept
 {
     if (k == KEY_RESIZE)
-	Layout();
+	layout();
 }
 
-void CursesWindow::Close (void) noexcept
+void CursesWindow::close (void) noexcept
 {
-    SetFlag (f_Unused);
-    _uiinput.Stop();
+    set_unused();
+    _uiinput.stop();
 }
 
-void CursesWindow::TimerR_Timer (int) noexcept
+void CursesWindow::TimerR_timer (PTimerR::fd_t) noexcept
 {
-    if (MsgerId() != s_focused || !_winput)
+    if (msger_id() != s_focused || !_winput)
 	return;	// a modal dialog is active
     for (key_t k; 0 < (k = wgetch (_winput));)
-	OnKey (k);
-    if (!Flag(f_Unused) && !isendwin()) {
-	Draw();
-	_uiinput.WaitRead (STDIN_FILENO);
+	on_key (k);
+    if (!flag (f_Unused) && !isendwin()) {
+	draw();
+	_uiinput.wait_read (STDIN_FILENO);
     }
 }
 
-bool CursesWindow::Dispatch (Msg& msg) noexcept
+bool CursesWindow::dispatch (Msg& msg) noexcept
 {
-    return PTimerR::Dispatch(this, msg)
-	|| Msger::Dispatch(msg);
+    return PTimerR::dispatch (this, msg)
+	|| Msger::dispatch (msg);
 }
 
 //}}}-------------------------------------------------------------------
 //{{{ CursesWindow::Ctrl
 
-void CursesWindow::Ctrl::Create (int l, int c, int y, int x) noexcept
+void CursesWindow::Ctrl::create (int l, int c, int y, int x) noexcept
 {
-    auto ow = exchange(_w,newwin(l,c,y,x));
+    auto ow = exchange (_w, newwin (l,c,y,x));
     if (ow)
-	delwin(ow);
+	delwin (ow);
     leaveok (*this, true);
 }
 
 //}}}-------------------------------------------------------------------
 //{{{ CursesWindow::Label
 
-auto CursesWindow::Label::Measure (const string_view& text) noexcept -> Size
-{
-    Size sz = {};
-    for (auto l = text.begin(), textend = text.end(); l < textend;) {
-	auto lend = text.find ('\n', l);
-	if (!lend)
-	    lend = textend;
-	sz.x = max (sz.x, lend-l+1);
-	++sz.y;
-	l = lend+1;
-    }
-    return sz;
-}
-
-void CursesWindow::Label::Draw (const char* text) const noexcept
+void CursesWindow::Label::draw (const char* text) const noexcept
 {
     werase (*this);
     waddstr (*this, text);
@@ -136,10 +122,10 @@ void CursesWindow::Label::Draw (const char* text) const noexcept
 //}}}-------------------------------------------------------------------
 //{{{ CursesWindow::Button
 
-void CursesWindow::Button::Draw (void) const noexcept
+void CursesWindow::Button::draw (void) const noexcept
 {
     werase (*this);
-    if (Focused())
+    if (focused())
 	wattron (*this, A_REVERSE);
     wattron (*this, A_BOLD);
     waddstr (*this, "[ ");
@@ -155,7 +141,7 @@ void CursesWindow::Button::Draw (void) const noexcept
 //}}}-------------------------------------------------------------------
 //{{{ CursesWindow::Listbox
 
-void CursesWindow::Listbox::OnKey (key_t k) noexcept
+void CursesWindow::Listbox::on_key (key_t k) noexcept
 {
     if ((k == 'k' || k == KEY_UP) && sel)
 	--sel;
@@ -166,22 +152,22 @@ void CursesWindow::Listbox::OnKey (key_t k) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ CursesWindow::Editbox
 
-void CursesWindow::Editbox::Create (int c, int y, int x) noexcept
+void CursesWindow::Editbox::create (int c, int y, int x) noexcept
 {
-    Ctrl::Create (1,c,y,x);
+    Ctrl::create (1,c,y,x);
     leaveok (*this, false);
     wbkgdset (*this, ' '|A_UNDERLINE);
-    Posclip();
+    posclip();
 }
 
-void CursesWindow::Editbox::Posclip (void) noexcept
+void CursesWindow::Editbox::posclip (void) noexcept
 {
     if (_cpos < _fc) {	// cursor past left edge
 	_fc = _cpos;
 	if (_fc > 0)
 	    --_fc;	// adjust for clip indicator
     }
-    if (W()) {
+    if (w()) {
 	if (_fc+maxx() < _cpos+2)	// cursor past right edge +2 for > indicator
 	    _fc = _cpos+2-maxx();
 	while (_fc && _fc-1u+maxx() > _text.size())	// if text fits in box, no scroll
@@ -189,7 +175,7 @@ void CursesWindow::Editbox::Posclip (void) noexcept
     }
 }
 
-void CursesWindow::Editbox::OnKey (key_t k) noexcept
+void CursesWindow::Editbox::on_key (key_t k) noexcept
 {
     if (k == KEY_LEFT && _cpos)
 	--_cpos;
@@ -205,10 +191,10 @@ void CursesWindow::Editbox::OnKey (key_t k) noexcept
 	_text.erase (_text.iat(_cpos));
     else if (isprint(k))
 	_text.insert (_text.iat(_cpos++), k);
-    Posclip();
+    posclip();
 }
 
-void CursesWindow::Editbox::Draw (void) const noexcept
+void CursesWindow::Editbox::draw (void) const noexcept
 {
     mvwhline (*this, 0, 0, ' ', maxx());
     waddstr (*this, _text.iat(_fc));
@@ -242,121 +228,121 @@ MessageBox::MessageBox (const Msg::Link& l) noexcept
 {
 }
 
-bool MessageBox::Dispatch (Msg& msg) noexcept
+bool MessageBox::dispatch (Msg& msg) noexcept
 {
-    return PMessageBox::Dispatch (this, msg)
-	|| CursesWindow::Dispatch (msg);
+    return PMessageBox::dispatch (this, msg)
+	|| CursesWindow::dispatch (msg);
 }
 
-void MessageBox::MessageBox_Ask (const string_view& prompt, Type type, uint16_t) noexcept
+void MessageBox::MessageBox_ask (const string_view& prompt, Type type, uint16_t) noexcept
 {
     _prompt = prompt;
     _type = type;
     if (_type == Type::YesNo) {
-	_wok.SetText ("Yes");
-	_wcancel.SetText ("No");
+	_wok.set_text ("Yes");
+	_wcancel.set_text ("No");
     } else if (_type == Type::YesNoCancel) {
-	_wok.SetText ("Yes");
-	_wignore.SetText ("No");
+	_wok.set_text ("Yes");
+	_wignore.set_text ("No");
     } else if (_type == Type::RetryCancelIgnore)
-	_wok.SetText ("Retry");
-    Layout();
+	_wok.set_text ("Retry");
+    layout();
 }
 
-void MessageBox::Layout (void) noexcept
+void MessageBox::layout (void) noexcept
 {
-    // Measure message
-    auto lsz = Label::Measure (_prompt);
+    // measure message
+    auto lsz = Label::measure (_prompt);
     lsz.y = min (lsz.y, LINES-4u);
     lsz.x = min (lsz.x, COLS-4u);
 
-    // Measure button strip width
-    auto okw = _wok.Measure(), cancelw = _wcancel.Measure(), ignorew = _wignore.Measure();
+    // measure button strip width
+    auto okw = _wok.measure(), cancelw = _wcancel.measure(), ignorew = _wignore.measure();
     auto bw = okw;
     if (_type != Type::Ok)
 	bw += cancelw;
     if (_type == Type::YesNoCancel || _type == Type::RetryCancelIgnore)
 	bw += ignorew;
 
-    // Create main dialog window
+    // create main dialog window
     auto wy = lsz.y+4;
     auto wx = max(lsz.x,bw)+4;
-    _w.Create (wy, wx, (LINES-wy)/2u, (COLS-wx)/2u);
+    _w.create (wy, wx, (LINES-wy)/2u, (COLS-wx)/2u);
     // The message is just inside, centered
-    _wmsg.Create (lsz.y, lsz.x, _w.begy()+1, _w.begx()+(_w.maxx()-lsz.x)/2u);
+    _wmsg.create (lsz.y, lsz.x, _w.begy()+1, _w.begx()+(_w.maxx()-lsz.x)/2u);
 
-    // Create button row, centered under message
+    // create button row, centered under message
     auto bbeg = _w.begx()+(_w.maxx()-bw)/2u;
     auto bry = _w.begy()+_w.maxy()-2;
-    _wok.Create (okw, bry, bbeg);
+    _wok.create (okw, bry, bbeg);
     bbeg += okw;
     if (_type == Type::YesNoCancel || _type == Type::RetryCancelIgnore) {
-	_wignore.Create (ignorew, bry, bbeg);
+	_wignore.create (ignorew, bry, bbeg);
 	bbeg += ignorew;
     }
 
     // Initialize focus
     if (_type == Type::Ok)
-	InitCtrlFocus (_wok);
+	init_ctrl_focus (_wok);
     else {
-	_wcancel.Create (cancelw, bry, bbeg);
-	InitCtrlFocus (_wcancel, _wok, _wignore);
+	_wcancel.create (cancelw, bry, bbeg);
+	init_ctrl_focus (_wcancel, _wok, _wignore);
     }
-    CursesWindow::Layout();
+    CursesWindow::layout();
 }
 
-void MessageBox::Draw (void) const noexcept
+void MessageBox::draw (void) const noexcept
 {
     werase (_w);
     box (_w, 0, 0);
     wnoutrefresh (_w);
 
-    _wmsg.Draw (_prompt);
+    _wmsg.draw (_prompt);
 
-    _wok.Draw();
+    _wok.draw();
     if (_type != Type::Ok) {
-	_wcancel.Draw();
+	_wcancel.draw();
 	if (_type == Type::YesNoCancel || _type == Type::RetryCancelIgnore)
-	    _wignore.Draw();
+	    _wignore.draw();
     }
-    CursesWindow::Draw();
+    CursesWindow::draw();
 }
 
-void MessageBox::Done (Answer answer) noexcept
+void MessageBox::done (Answer answer) noexcept
 {
-    _reply.Reply (answer);
-    Close();
+    _reply.reply (answer);
+    close();
 }
 
-void MessageBox::OnKey (key_t key) noexcept
+void MessageBox::on_key (key_t key) noexcept
 {
     if (key == 'y' || key == 'r')
-	Done (Answer::Ok);
+	done (Answer::Ok);
     else if (key == 'n' || key == 'i')
-	Done (Answer::No);
+	done (Answer::No);
     else if (key == KEY_ESCAPE || key == 'c')
-	Done (Answer::Cancel);
+	done (Answer::Cancel);
 
-    if (_wcancel.Focused()) {
+    if (_wcancel.focused()) {
 	if (key == '\t')
-	    RotateCtrlFocus (_wcancel, _wok);
+	    rotate_ctrl_focus (_wcancel, _wok);
 	else if (key == '\n')
-	    Done (Answer::Cancel);
-    } else if (_wignore.Focused()) {
+	    done (Answer::Cancel);
+    } else if (_wignore.focused()) {
 	if (key == '\t')
-	    RotateCtrlFocus (_wignore, _wcancel);
+	    rotate_ctrl_focus (_wignore, _wcancel);
 	else if (key == '\n')
-	    Done (Answer::Ignore);
+	    done (Answer::Ignore);
     } else {
 	if (key == '\t') {
 	    if (_type == Type::OkCancel || _type == Type::YesNo)
-		RotateCtrlFocus (_wok, _wcancel);
+		rotate_ctrl_focus (_wok, _wcancel);
 	    else if (_type == Type::YesNoCancel || _type == Type::RetryCancelIgnore)
-		RotateCtrlFocus (_wok, _wignore);
+		rotate_ctrl_focus (_wok, _wignore);
 	} else if (key == '\n')
-	    Done (Answer::Ok);
+	    done (Answer::Ok);
     }
-    CursesWindow::OnKey (key);
+    CursesWindow::on_key (key);
 }
 
 //}}}-------------------------------------------------------------------

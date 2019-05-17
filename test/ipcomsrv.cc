@@ -12,11 +12,11 @@
 
 class TestApp : public App {
 public:
-    static auto&	Instance (void) { static TestApp s_App; return s_App; }
-    void		ProcessArgs (argc_t argc, argv_t argv) noexcept;
-    bool		Dispatch (Msg& msg) noexcept override
-			    { return PExternR::Dispatch (this, msg) || App::Dispatch (msg); }
-    inline void		ExternR_Connected (const ExternInfo*) noexcept;
+    static auto&	instance (void) { static TestApp s_app; return s_app; }
+    void		process_args (argc_t argc, argv_t argv) noexcept;
+    bool		dispatch (Msg& msg) noexcept override
+			    { return PExternR::dispatch (this, msg) || App::dispatch (msg); }
+    inline void		ExternR_connected (const Extern::Info*) noexcept;
 private:
 			TestApp (void) : App(), _eserver (mrid_App), _epipe (mrid_App) {}
 private:
@@ -32,15 +32,15 @@ END_CWICLO_APP
 
 //----------------------------------------------------------------------
 
-void TestApp::ProcessArgs (argc_t argc, argv_t argv) noexcept
+void TestApp::process_args (argc_t argc, argv_t argv) noexcept
 {
-    bool isPrivatePipe = false;
+    bool is_private_pipe = false;
     for (int opt; 0 < (opt = getopt (argc, argv, "pd"));) {
 	if (opt == 'p')
-	    isPrivatePipe = true;
+	    is_private_pipe = true;
 	#ifndef NDEBUG
 	    else if (opt == 'd')
-		SetFlag (f_DebugMsgTrace);
+		set_flag (f_DebugMsgTrace);
 	#endif
 	else {
 	    printf ("Usage: ipcom [-p]\n"
@@ -55,14 +55,14 @@ void TestApp::ProcessArgs (argc_t argc, argv_t argv) noexcept
     // it is capable of instantiating. In this example, the only interface
     // exported is Ping (see ping.h). The client side sends an empty export
     // list when it only imports interfaces.
-    static const iid_t eil_Ping[] = { PPing::Interface(), nullptr };
+    static const iid_t eil_Ping[] = { PPing::interface(), nullptr };
 
     // Object servers can be run on a UNIX socket or a TCP port. ipcom shows
     // the UNIX socket version. These sockets are created in system standard
     // locations; typically /run for root processes or /run/user/<uid> for
     // processes launched by the user. If you also implement systemd socket
     // activation (see below), any other sockets can be used.
-    static const char c_IPCOM_SocketName[] = "ipcom.socket";
+    static const char c_IPCOM_socket_name[] = "ipcom.socket";
 
     // When writing a server, it is recommended to use the ExternServer
     // object to manage the sockets being listened to. It will create
@@ -74,8 +74,8 @@ void TestApp::ProcessArgs (argc_t argc, argv_t argv) noexcept
     // is not required, and only an Extern Msger is needed to directly
     // bind to the pipe file descriptor.
     //
-    if (isPrivatePipe)
-	_epipe.Open (STDIN_FILENO, eil_Ping);
+    if (is_private_pipe)
+	_epipe.open (STDIN_FILENO, eil_Ping);
     // 
     // For flexibility it is recommended to implement systemd socket activation.
     // Doing so is very simple; sd_listen_fds returns the number of fds passed to
@@ -84,21 +84,21 @@ void TestApp::ProcessArgs (argc_t argc, argv_t argv) noexcept
     // to listen on more than one socket.
     //
     else if (sd_listen_fds())
-	_eserver.Open (SD_LISTEN_FDS_START+0, eil_Ping);
+	_eserver.open (SD_LISTEN_FDS_START+0, eil_Ping);
     //
     // If no sockets were passed from systemd, create one manually
-    // Use BindUserLocal to create the socket in XDG_RUNTIME_DIR,
+    // Use bind_user_local to create the socket in XDG_RUNTIME_DIR,
     // the standard location for sockets of user services.
-    // See other Bind variants in PExternServer declaration.
+    // See other bind variants in PExternServer declaration.
     // Each returns the fd of the new socket, -1 on failure.
     //
-    else if (0 > _eserver.BindUserLocal (c_IPCOM_SocketName, eil_Ping))
-	return ErrorLibc ("BindUserLocal");
+    else if (0 > _eserver.bind_user_local (c_IPCOM_socket_name, eil_Ping))
+	return error_libc ("bind_user_local");
 }
 
-void TestApp::ExternR_Connected (const ExternInfo*) noexcept
+void TestApp::ExternR_connected (const Extern::Info*) noexcept
 {
     // When a client connects, ExternServer will forward the
-    // ExternR_Connected message here. On the server side,
+    // ExternR_connected message here. On the server side,
     // there is nothing to do in this example.
 }

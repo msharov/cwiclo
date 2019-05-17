@@ -81,7 +81,7 @@ void print_backtrace (void) noexcept
 {
 #if __has_include(<execinfo.h>)
     void* frames[32];
-    auto nf = backtrace (ArrayBlock(frames));
+    auto nf = backtrace (ARRAY_BLOCK(frames));
     if (nf <= 1)
 	return;
     auto syms = backtrace_symbols (frames, nf);
