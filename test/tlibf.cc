@@ -292,8 +292,16 @@ void LibTestApp::test_vector (void) // static
     printf ("count(1): %u\n", count(v,1));
     printf ("count(11): %u\n", count(v,11));
     printf ("count_if(odd): %u\n", count_if(v,[](auto e){return e%2;}));
-    iota (v.begin(), v.end(), 2);
+    iota (v, 2);
     printf ("iota(2): ");
+    print_vector (v);
+    v.resize (8);
+    printf ("generate(pow2()): ");
+    unsigned p2i = 0;
+    generate (v, [&]{ return 1u << p2i++; });
+    print_vector (v);
+    printf ("generate_n(pow2(),3): ");
+    generate_n (v.begin(), 3, [&]{ return 1u << p2i++; });
     print_vector (v);
 
     puts ("Constructing vector<A>(3)");

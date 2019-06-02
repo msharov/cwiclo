@@ -98,6 +98,8 @@ count(1): 2
 count(11): 0
 count_if(odd): 13
 iota(2): {2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20}
+generate(pow2()): {1,2,4,8,16,32,64,128}
+generate_n(pow2(),3): {256,512,1024,8,16,32,64,128}
 Constructing vector<A>(3)
 A::A
 A::A

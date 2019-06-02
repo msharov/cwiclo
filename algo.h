@@ -324,6 +324,23 @@ template <typename C, typename P>
 constexpr auto count_if (const C& c, P p)
     { return count_if (begin(c), end(c), move(p)); }
 
+template <typename I, typename G>
+constexpr void generate_n (I f, size_t n, G g)
+{
+    for (; n--; advance(f))
+	*f = g();
+}
+
+template <typename I, typename G>
+constexpr void generate (I f, I l, G g)
+{
+    for (; f < l; advance(f))
+	*f = g();
+}
+template <typename C, typename G>
+constexpr auto generate (C& c, G g)
+    { return generate (begin(c), end(c), move(g)); }
+
 //}}}-------------------------------------------------------------------
 //{{{ C utility functions
 
