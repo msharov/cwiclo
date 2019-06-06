@@ -183,14 +183,14 @@ void CursesWindow::Listbox::draw (drawRow drf) const noexcept
 {
     for (u_short y = 0, yend = min(n, top+maxy()); y < yend; ++y) {
 	if (y >= top) {
-	    if (y == sel && focused())
+	    wmove (w(), y-top, 0);
+	    if (y == sel && focused()) {
 		wattron (w(), A_REVERSE);
-	    drf (w(), y);
-	    if (y == sel) {
 		whline (w(), ' ', maxx()-curx());
-		wattroff (w(), A_REVERSE);
 	    }
-	    wmove (w(), cury()+1, 0);
+	    drf (w(), y);
+	    if (y == sel)
+		wattroff (w(), A_REVERSE);
 	}
     }
 }
