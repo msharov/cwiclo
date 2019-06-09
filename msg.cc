@@ -19,8 +19,6 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 
 //----------------------------------------------------------------------
 
-auto& ProxyB::linkw (void) noexcept { return _link; }
-
 Msg& ProxyB::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo) noexcept
 {
     return App::instance().create_msg (linkw(), mid, sz, fdo);
@@ -94,8 +92,10 @@ Msg::Msg (const Link& l, methodid_t mid, streamsize size, fdoffset_t fdo) noexce
 
 static streamsize sigelement_size (char c) noexcept
 {
-    static const struct { char sym; uint8_t sz; } syms[] =
-	{{'y',1},{'b',1},{'n',2},{'q',2},{'i',4},{'u',4},{'h',sizeof(Msg::fd_t)},{'x',8},{'t',8}};
+    static const struct { char sym; uint8_t sz; } syms[] = {
+	{'y',1},{'c',1},{'b',1},{'q',2},{'n',2},{'u',4},{'i',4},
+	{'f',4},{'h',sizeof(Msg::fd_t)},{'x',8},{'t',8},{'d',8}
+    };
     for (auto& i : syms)
 	if (i.sym == c)
 	    return i.sz;

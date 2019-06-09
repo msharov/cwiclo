@@ -209,8 +209,8 @@ public:
 protected:
     constexpr		ProxyB (mrid_t from, mrid_t to)		: _link {from,to} {}
 			ProxyB (const ProxyB&) = delete;
-    inline auto&	linkw (void) noexcept;
     void		operator= (const ProxyB&) = delete;
+    constexpr auto&	linkw (void) noexcept			{ return _link; }
     Msg&		create_msg (methodid_t imethod, streamsize sz) noexcept;
     Msg&		create_msg (methodid_t imethod, streamsize sz, Msg::fdoffset_t fdo) noexcept;
     void		forward_msg (Msg&& msg) noexcept;
