@@ -247,20 +247,6 @@ public:
 };
 
 //}}}-------------------------------------------------------------------
-//{{{ has_msger_named_create
-
-template <typename T> class __has_msger_named_create {
-    template <typename O, T& (*)(const Msg::Link&)> struct test_for_create {};
-    template <typename O> static true_type found (test_for_create<O,&O::create>*);
-    template <typename O> static false_type found (...);
-public:
-    using type = decltype(found<T>(nullptr));
-};
-// Differentiates between normal and singleton Msger classes
-template <typename T>
-struct has_msger_named_create : public __has_msger_named_create<T>::type {};
-
-//}}}-------------------------------------------------------------------
 //{{{ Msger
 
 class Msger {
@@ -268,12 +254,8 @@ public:
     enum { f_Unused, f_Static, f_Last };
     //{{{2 Msger factory template --------------------------------------
     template <typename M>
-    [[nodiscard]] static Msger* factory (const Msg::Link& l) {
-	if constexpr (has_msger_named_create<M>::value)
-	    return M::create(l);	// this variant is used for singleton Msgers
-	else
-	    return new M(l);
-    }
+    [[nodiscard]] static Msger* factory (const Msg::Link& l)
+	{ return new M (l); }
     using pfn_factory_t = ProxyB::pfn_factory_t;
     //}}}2--------------------------------------------------------------
 public:
