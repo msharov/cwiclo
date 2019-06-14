@@ -8,7 +8,7 @@
 
 namespace cwiclo {
 
-int string::insertv (const_iterator cip, const char* fmt, va_list args) noexcept
+int string::insertv (const_iterator cip, const char* fmt, va_list args)
 {
     auto ip = p2i (cip);
     const char c = (ip < end() ? *ip : 0);
@@ -25,7 +25,7 @@ int string::insertv (const_iterator cip, const char* fmt, va_list args) noexcept
     }
 }
 
-int string::insertf (const_iterator ip, const char* fmt, ...) noexcept
+int string::insertf (const_iterator ip, const char* fmt, ...)
 {
     va_list args;
     va_start (args, fmt);
@@ -34,12 +34,12 @@ int string::insertf (const_iterator ip, const char* fmt, ...) noexcept
     return rv;
 }
 
-int string::appendv (const char* fmt, va_list args) noexcept
+int string::appendv (const char* fmt, va_list args)
 {
     return insertv (end(), fmt, args);
 }
 
-int string::appendf (const char* fmt, ...) noexcept
+int string::appendf (const char* fmt, ...)
 {
     va_list args;
     va_start (args, fmt);
@@ -48,13 +48,13 @@ int string::appendf (const char* fmt, ...) noexcept
     return rv;
 }
 
-int string::assignv (const char* fmt, va_list args) noexcept
+int string::assignv (const char* fmt, va_list args)
 {
     resize(0);
     return insertv (begin(), fmt, args);
 }
 
-int string::assignf (const char* fmt, ...) noexcept
+int string::assignf (const char* fmt, ...)
 {
     va_list args;
     va_start (args, fmt);
@@ -63,7 +63,7 @@ int string::assignf (const char* fmt, ...) noexcept
     return rv;
 }
 
-int string::compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2) noexcept // static
+int string::compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2) // static
 {
     assert (f1 <= l1 && (f2 <= l2 || !l2) && "Negative ranges result in memory allocation errors.");
     const auto len1 = l1-f1, len2 = l2-f2;
@@ -71,12 +71,12 @@ int string::compare (const_iterator f1, const_iterator l1, const_iterator f2, co
     return rv ? rv : sign (len1 - len2);
 }
 
-bool string::operator== (const_pointer s) const noexcept
+bool string::operator== (const_pointer s) const
 {
     return strlen(s) == size() && 0 == strcmp (c_str(), s);
 }
 
-string::iterator string::replace (const_iterator f, const_iterator l, size_type n, value_type c) noexcept
+string::iterator string::replace (const_iterator f, const_iterator l, size_type n, value_type c)
 {
     auto dsz = difference_type(n) - (l-f);
     if (dsz > 0)
@@ -88,7 +88,7 @@ string::iterator string::replace (const_iterator f, const_iterator l, size_type 
     return iwp;
 }
 
-auto string::rfind (const_pointer s, const_iterator fi) const noexcept -> const_iterator
+auto string::rfind (const_pointer s, const_iterator fi) const -> const_iterator
 {
     fi -= strlen(s);
     const_iterator r = nullptr;

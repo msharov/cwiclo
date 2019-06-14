@@ -11,16 +11,16 @@
 
 namespace std {
 
-void terminate (void) noexcept { abort(); }
+void terminate (void) { abort(); }
 
 } // namespace std
 namespace __cxxabiv1 {
 extern "C" {
 
 #ifndef NDEBUG
-#define TERMINATE_ALIAS(name)	void name (void) noexcept { assert (!#name); std::terminate(); }
+#define TERMINATE_ALIAS(name)	void name (void) { assert (!#name); std::terminate(); }
 #else
-#define TERMINATE_ALIAS(name)	void name (void) noexcept WEAKALIAS("_ZSt9terminatev");
+#define TERMINATE_ALIAS(name)	void name (void) WEAKALIAS("_ZSt9terminatev");
 #endif
 TERMINATE_ALIAS (__cxa_call_unexpected)
 TERMINATE_ALIAS (__cxa_pure_virtual)
@@ -31,16 +31,16 @@ TERMINATE_ALIAS (__cxa_throw_bad_array_new_length)
 TERMINATE_ALIAS (__cxa_throw_bad_array_length)
 #undef TERMINATE_ALIAS
 
-int __cxa_guard_acquire (__guard* g) noexcept { return !g->test_and_set(); }
-void __cxa_guard_release (__guard*) noexcept {}
-void __cxa_guard_abort (__guard* g) noexcept { g->clear(); }
+int __cxa_guard_acquire (__guard* g) { return !g->test_and_set(); }
+void __cxa_guard_release (__guard*) {}
+void __cxa_guard_abort (__guard* g) { g->clear(); }
 
 } // extern "C"
 } // namespace __cxxabiv1
 
 //----------------------------------------------------------------------
 
-void* _realloc (void* p, size_t n) noexcept
+void* _realloc (void* p, size_t n)
 {
     p = realloc (p, n);
     if (!p)
@@ -48,7 +48,7 @@ void* _realloc (void* p, size_t n) noexcept
     return p;
 }
 
-void* _alloc (size_t n) noexcept
+void* _alloc (size_t n)
 {
     auto p = _realloc (nullptr, n);
     #ifndef NDEBUG
@@ -59,7 +59,7 @@ void* _alloc (size_t n) noexcept
 
 namespace cwiclo {
 
-void brotate (void* vf, void* vm, void* vl) noexcept
+void brotate (void* vf, void* vm, void* vl)
 {
     auto f = (char*) vf, m = (char*) vm, l = (char*) vl;
     const auto lsz (m-f), hsz (l-m), hm (min (lsz, hsz));
@@ -77,7 +77,7 @@ void brotate (void* vf, void* vm, void* vl) noexcept
     }
 }
 
-void print_backtrace (void) noexcept
+void print_backtrace (void)
 {
 #if __has_include(<execinfo.h>)
     void* frames[32];
@@ -118,7 +118,7 @@ void print_backtrace (void) noexcept
 }
 
 #ifndef UC_VERSION
-void hexdump (const void* vp, size_t n) noexcept
+void hexdump (const void* vp, size_t n)
 {
     //{{{ CP437 UTF8 table
     static const char c_437table[256][4] = {

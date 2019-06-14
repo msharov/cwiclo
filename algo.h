@@ -248,10 +248,10 @@ private:
 template <typename F>
 class scope_exit {
 public:
-    constexpr explicit	scope_exit (F&& f) noexcept		: _f(move(f)),_enabled(true) {}
-    constexpr		scope_exit (scope_exit&& f) noexcept	: _f(move(f._f)),_enabled(f._enabled) { f.release(); }
-    constexpr void	release (void) noexcept			{ _enabled = false; }
-    inline		~scope_exit (void) noexcept (noexcept (declval<F>()))	{ if (_enabled) _f(); }
+    constexpr explicit	scope_exit (F&& f)		: _f(move(f)),_enabled(true) {}
+    constexpr		scope_exit (scope_exit&& f)	: _f(move(f._f)),_enabled(f._enabled) { f.release(); }
+    constexpr void	release (void)			{ _enabled = false; }
+    inline		~scope_exit (void)		{ if (_enabled) _f(); }
     scope_exit&		operator= (scope_exit&&) = delete;
 private:
     F		_f;
@@ -259,7 +259,7 @@ private:
 };
 
 template <typename F>
-constexpr auto make_scope_exit (F&& f) noexcept
+constexpr auto make_scope_exit (F&& f)
     { return scope_exit<remove_reference_t<F>>(forward<F>(f)); }
 
 //}}}-------------------------------------------------------------------
@@ -345,7 +345,7 @@ constexpr auto generate (C& c, G g)
 //{{{ C utility functions
 
 // Read ntr bytes from fd, accounting for partial reads and EINTR
-inline int complete_read (int fd, void* p, size_t ntr) noexcept
+inline int complete_read (int fd, void* p, size_t ntr)
 {
     int nr = 0;
     while (ntr) {
@@ -363,7 +363,7 @@ inline int complete_read (int fd, void* p, size_t ntr) noexcept
 }
 
 // Write ntw bytes to fd, accounting for partial writes and EINTR
-inline int complete_write (int fd, const void* p, size_t ntw) noexcept
+inline int complete_write (int fd, const void* p, size_t ntw)
 {
     int nw = 0;
     while (ntw) {
@@ -383,14 +383,14 @@ inline int complete_write (int fd, const void* p, size_t ntw) noexcept
 extern "C" {
 
 #ifndef UC_VERSION
-const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexcept NONNULL();
-int mkpath (const char* path, mode_t mode) noexcept NONNULL();
-int rmpath (const char* path) noexcept NONNULL();
+const char* executable_in_path (const char* efn, char* exe, size_t exesz) NONNULL();
+int mkpath (const char* path, mode_t mode) NONNULL();
+int rmpath (const char* path) NONNULL();
 #endif
 
 enum { SD_LISTEN_FDS_START = STDERR_FILENO+1 };
-unsigned sd_listen_fds (void) noexcept;
-int sd_listen_fd_by_name (const char* name) noexcept;
+unsigned sd_listen_fds (void);
+int sd_listen_fd_by_name (const char* name);
 
 } // extern "C"
 } // namespace cwiclo

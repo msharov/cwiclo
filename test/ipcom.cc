@@ -13,20 +13,20 @@
 
 class TestApp : public App {
 public:
-    static auto&	instance (void) noexcept { static TestApp s_app; return s_app; }
-    bool		dispatch (Msg& msg) noexcept override {
+    static auto&	instance (void) { static TestApp s_app; return s_app; }
+    bool		dispatch (Msg& msg) override {
 			    return PPingR::dispatch (this, msg)
 				|| PExternR::dispatch (this, msg)
 				|| PSignal::dispatch (this, msg)
 				|| App::dispatch (msg);
 			}
-    void		on_msger_destroyed (mrid_t mid) noexcept override;
-    void		process_args (argc_t argc, argv_t argv) noexcept;
-    inline void		ExternR_connected (const Extern::Info* einfo) noexcept;
-    inline void		PingR_ping (uint32_t v) noexcept;
-    inline void		Signal_signal (int sig) noexcept;
+    void		on_msger_destroyed (mrid_t mid) override;
+    void		process_args (argc_t argc, argv_t argv);
+    inline void		ExternR_connected (const Extern::Info* einfo);
+    inline void		PingR_ping (uint32_t v);
+    inline void		Signal_signal (int sig);
 private:
-			TestApp (void) noexcept;
+			TestApp (void);
 private:
     PPing		_pinger;
     PExtern		_eclient;
@@ -40,7 +40,7 @@ END_CWICLO_APP
 
 //----------------------------------------------------------------------
 
-TestApp::TestApp (void) noexcept
+TestApp::TestApp (void)
 : App()
 ,_pinger (mrid_App)
 ,_eclient (mrid_App)
@@ -50,7 +50,7 @@ TestApp::TestApp (void) noexcept
     // exporting the Ping interface must first be established.
 }
 
-void TestApp::process_args (argc_t argc [[maybe_unused]], argv_t argv [[maybe_unused]]) noexcept
+void TestApp::process_args (argc_t argc [[maybe_unused]], argv_t argv [[maybe_unused]])
 {
     #ifndef NDEBUG
 	// Debug tracing is very useful in asynchronous apps, since backtraces
@@ -94,7 +94,7 @@ void TestApp::process_args (argc_t argc [[maybe_unused]], argv_t argv [[maybe_un
 // here. This is the appropriate place to check that all the imports are satisfied,
 // authenticate the connection (if using a UNIX socket), and create objects.
 //
-void TestApp::ExternR_connected (const Extern::Info* einfo) noexcept
+void TestApp::ExternR_connected (const Extern::Info* einfo)
 {
     // ExternInfo contains the list of interfaces available on this connection, so
     // here is the right place to check that the expected interfaces can be created.
@@ -117,7 +117,7 @@ void TestApp::ExternR_connected (const Extern::Info* einfo) noexcept
 // The ping replies are received exactly the same way as from a local
 // object. But now the object resides in the server process and the
 // message is read from the socket.
-void TestApp::PingR_ping (uint32_t v) noexcept
+void TestApp::PingR_ping (uint32_t v)
 {
     LOG ("Ping %u reply received in app\n", v);
     if (++v < 5)
@@ -132,7 +132,7 @@ void TestApp::PingR_ping (uint32_t v) noexcept
 // all recepients, so there is no need to register for it,
 // and this method is implemented like a signal handler.
 //
-void TestApp::Signal_signal (int sig) noexcept
+void TestApp::Signal_signal (int sig)
 {
     if (sig == SIGCHLD) {
 	int ec = EXIT_SUCCESS;
@@ -150,7 +150,7 @@ void TestApp::Signal_signal (int sig) noexcept
 // The remote end may also have been shut down normally, without an
 // error. Here this can be detected when undesirable.
 //
-void TestApp::on_msger_destroyed (mrid_t mid) noexcept
+void TestApp::on_msger_destroyed (mrid_t mid)
 {
     App::on_msger_destroyed (mid);
     if (flag (f_Quitting))

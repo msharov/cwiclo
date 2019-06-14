@@ -17,7 +17,7 @@ uint8_t CursesWindow::s_nwins = 0;
 
 //----------------------------------------------------------------------
 
-CursesWindow::CursesWindow (const Msg::Link& l) noexcept
+CursesWindow::CursesWindow (const Msg::Link& l)
 : Msger(l)
 ,_winput()
 ,_uiinput (l.dest)
@@ -37,7 +37,7 @@ CursesWindow::CursesWindow (const Msg::Link& l) noexcept
     }
 }
 
-CursesWindow::~CursesWindow (void) noexcept
+CursesWindow::~CursesWindow (void)
 {
     if (!--s_nwins) {
 	flushinp();
@@ -45,7 +45,7 @@ CursesWindow::~CursesWindow (void) noexcept
     }
 }
 
-void CursesWindow::set_input_ctrl (Ctrl& c) noexcept
+void CursesWindow::set_input_ctrl (Ctrl& c)
 {
     _winput = c.w();
     if (_winput) {
@@ -57,7 +57,7 @@ void CursesWindow::set_input_ctrl (Ctrl& c) noexcept
     }
 }
 
-void CursesWindow::on_msger_destroyed (mrid_t mid) noexcept
+void CursesWindow::on_msger_destroyed (mrid_t mid)
 {
     Msger::on_msger_destroyed (mid);
     // Check if a child modal dialog closed
@@ -68,19 +68,19 @@ void CursesWindow::on_msger_destroyed (mrid_t mid) noexcept
     }
 }
 
-void CursesWindow::on_key (key_t k) noexcept
+void CursesWindow::on_key (key_t k)
 {
     if (k == KEY_RESIZE)
 	layout();
 }
 
-void CursesWindow::close (void) noexcept
+void CursesWindow::close (void)
 {
     set_unused();
     _uiinput.stop();
 }
 
-void CursesWindow::TimerR_timer (PTimerR::fd_t) noexcept
+void CursesWindow::TimerR_timer (PTimerR::fd_t)
 {
     if (msger_id() != s_focused || !_winput)
 	return;	// a modal dialog is active
@@ -92,7 +92,7 @@ void CursesWindow::TimerR_timer (PTimerR::fd_t) noexcept
     }
 }
 
-bool CursesWindow::dispatch (Msg& msg) noexcept
+bool CursesWindow::dispatch (Msg& msg)
 {
     return PTimerR::dispatch (this, msg)
 	|| Msger::dispatch (msg);
@@ -101,7 +101,7 @@ bool CursesWindow::dispatch (Msg& msg) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ CursesWindow::Ctrl
 
-void CursesWindow::Ctrl::create (int l, int c, int y, int x) noexcept
+void CursesWindow::Ctrl::create (int l, int c, int y, int x)
 {
     auto ow = exchange (_w, newwin (l,c,y,x));
     if (ow)
@@ -112,7 +112,7 @@ void CursesWindow::Ctrl::create (int l, int c, int y, int x) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ CursesWindow::Label
 
-void CursesWindow::Label::draw (const char* text) const noexcept
+void CursesWindow::Label::draw (const char* text) const
 {
     werase (*this);
     waddstr (*this, text);
@@ -122,7 +122,7 @@ void CursesWindow::Label::draw (const char* text) const noexcept
 //}}}-------------------------------------------------------------------
 //{{{ CursesWindow::Button
 
-void CursesWindow::Button::draw (void) const noexcept
+void CursesWindow::Button::draw (void) const
 {
     werase (*this);
     if (focused())
@@ -141,7 +141,7 @@ void CursesWindow::Button::draw (void) const noexcept
 //}}}-------------------------------------------------------------------
 //{{{ CursesWindow::Listbox
 
-void CursesWindow::Listbox::on_key (key_t k) noexcept
+void CursesWindow::Listbox::on_key (key_t k)
 {
     if ((k == 'k' || k == KEY_UP) && sel)
 	--sel;
@@ -152,7 +152,7 @@ void CursesWindow::Listbox::on_key (key_t k) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ CursesWindow::Editbox
 
-void CursesWindow::Editbox::create (int c, int y, int x) noexcept
+void CursesWindow::Editbox::create (int c, int y, int x)
 {
     Ctrl::create (1,c,y,x);
     leaveok (*this, false);
@@ -160,7 +160,7 @@ void CursesWindow::Editbox::create (int c, int y, int x) noexcept
     posclip();
 }
 
-void CursesWindow::Editbox::posclip (void) noexcept
+void CursesWindow::Editbox::posclip (void)
 {
     if (_cpos < _fc) {	// cursor past left edge
 	_fc = _cpos;
@@ -175,7 +175,7 @@ void CursesWindow::Editbox::posclip (void) noexcept
     }
 }
 
-void CursesWindow::Editbox::on_key (key_t k) noexcept
+void CursesWindow::Editbox::on_key (key_t k)
 {
     if (k == KEY_LEFT && _cpos)
 	--_cpos;
@@ -194,7 +194,7 @@ void CursesWindow::Editbox::on_key (key_t k) noexcept
     posclip();
 }
 
-void CursesWindow::Editbox::draw (void) const noexcept
+void CursesWindow::Editbox::draw (void) const
 {
     mvwhline (*this, 0, 0, ' ', maxx());
     waddstr (*this, _text.iat(_fc));
@@ -214,7 +214,7 @@ DEFINE_INTERFACE (MessageBoxR)
 
 //----------------------------------------------------------------------
 
-MessageBox::MessageBox (const Msg::Link& l) noexcept
+MessageBox::MessageBox (const Msg::Link& l)
 : CursesWindow(l)
 ,_prompt()
 ,_w()
@@ -228,13 +228,13 @@ MessageBox::MessageBox (const Msg::Link& l) noexcept
 {
 }
 
-bool MessageBox::dispatch (Msg& msg) noexcept
+bool MessageBox::dispatch (Msg& msg)
 {
     return PMessageBox::dispatch (this, msg)
 	|| CursesWindow::dispatch (msg);
 }
 
-void MessageBox::MessageBox_ask (const string_view& prompt, Type type, uint16_t) noexcept
+void MessageBox::MessageBox_ask (const string_view& prompt, Type type, uint16_t)
 {
     _prompt = prompt;
     _type = type;
@@ -249,7 +249,7 @@ void MessageBox::MessageBox_ask (const string_view& prompt, Type type, uint16_t)
     layout();
 }
 
-void MessageBox::layout (void) noexcept
+void MessageBox::layout (void)
 {
     // measure message
     auto lsz = Label::measure (_prompt);
@@ -291,7 +291,7 @@ void MessageBox::layout (void) noexcept
     CursesWindow::layout();
 }
 
-void MessageBox::draw (void) const noexcept
+void MessageBox::draw (void) const
 {
     werase (_w);
     box (_w, 0, 0);
@@ -308,13 +308,13 @@ void MessageBox::draw (void) const noexcept
     CursesWindow::draw();
 }
 
-void MessageBox::done (Answer answer) noexcept
+void MessageBox::done (Answer answer)
 {
     _reply.reply (answer);
     close();
 }
 
-void MessageBox::on_key (key_t key) noexcept
+void MessageBox::on_key (key_t key)
 {
     if (key == 'y' || key == 'r')
 	done (Answer::Ok);

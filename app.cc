@@ -16,13 +16,13 @@ DEFINE_INTERFACE (Timer)
 DEFINE_INTERFACE (TimerR)
 DEFINE_INTERFACE (Signal)
 
-int PTimer::make_nonblocking (fd_t fd) noexcept // static
+int PTimer::make_nonblocking (fd_t fd) // static
 {
     auto f = fcntl (fd, F_GETFL);
     return f < 0 ? f : fcntl (fd, F_SETFL, f| O_NONBLOCK| O_CLOEXEC);
 }
 
-auto PTimer::now (void) noexcept -> mstime_t // static
+auto PTimer::now (void) -> mstime_t // static
 {
     struct timespec t;
     if (0 > clock_gettime (CLOCK_REALTIME, &t))
@@ -32,10 +32,10 @@ auto PTimer::now (void) noexcept -> mstime_t // static
 
 //----------------------------------------------------------------------
 
-App::Timer::~Timer (void) noexcept
+App::Timer::~Timer (void)
     { App::instance().remove_timer (this); }
 
-void App::Timer::Timer_watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms) noexcept
+void App::Timer::Timer_watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms)
 {
     _cmd = cmd;
     set_unused (_cmd == PTimer::WatchCmd::Stop);
@@ -43,7 +43,7 @@ void App::Timer::Timer_watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t ti
     _nextfire = timeoutms + (timeoutms <= PTimer::TimerMax ? PTimer::now() : PTimer::TimerNone);
 }
 
-bool App::Timer::dispatch (Msg& msg) noexcept
+bool App::Timer::dispatch (Msg& msg)
     { return PTimer::dispatch(this,msg) || Msger::dispatch(msg); }
 
 //}}}-------------------------------------------------------------------
@@ -55,7 +55,7 @@ uint32_t App::s_received_signals = 0;		// static
 
 //----------------------------------------------------------------------
 
-App::App (void) noexcept
+App::App (void)
 : Msger (mrid_App)
 ,_outq()
 ,_inq()
@@ -69,7 +69,7 @@ App::App (void) noexcept
     register_singleton_msger (this);
 }
 
-App::~App (void) noexcept
+App::~App (void)
 {
     // Delete Msgers in reverse order of creation
     for (mrid_t mid = _msgers.size(); mid--;)
@@ -78,7 +78,7 @@ App::~App (void) noexcept
 	fprintf (stderr, "Error: %s\n", _errors.c_str());
 }
 
-iid_t App::interface_by_name (const char* iname, streamsize inamesz) noexcept // static
+iid_t App::interface_by_name (const char* iname, streamsize inamesz) // static
 {
     for (auto mii = s_msger_factories; mii->iface; ++mii)
 	if (equal_n (iname, inamesz, mii->iface, interface_name_size (mii->iface)))
@@ -98,7 +98,7 @@ enum {
 #undef M
 enum { qc_ShellSignalQuitOffset = 128 };
 
-void App::install_signal_handlers (void) noexcept // static
+void App::install_signal_handlers (void) // static
 {
     for (auto sig = 0u; sig < NSIG; ++sig) {
 	if (get_bit (sigset_Msg, sig))
@@ -108,7 +108,7 @@ void App::install_signal_handlers (void) noexcept // static
     }
 }
 
-void App::fatal_signal_handler (int sig) noexcept // static
+void App::fatal_signal_handler (int sig) // static
 {
     static atomic_flag doubleSignal = ATOMIC_FLAG_INIT;
     if (!doubleSignal.test_and_set (memory_order::relaxed)) {
@@ -122,7 +122,7 @@ void App::fatal_signal_handler (int sig) noexcept // static
     _Exit (qc_ShellSignalQuitOffset+sig);
 }
 
-void App::msg_signal_handler (int sig) noexcept // static
+void App::msg_signal_handler (int sig) // static
 {
     set_bit (s_received_signals, sig);
     if (get_bit (sigset_Quit, sig)) {
@@ -132,7 +132,7 @@ void App::msg_signal_handler (int sig) noexcept // static
 }
 
 #ifndef NDEBUG
-void App::errorv (const char* fmt, va_list args) noexcept
+void App::errorv (const char* fmt, va_list args)
 {
     bool isFirst = _errors.empty();
     _errors.appendv (fmt, args);
@@ -141,7 +141,7 @@ void App::errorv (const char* fmt, va_list args) noexcept
 }
 #endif
 
-bool App::forward_error (mrid_t oid, mrid_t eoid) noexcept
+bool App::forward_error (mrid_t oid, mrid_t eoid)
 {
     auto m = msgerp_by_id (oid);
     if (!m)
@@ -159,7 +159,7 @@ bool App::forward_error (mrid_t oid, mrid_t eoid) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Msger lifecycle
 
-mrid_t App::allocate_mrid (mrid_t creator) noexcept
+mrid_t App::allocate_mrid (mrid_t creator)
 {
     assert (valid_msger_id (creator));
     mrid_t id = 0;
@@ -180,7 +180,7 @@ mrid_t App::allocate_mrid (mrid_t creator) noexcept
     return id;
 }
 
-void App::free_mrid (mrid_t id) noexcept
+void App::free_mrid (mrid_t id)
 {
     assert (valid_msger_id(id));
     auto m = _msgers[id];
@@ -198,14 +198,14 @@ void App::free_mrid (mrid_t id) noexcept
     }
 }
 
-mrid_t App::register_singleton_msger (Msger* m) noexcept
+mrid_t App::register_singleton_msger (Msger* m)
 {
     _msgers.push_back (m);
     _creators.push_back (mrid_App);
     return _msgers.size()-1;
 }
 
-Msger* App::create_msger_with (const Msg::Link& l, iid_t iid [[maybe_unused]], Msger::pfn_factory_t fac) noexcept // static
+Msger* App::create_msger_with (const Msg::Link& l, iid_t iid [[maybe_unused]], Msger::pfn_factory_t fac) // static
 {
     Msger* r = fac ? (*fac)(l) : nullptr;
     #ifndef NDEBUG	// Log failure to create in debug mode
@@ -223,7 +223,7 @@ Msger* App::create_msger_with (const Msg::Link& l, iid_t iid [[maybe_unused]], M
     return r;
 }
 
-auto App::msger_factory_for (iid_t id) noexcept // static
+auto App::msger_factory_for (iid_t id) // static
 {
     auto mii = s_msger_factories;
     while (mii->iface && mii->iface != id)
@@ -231,10 +231,10 @@ auto App::msger_factory_for (iid_t id) noexcept // static
     return mii->factory;
 }
 
-auto App::create_msger (const Msg::Link& l, iid_t iid) noexcept // static
+auto App::create_msger (const Msg::Link& l, iid_t iid) // static
     { return create_msger_with (l, iid, msger_factory_for (iid)); }
 
-Msg::Link& App::create_link (Msg::Link& l, iid_t iid) noexcept
+Msg::Link& App::create_link (Msg::Link& l, iid_t iid)
 {
     assert (valid_msger_id (l.src) && "You may only create links originating from an existing Msger");
     assert ((l.dest == mrid_New || l.dest == mrid_Broadcast || valid_msger_id(l.dest)) && "Invalid link destination requested");
@@ -247,7 +247,7 @@ Msg::Link& App::create_link (Msg::Link& l, iid_t iid) noexcept
     return l;
 }
 
-Msg::Link& App::create_link_with (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept
+Msg::Link& App::create_link_with (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac)
 {
     assert (valid_msger_id (l.src) && "You may only create links originating from an existing Msger");
     assert (l.dest == mrid_New && "create_link_with can only be used to create new links");
@@ -257,7 +257,7 @@ Msg::Link& App::create_link_with (Msg::Link& l, iid_t iid, Msger::pfn_factory_t 
     return l;
 }
 
-void App::delete_msger (mrid_t mid) noexcept
+void App::delete_msger (mrid_t mid)
 {
     assert (valid_msger_id(mid) && valid_msger_id(_creators[mid]));
     auto m = exchange (_msgers[mid], nullptr);
@@ -281,7 +281,7 @@ void App::delete_msger (mrid_t mid) noexcept
 	    free_mrid (i);
 }
 
-void App::delete_unused_msgers (void) noexcept
+void App::delete_unused_msgers (void)
 {
     // A Msger is unused if it has f_Unused flag set and has no pending messages in _outq
     for (auto m : _msgers)
@@ -292,7 +292,7 @@ void App::delete_unused_msgers (void) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Message loop
 
-int App::run (void) noexcept
+int App::run (void)
 {
     if (!errors().empty())	// Check for errors generated in ctor and ProcessArgs
 	return EXIT_FAILURE;
@@ -303,7 +303,7 @@ int App::run (void) noexcept
     return exit_code();
 }
 
-void App::message_loop_once (void) noexcept
+void App::message_loop_once (void)
 {
     _inq.clear();		// input queue was processed on the last iteration
     _inq.swap (move(_outq));	// output queue now becomes the input queue
@@ -313,7 +313,7 @@ void App::message_loop_once (void) noexcept
     forward_received_signals();
 }
 
-void App::process_input_queue (void) noexcept
+void App::process_input_queue (void)
 {
     for (auto& msg : _inq) {
 	// Dump the message if tracing
@@ -350,7 +350,7 @@ void App::process_input_queue (void) noexcept
     }
 }
 
-void App::run_timers (void) noexcept
+void App::run_timers (void)
 {
     auto ntimers = has_timers();
     if (!ntimers || flag (f_Quitting)) {
@@ -392,7 +392,7 @@ void App::run_timers (void) noexcept
     check_poll_timers (fds);
 }
 
-void App::forward_received_signals (void) noexcept
+void App::forward_received_signals (void)
 {
     auto oldrs = s_received_signals;
     if (!oldrs)
@@ -405,7 +405,7 @@ void App::forward_received_signals (void) noexcept
     s_received_signals ^= oldrs;
 }
 
-App::msgq_t::size_type App::has_messages_for (mrid_t mid) const noexcept
+App::msgq_t::size_type App::has_messages_for (mrid_t mid) const
 {
     return count_if (_outq, [=](auto& msg){ return msg.dest() == mid; });
 }
@@ -413,7 +413,7 @@ App::msgq_t::size_type App::has_messages_for (mrid_t mid) const noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Timers
 
-unsigned App::get_poll_timer_list (pollfd* pfd, unsigned pfdsz, int& timeout) const noexcept
+unsigned App::get_poll_timer_list (pollfd* pfd, unsigned pfdsz, int& timeout) const
 {
     // Put all valid fds into the pfd list and calculate the nearest timeout
     // Note that there may be a timeout without any fds
@@ -441,7 +441,7 @@ unsigned App::get_poll_timer_list (pollfd* pfd, unsigned pfdsz, int& timeout) co
     return npfd;
 }
 
-void App::check_poll_timers (const pollfd* fds) noexcept
+void App::check_poll_timers (const pollfd* fds)
 {
     // Poll errors are checked for each fd with POLLERR. Other errors are ignored.
     // poll will exit when there are fds available or when the timer expires

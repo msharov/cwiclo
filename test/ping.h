@@ -53,7 +53,7 @@ public:
     // indicates whether the message was accepted.
     //
     template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_ping()) {
 	    // Each method unmarshals the arguments and calls the handling object
 	    auto is = msg.read();
@@ -79,7 +79,7 @@ public:
 			// create a message that only marshals arguments.
     void		ping (uint32_t v) { send (m_ping(), v); }
     template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_ping())
 	    return false;
 	o->PingR_ping (msg.read().read<uint32_t>());
@@ -98,13 +98,13 @@ public:
     explicit		PingMsger (const Msg::Link& l)
 			    : Msger(l),_reply(l),_npings(0)
 			    { LOG ("Created Ping%hu\n", msger_id()); }
-			~PingMsger (void) noexcept override
+			~PingMsger (void) override
 			    { LOG ("Destroy Ping%hu\n", msger_id()); }
     inline void		Ping_ping (uint32_t v) {
 			    LOG ("Ping%hu: %u, %u total\n", msger_id(), v, ++_npings);
 			    _reply.ping (v);
 			}
-    bool		dispatch (Msg& msg) noexcept override {
+    bool		dispatch (Msg& msg) override {
 			    return PPing::dispatch (this, msg)
 					|| Msger::dispatch (msg);
 			}

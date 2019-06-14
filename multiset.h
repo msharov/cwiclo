@@ -62,10 +62,10 @@ public:
     inline void		insert (const_iterator i1, const_iterator i2)	{ for (; i1 < i2; ++i1) insert (*i1); }
     inline void		insert (initlist_t v)		{ insert (v.begin(), v.end()); }
     template <typename... Args>
-    auto		emplace (Args&&... args) noexcept;
+    auto		emplace (Args&&... args);
     template <typename... Args>
     auto		emplace_hint (const_iterator ip, Args&&... args)	{ return vecbase::emplace (ip, forward<Args>(args)...); }
-    auto		erase (const_reference v) noexcept {
+    auto		erase (const_reference v) {
 			    auto l = lower_bound (v), u = l;
 			    while (*u == v) ++u;
 			    return erase (l, u);
@@ -74,7 +74,7 @@ public:
 
 template <typename T>
 template <typename... Args>
-auto multiset<T>::emplace (Args&&... args) noexcept
+auto multiset<T>::emplace (Args&&... args)
 {
     auto e = &vecbase::emplace_back (forward<Args>(args)...),
 	iend = this->end(), ilast = iend-1,

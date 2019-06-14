@@ -44,7 +44,7 @@ template <typename T> struct add_const<T*>	{ using type = const T*; };
 template <typename T> struct add_const<T&>	{ using type = const T&; };
 template <typename T> using add_const_t = typename add_const<T>::type;
 
-template <typename T> T&& declval (void) noexcept;
+template <typename T> T&& declval (void);
 
 template <typename T> struct is_trivial : public integral_constant<bool, __is_trivial(T)> {};
 template <typename T> struct is_trivially_constructible : public integral_constant<bool, __has_trivial_constructor(T)> {};
@@ -63,12 +63,12 @@ template <typename T> struct is_signed : public integral_constant<bool, !is_same
 
 template <typename T> struct bits_in_type	{ static constexpr const size_t value = sizeof(T)*8; };
 
-template <typename T> constexpr add_const_t<T>& as_const (T& t) noexcept { return t; }
+template <typename T> constexpr add_const_t<T>& as_const (T& t) { return t; }
 template <typename T> void as_const (T&&) = delete;
 
-template <typename T, typename F> constexpr decltype(auto) bit_cast (F& v) noexcept
+template <typename T, typename F> constexpr decltype(auto) bit_cast (F& v)
     { union FTU { F f; T t; }; return reinterpret_cast<FTU&>(v).t; }
-template <typename T, typename F> constexpr decltype(auto) bit_cast (const F& v) noexcept
+template <typename T, typename F> constexpr decltype(auto) bit_cast (const F& v)
     { union FTU { F f; T t; }; return reinterpret_cast<const FTU&>(v).t; }
 template <typename T, typename F> constexpr void bit_cast (F&& v) = delete;
 
@@ -109,18 +109,18 @@ public:
 
 template <typename T> constexpr decltype(auto) begin (T& c) { return c.begin(); }
 template <typename T> constexpr decltype(auto) begin (const T& c) { return c.begin(); }
-template <typename T, size_t N> constexpr auto begin (T (&a)[N]) noexcept { return &a[0]; }
+template <typename T, size_t N> constexpr auto begin (T (&a)[N]) { return &a[0]; }
 template <typename T> constexpr decltype(auto) cbegin (const T& c) { return begin(c); }
 template <typename T> constexpr decltype(auto) end (T& c) { return c.end(); }
 template <typename T> constexpr decltype(auto) end (const T& c) { return c.end(); }
-template <typename T, size_t N> constexpr auto end (T (&c)[N]) noexcept { return &c[N]; }
+template <typename T, size_t N> constexpr auto end (T (&c)[N]) { return &c[N]; }
 template <typename T> constexpr decltype(auto) cend (const T& c) { return end(c); }
 template <typename T> constexpr auto size (const T& c) { return c.size(); }
-template <typename T, size_t N> constexpr auto size (const T (&)[N]) noexcept { return N; }
+template <typename T, size_t N> constexpr auto size (const T (&)[N]) { return N; }
 template <typename T> [[nodiscard]] constexpr bool empty (const T& c) { return !c.size(); }
 template <typename T> constexpr decltype(auto) data (T& c) { return c.data(); }
 template <typename T> constexpr decltype(auto) data (const T& c) { return c.data(); }
-template <typename T, size_t N> constexpr auto data(T (&c)[N]) noexcept { return &c[0]; }
+template <typename T, size_t N> constexpr auto data(T (&c)[N]) { return &c[0]; }
 
 /// Expands into a ptr,size expression for the given static vector; useful as link arguments.
 #define ARRAY_BLOCK(v)	::cwiclo::data(v), ::cwiclo::size(v)
@@ -282,11 +282,11 @@ static constexpr void tight_loop_pause (void)
 }
 
 template <typename T>
-[[nodiscard]] static constexpr T kill_dependency (T v) noexcept
+[[nodiscard]] static constexpr T kill_dependency (T v)
     { return T(v); }
-static constexpr void atomic_thread_fence (memory_order order) noexcept
+static constexpr void atomic_thread_fence (memory_order order)
     { __atomic_thread_fence (int(order)); }
-static constexpr void atomic_signal_fence (memory_order order) noexcept
+static constexpr void atomic_signal_fence (memory_order order)
     { __atomic_signal_fence (int(order)); }
 
 } // namespace
@@ -308,8 +308,8 @@ public:
 class atomic_scope_lock {
     atomic_flag& _f;
 public:
-    explicit atomic_scope_lock (atomic_flag& f) noexcept : _f(f) { while (_f.test_and_set()) tight_loop_pause(); }
-    ~atomic_scope_lock (void) noexcept { _f.clear(); }
+    explicit atomic_scope_lock (atomic_flag& f) : _f(f) { while (_f.test_and_set()) tight_loop_pause(); }
+    ~atomic_scope_lock (void) { _f.clear(); }
 };
 
 //}}}-------------------------------------------------------------------
@@ -346,7 +346,7 @@ union alignas(16) simd16_t {
     float	asf [4];
     double	asd [2];
 
-    [[nodiscard]] CONST static constexpr auto zero (void) noexcept
+    [[nodiscard]] CONST static constexpr auto zero (void)
 	{ return simd16_t {0,0,0,0}; }
 };
 

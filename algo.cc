@@ -10,7 +10,7 @@
 namespace cwiclo {
 #ifndef UC_VERSION
 
-const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexcept
+const char* executable_in_path (const char* efn, char* exe, size_t exesz)
 {
     if (efn[0] == '/' || (efn[0] == '.' && (efn[1] == '/' || efn[1] == '.'))) {
 	if (0 != access (efn, X_OK))
@@ -37,7 +37,7 @@ const char* executable_in_path (const char* efn, char* exe, size_t exesz) noexce
     return nullptr;
 }
 
-unsigned sd_listen_fds (void) noexcept
+unsigned sd_listen_fds (void)
 {
     const char* e = getenv("LISTEN_PID");
     if (!e || getpid() != pid_t(atoi(e)))
@@ -46,7 +46,7 @@ unsigned sd_listen_fds (void) noexcept
     return e ? atoi(e) : 0;
 }
 
-int sd_listen_fd_by_name (const char* name) noexcept
+int sd_listen_fd_by_name (const char* name)
 {
     const char* na = getenv("LISTEN_FDNAMES");
     if (!na)
@@ -65,7 +65,7 @@ int sd_listen_fd_by_name (const char* name) noexcept
     return -1;
 }
 
-int mkpath (const char* path, mode_t mode) noexcept
+int mkpath (const char* path, mode_t mode)
 {
     char pbuf [PATH_MAX];
     auto n = size_t(snprintf (ARRAY_BLOCK(pbuf), "%s", path));
@@ -81,7 +81,7 @@ int mkpath (const char* path, mode_t mode) noexcept
     return 0;
 }
 
-int rmpath (const char* path) noexcept
+int rmpath (const char* path)
 {
     char pbuf [PATH_MAX];
     if (size(pbuf) < size_t(snprintf (ARRAY_BLOCK(pbuf), "%s", path)))

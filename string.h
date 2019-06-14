@@ -27,22 +27,22 @@ public:
     inline auto		insert (const_iterator ip, const string& s)			{ return insert (ip, s.c_str(), s.size()); }
     inline auto		insert (const_iterator ip, const_pointer s)			{ return insert (ip, s, strlen(s)); }
     inline auto		insert (const_iterator ip, const_pointer f, const_iterator l)	{ return insert (ip, f, l-f); }
-    int			insertv (const_iterator ip, const char* fmt, va_list args) noexcept;
-    int			insertf (const_iterator ip, const char* fmt, ...) noexcept PRINTFARGS(3,4);
+    int			insertv (const_iterator ip, const char* fmt, va_list args);
+    int			insertf (const_iterator ip, const char* fmt, ...) PRINTFARGS(3,4);
 			using memblock::append;
     inline auto	   	append (const_pointer s)			{ return append (s, strlen(s)); }
     inline auto		append (const_iterator i1, const_iterator i2)	{ assert (i1<=i2); return append (i1, i2-i1); }
-    int			appendv (const char* fmt, va_list args) noexcept;
-    int			appendf (const char* fmt, ...) noexcept PRINTFARGS(2,3);
+    int			appendv (const char* fmt, va_list args);
+    int			appendf (const char* fmt, ...) PRINTFARGS(2,3);
 			using memblock::assign;
     inline void	    	assign (const_pointer s)			{ assign (s, strlen(s)); }
     inline void		assign (const_iterator i1, const_iterator i2)	{ assert (i1<=i2); assign (i1, i2-i1); }
-    int			assignv (const char* fmt, va_list args) noexcept;
-    int			assignf (const char* fmt, ...) noexcept PRINTFARGS(2,3);
-    inline static auto	create_from_file (const char* filename)noexcept	{ string r; r.read_file (filename); return r; }
+    int			assignv (const char* fmt, va_list args);
+    int			assignf (const char* fmt, ...) PRINTFARGS(2,3);
+    inline static auto	create_from_file (const char* filename)		{ string r; r.read_file (filename); return r; }
     template <typename... Args>
     inline static auto	createf (const char* fmt, Args&&... args)	{ string r; r.assignf (fmt, forward<Args>(args)...); return r; }
-    static int		compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2) noexcept;
+    static int		compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2);
     auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
     auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
     auto		compare (const_reference c) const		{ return compare (begin(), end(), &c, &c+1); }
@@ -55,7 +55,7 @@ public:
     inline auto&	operator+= (const_reference c)			{ push_back (c); return *this; }
     inline auto		operator+ (const string& s) const		{ auto r (*this); r += s; return r; }
     inline bool		operator== (const string& s) const		{ return memblock::operator== (s); }
-    bool		operator== (const_pointer s) const noexcept;
+    bool		operator== (const_pointer s) const;
     constexpr bool	operator== (const_reference c) const		{ return size() == 1 && c == at(0); }
     inline bool		operator!= (const string& s) const		{ return !operator== (s); }
     inline bool		operator!= (const_pointer s) const		{ return !operator== (s); }
@@ -82,7 +82,7 @@ public:
     inline auto		replace (const_iterator f, const_iterator l, const_pointer s)			{ return replace (f, l, s, strlen(s)); }
     inline auto		replace (const_iterator f, const_iterator l, const_pointer i1,const_pointer i2)	{ return replace (f, l, i1, i2-i1); }
     inline auto		replace (const_iterator f, const_iterator l, const string& s)			{ return replace (f, l, s.begin(), s.end()); }
-    iterator		replace (const_iterator f, const_iterator l, size_type n, value_type c) noexcept;
+    iterator		replace (const_iterator f, const_iterator l, size_type n, value_type c);
 
     constexpr auto	find (const_pointer s, const_iterator fi) const		{ return const_iterator (__builtin_strstr (fi, s)); }
     constexpr auto	find (const string& s, const_iterator fi) const		{ return find (s.c_str(), fi); }
@@ -98,7 +98,7 @@ public:
     constexpr auto	find (const_reference c, const_iterator fi)		{ return UNCONST_MEMBER_FN (find,c,fi); }
     constexpr auto	find (const_reference c)				{ return UNCONST_MEMBER_FN (find,c); }
 
-    const_iterator	rfind (const_pointer s, const_iterator fi) const noexcept;
+    const_iterator	rfind (const_pointer s, const_iterator fi) const;
     inline auto		rfind (const string& s, const_iterator fi) const	{ return rfind (s.c_str(), fi); }
     inline auto		rfind (const_pointer s) const				{ return rfind (s, end()); }
     inline auto		rfind (const string& s) const				{ return rfind (s, end()); }
@@ -112,9 +112,9 @@ public:
     inline auto		rfind (const_reference c, const_iterator fi)		{ return UNCONST_MEMBER_FN (rfind,c,fi); }
     inline auto		rfind (const_reference c)				{ return UNCONST_MEMBER_FN (rfind,c); }
 
-    constexpr auto	find_first_of (const_pointer s) const noexcept		{ auto rsz = __builtin_strcspn (c_str(), s); return rsz >= size() ? nullptr : iat(rsz); }
+    constexpr auto	find_first_of (const_pointer s) const		{ auto rsz = __builtin_strcspn (c_str(), s); return rsz >= size() ? nullptr : iat(rsz); }
     constexpr auto	find_first_of (const string& s) const			{ return find_first_of (s.c_str()); }
-    constexpr auto	find_first_not_of (const_pointer s) const noexcept	{ auto rsz = __builtin_strspn (c_str(), s); return rsz >= size() ? nullptr : iat(rsz); }
+    constexpr auto	find_first_not_of (const_pointer s) const	{ auto rsz = __builtin_strspn (c_str(), s); return rsz >= size() ? nullptr : iat(rsz); }
     constexpr auto	find_first_not_of (const string& s) const		{ return find_first_not_of (s.c_str()); }
 
     constexpr auto	find_first_of (const_pointer s)				{ return UNCONST_MEMBER_FN (find_first_of,s); }
@@ -127,47 +127,47 @@ public:
 
 class string_view : public cmemlink {
 public:
-    inline constexpr		string_view (void)			: cmemlink () { set_zero_terminated(); }
+    inline constexpr		string_view (void)		: cmemlink () { set_zero_terminated(); }
     inline constexpr		string_view (const_pointer s, size_type len)	: cmemlink (s, len, true) {}
     inline constexpr		string_view (const_pointer s1, const_pointer s2): string_view (s1, s2-s1) {}
-    inline constexpr		string_view (const_pointer s)		: string_view (s, __builtin_strlen(s)) {}
-    inline constexpr		string_view (string_view&& s)		: cmemlink (move(s)) {}
+    inline constexpr		string_view (const_pointer s)	: string_view (s, __builtin_strlen(s)) {}
+    inline constexpr		string_view (string_view&& s)	: cmemlink (move(s)) {}
     inline constexpr		string_view (const string_view& s)	: cmemlink (s) {}
-    inline constexpr		string_view (const string& s)		: cmemlink (s) {}
-    inline constexpr void	swap (string_view&& s)			{ cmemlink::swap (move(s)); }
-    inline constexpr auto&	operator= (const string& s)		{ cmemlink::operator= (s); return *this; }
-    inline constexpr auto&	operator= (string_view&& s)		{ cmemlink::operator= (move(s)); return *this; }
+    inline constexpr		string_view (const string& s)	: cmemlink (s) {}
+    inline constexpr void	swap (string_view&& s)		{ cmemlink::swap (move(s)); }
+    inline constexpr auto&	operator= (const string& s)	{ cmemlink::operator= (s); return *this; }
+    inline constexpr auto&	operator= (string_view&& s)	{ cmemlink::operator= (move(s)); return *this; }
 
-    inline constexpr auto&	str (void) const			{ return reinterpret_cast<const string&>(*this); }
+    inline constexpr auto&	str (void) const		{ return reinterpret_cast<const string&>(*this); }
     inline constexpr		operator const string& (void) const	{ return str(); }
 
-    inline constexpr auto	c_str (void) const			{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
-    inline constexpr auto&	back (void) const			{ return at(size()-1); }
+    inline constexpr auto	c_str (void) const		{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
+    inline constexpr auto&	back (void) const		{ return at(size()-1); }
 
     inline static int	compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2)
-									{ return string::compare (f1,l1,f2,l2); }
-    inline auto		compare (const string_view& s) const		{ return compare (begin(), end(), s.begin(), s.end()); }
-    inline auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
-    inline auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
+								{ return string::compare (f1,l1,f2,l2); }
+    inline auto		compare (const string_view& s) const	{ return compare (begin(), end(), s.begin(), s.end()); }
+    inline auto		compare (const string& s) const		{ return compare (begin(), end(), s.begin(), s.end()); }
+    inline auto		compare (const_pointer s) const		{ return compare (begin(), end(), s, s + strlen(s)); }
 
-    inline bool		operator== (const string& s) const		{ return str() == s; }
-    inline bool		operator== (const_pointer s) const		{ return str() == s; }
-    constexpr bool	operator== (const_reference c) const		{ return str() == c; }
-    inline bool		operator!= (const string& s) const		{ return str() != s; }
-    inline bool		operator!= (const_pointer s) const		{ return str() != s; }
-    constexpr bool	operator!= (const_reference c) const		{ return str() != c; }
-    inline bool		operator< (const string& s) const		{ return str() < s; }
-    inline bool		operator< (const_pointer s) const		{ return str() < s; }
-    inline bool		operator< (const_reference c) const		{ return str() < c; }
-    inline bool		operator> (const string& s) const		{ return str() > s; }
-    inline bool		operator> (const_pointer s) const		{ return str() > s; }
-    inline bool		operator> (const_reference c) const		{ return str() > c; }
-    inline bool		operator<= (const string& s) const		{ return str() <= s; }
-    inline bool		operator<= (const_pointer s) const		{ return str() <= s; }
-    inline bool		operator<= (const_reference c) const		{ return str() <= c; }
-    inline bool		operator>= (const string& s) const		{ return str() >= s; }
-    inline bool		operator>= (const_pointer s) const		{ return str() >= s; }
-    inline bool		operator>= (const_reference c) const		{ return str() >= c; }
+    inline bool		operator== (const string& s) const	{ return str() == s; }
+    inline bool		operator== (const_pointer s) const	{ return str() == s; }
+    constexpr bool	operator== (const_reference c) const	{ return str() == c; }
+    inline bool		operator!= (const string& s) const	{ return str() != s; }
+    inline bool		operator!= (const_pointer s) const	{ return str() != s; }
+    constexpr bool	operator!= (const_reference c) const	{ return str() != c; }
+    inline bool		operator< (const string& s) const	{ return str() < s; }
+    inline bool		operator< (const_pointer s) const	{ return str() < s; }
+    inline bool		operator< (const_reference c) const	{ return str() < c; }
+    inline bool		operator> (const string& s) const	{ return str() > s; }
+    inline bool		operator> (const_pointer s) const	{ return str() > s; }
+    inline bool		operator> (const_reference c) const	{ return str() > c; }
+    inline bool		operator<= (const string& s) const	{ return str() <= s; }
+    inline bool		operator<= (const_pointer s) const	{ return str() <= s; }
+    inline bool		operator<= (const_reference c) const	{ return str() <= c; }
+    inline bool		operator>= (const string& s) const	{ return str() >= s; }
+    inline bool		operator>= (const_pointer s) const	{ return str() >= s; }
+    inline bool		operator>= (const_reference c) const	{ return str() >= c; }
 
     constexpr auto	find (const_pointer s, const_iterator fi) const		{ return str().find (s, fi); }
     constexpr auto	find (const string& s, const_iterator fi) const		{ return str().find (s, fi); }

@@ -21,14 +21,14 @@ public:
     };
     enum { f_CaretOn = Msger::f_Last, f_Last };
 public:
-    explicit		CursesWindow (const Msg::Link& l) noexcept;
-			~CursesWindow (void) noexcept override;
-    bool		dispatch (Msg& msg) noexcept override;
-    void		on_msger_destroyed (mrid_t mid) noexcept override;
-    inline virtual void	draw (void) const noexcept { wrefresh (_winput); }
-    virtual void	on_key (key_t key) noexcept;
-    void		close (void) noexcept;
-    void		TimerR_timer (PTimerR::fd_t) noexcept;
+    explicit		CursesWindow (const Msg::Link& l);
+			~CursesWindow (void) override;
+    bool		dispatch (Msg& msg) override;
+    void		on_msger_destroyed (mrid_t mid) override;
+    inline virtual void	draw (void) const { wrefresh (_winput); }
+    virtual void	on_key (key_t key);
+    void		close (void);
+    void		TimerR_timer (PTimerR::fd_t);
 protected:
     //{{{ Ctrl ---------------------------------------------------------
 
@@ -39,7 +39,7 @@ protected:
     public:
 	constexpr		Ctrl (void)		:_w(),_flags() {}
 				Ctrl (const Ctrl&) = delete;
-				~Ctrl (void) noexcept	{ destroy(); }
+				~Ctrl (void)		{ destroy(); }
 	constexpr auto		w (void) const		{ return _w; }
 	constexpr		operator WINDOW* (void)	const	{ return w(); }
 	void			operator= (const Ctrl&) = delete;
@@ -52,7 +52,7 @@ protected:
 	constexpr u_short	cury (void) const	{ return getcury(w()); }
 	void			destroy (void)
 				    { auto ow = exchange(_w,nullptr); if (ow) delwin(ow); }
-	void			create (int l, int c, int y, int x) noexcept;
+	void			create (int l, int c, int y, int x);
 	constexpr auto		flag (unsigned f) const			{ return get_bit(_flags,f); }
 	constexpr void		set_flag (unsigned f, bool v = true)	{ set_bit(_flags,f,v); }
 	constexpr auto		focused (void) const			{ return flag (f_focused); }
@@ -68,21 +68,21 @@ protected:
     public:
 	struct Size { uint16_t	x,y; };
     public:
-	constexpr		Label (void)		:Ctrl() {}
-	static constexpr Size	measure (const string_view& text) noexcept {
-				    Size sz = {};
-				    for (auto l = text.begin(), textend = text.end(); l < textend;) {
-					auto lend = text.find ('\n', l);
-					if (!lend)
-					    lend = textend;
-					sz.x = max (sz.x, lend-l+1);
-					++sz.y;
-					l = lend+1;
-				    }
-				    return sz;
-				}
-	void		draw (const char* text) const noexcept;
-	void		draw (const string_view& text) const noexcept
+	constexpr	Label (void) : Ctrl() {}
+	static constexpr Size measure (const string_view& text) {
+			    Size sz = {};
+			    for (auto l = text.begin(), textend = text.end(); l < textend;) {
+				auto lend = text.find ('\n', l);
+				if (!lend)
+				    lend = textend;
+				sz.x = max (sz.x, lend-l+1);
+				++sz.y;
+				l = lend+1;
+			    }
+			    return sz;
+			}
+	void		draw (const char* text) const;
+	void		draw (const string_view& text) const
 			    { draw (text.c_str()); }
     };
     //}}}---------------------------------------------------------------
@@ -92,10 +92,10 @@ protected:
     public:
 	constexpr explicit	Button (const char* t = "")	:Ctrl(),_text(t) {}
 	void			create (int c, int y, int x)	{ Ctrl::create (1,c,y,x); }
-	constexpr uint16_t	measure (void) noexcept	{ return __builtin_strlen(_text)+4; }
-	void			draw (void) const noexcept;
+	constexpr uint16_t	measure (void)		{ return __builtin_strlen(_text)+4; }
+	void			draw (void) const;
 	constexpr auto		text (void) const	{ return _text; }
-	constexpr void		set_text (const char* t)	{ _text = t; }
+	constexpr void		set_text (const char* t){ _text = t; }
     private:
 	const char*	_text;
     };
@@ -109,9 +109,9 @@ protected:
 	constexpr	Listbox (void)		:Ctrl(),n(),sel(),top() {}
 	constexpr void	clip_sel (void)		{ if (n && sel > n-1) sel = n-1; }
 	constexpr void	set_n (lcount_t nn)	{ n = nn; clip_sel(); }
-	void		on_key (key_t k) noexcept;
+	void		on_key (key_t k);
 	template <typename drawRow>
-	inline void	draw (drawRow drf) const noexcept;
+	inline void	draw (drawRow drf) const;
     public:
 	lcount_t	n;
 	lcount_t	sel;
@@ -126,14 +126,14 @@ protected:
     public:
 	constexpr	Editbox (void)			:Ctrl(),_cpos(),_fc(),_text() {}
 	explicit	Editbox (const string& t)	:Ctrl(),_cpos(t.size()),_fc(),_text(t) {}
-	void		create (int c, int y, int x) noexcept;
+	void		create (int c, int y, int x);
 	constexpr auto&	text (void) const		{ return _text; }
 	void		set_text (const char* t)	{ _text = t; _cpos = _text.size(); _fc = 0; posclip(); }
 	void		set_text (const string& t)	{ _text = t; _cpos = _text.size(); _fc = 0; posclip(); }
-	void		on_key (key_t k) noexcept;
-	void		draw (void) const noexcept;
+	void		on_key (key_t k);
+	void		draw (void) const;
     private:
-	void		posclip (void) noexcept;
+	void		posclip (void);
     private:
 	u_short		_cpos;
 	u_short		_fc;
@@ -167,8 +167,8 @@ protected:
     }
     //}}}---------------------------------------------------------------
 protected:
-    void		set_input_ctrl (Ctrl& c) noexcept;
-    inline virtual void	layout (void) noexcept { draw(); }
+    void		set_input_ctrl (Ctrl& c);
+    inline virtual void	layout (void) { draw(); }
 private:
     WINDOW*		_winput;
     PTimer		_uiinput;
@@ -179,7 +179,7 @@ private:
 //{{{ Ctrls inlines ----------------------------------------------------
 
 template <typename drawRow>
-void CursesWindow::Listbox::draw (drawRow drf) const noexcept
+void CursesWindow::Listbox::draw (drawRow drf) const
 {
     for (u_short y = 0, yend = min(n, top+maxy()); y < yend; ++y) {
 	if (y >= top) {
@@ -210,7 +210,7 @@ public:
     void		ask (const string& prompt, Type type = Type())
 			    { send (m_ask(), type, uint16_t(0), prompt); }
     template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_ask())
 	    return false;
 	auto is = msg.read();
@@ -233,7 +233,7 @@ public:
     explicit		PMessageBoxR (const Msg::Link& l) : ProxyR (l) {}
     void		reply (Answer answer) { send (m_answer(), answer); }
     template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_answer())
 	    return false;
 	o->MessageBoxR_reply (msg.read().read<Answer>());
@@ -247,14 +247,14 @@ class MessageBox : public CursesWindow {
     using Type = PMessageBox::Type;
     using Answer = PMessageBox::Answer;
 public:
-    explicit		MessageBox (const Msg::Link& l) noexcept;
-    bool		dispatch (Msg& msg) noexcept override;
-    inline void		MessageBox_ask (const string_view& prompt, Type type, uint16_t flags) noexcept;
-    void		layout (void) noexcept override;
-    void		draw (void) const noexcept override;
-    void		on_key (key_t key) noexcept override;
+    explicit		MessageBox (const Msg::Link& l);
+    bool		dispatch (Msg& msg) override;
+    inline void		MessageBox_ask (const string_view& prompt, Type type, uint16_t flags);
+    void		layout (void) override;
+    void		draw (void) const override;
+    void		on_key (key_t key) override;
 private:
-    void		done (Answer answer) noexcept;
+    void		done (Answer answer);
 private:
     string		_prompt;
     Ctrl		_w;

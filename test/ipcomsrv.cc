@@ -13,10 +13,10 @@
 class TestApp : public App {
 public:
     static auto&	instance (void) { static TestApp s_app; return s_app; }
-    void		process_args (argc_t argc, argv_t argv) noexcept;
-    bool		dispatch (Msg& msg) noexcept override
+    void		process_args (argc_t argc, argv_t argv);
+    bool		dispatch (Msg& msg) override
 			    { return PExternR::dispatch (this, msg) || App::dispatch (msg); }
-    inline void		ExternR_connected (const Extern::Info*) noexcept;
+    inline void		ExternR_connected (const Extern::Info*);
 private:
 			TestApp (void) : App(), _eserver (mrid_App), _epipe (mrid_App) {}
 private:
@@ -32,7 +32,7 @@ END_CWICLO_APP
 
 //----------------------------------------------------------------------
 
-void TestApp::process_args (argc_t argc, argv_t argv) noexcept
+void TestApp::process_args (argc_t argc, argv_t argv)
 {
     bool is_private_pipe = false;
     for (int opt; 0 < (opt = getopt (argc, argv, "pd"));) {
@@ -96,7 +96,7 @@ void TestApp::process_args (argc_t argc, argv_t argv) noexcept
 	return error_libc ("bind_user_local");
 }
 
-void TestApp::ExternR_connected (const Extern::Info*) noexcept
+void TestApp::ExternR_connected (const Extern::Info*)
 {
     // When a client connects, ExternServer will forward the
     // ExternR_connected message here. On the server side,

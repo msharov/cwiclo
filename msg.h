@@ -56,7 +56,7 @@ static constexpr const char* signature_of_method (methodid_t __restrict__ mid)
     { return mid+__builtin_strlen(mid)+1; }
 
 // When unmarshalling a message, convert method name to local pointer in the interface
-methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, size_t mnamesz) noexcept;
+methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, size_t mnamesz);
 
 class Msger;
 
@@ -155,7 +155,7 @@ public:
     };
     enum { MaxSize = (1u<<24)-1 };
 public:
-			Msg (const Link& l, methodid_t mid, streamsize size, fdoffset_t fdo = NoFdIncluded) noexcept;
+			Msg (const Link& l, methodid_t mid, streamsize size, fdoffset_t fdo = NoFdIncluded);
     constexpr auto&	link (void) const	{ return _link; }
     constexpr auto	src (void) const	{ return _link.src; }
     constexpr auto	dest (void) const	{ return _link.dest; }
@@ -175,15 +175,15 @@ public:
     constexpr auto&&	move_body (void)	{ return move(_body); }
     inline constexpr auto read (void) const	{ return istream (data(),size()); }
     inline constexpr auto write (void)		{ return ostream (data(),size()); }
-    static streamsize	validate_signature (istream is, const char* sig) noexcept;
-    auto		verify (void) const noexcept	{ return validate_signature (read(), signature()); }
-    inline constexpr	Msg (const Link& l, methodid_t mid) noexcept
+    static streamsize	validate_signature (istream is, const char* sig);
+    auto		verify (void) const	{ return validate_signature (read(), signature()); }
+    inline constexpr	Msg (const Link& l, methodid_t mid)
 			    :_method (mid),_link (l),_extid(0),_fdoffset (NoFdIncluded),_body() {}
-    inline constexpr	Msg (const Link& l, methodid_t mid, Body&& body, fdoffset_t fdo = NoFdIncluded, mrid_t extid = 0) noexcept
+    inline constexpr	Msg (const Link& l, methodid_t mid, Body&& body, fdoffset_t fdo = NoFdIncluded, mrid_t extid = 0)
 			    :_method (mid),_link (l),_extid (extid),_fdoffset (fdo),_body (move (body)) {}
-    inline constexpr	Msg (Msg&& msg, const Link& l) noexcept
+    inline constexpr	Msg (Msg&& msg, const Link& l)
 			    : Msg (l,msg.method(),msg.move_body(),msg.fd_offset(),msg.extid()) {}
-    inline constexpr	Msg (Msg&& msg) noexcept
+    inline constexpr	Msg (Msg&& msg)
 			    : Msg (move(msg), msg.link()) {}
 			Msg (const Msg&) = delete;
     Msg&		operator= (const Msg&) = delete;
@@ -203,23 +203,24 @@ public:
     using fd_t = Msg::fd_t;
     using pfn_factory_t = Msger* (*)(const Msg::Link& l);
 public:
-    constexpr auto&	link (void) const			{ return _link; }
-    constexpr auto	src (void) const			{ return link().src; }
-    constexpr auto	dest (void) const			{ return link().dest; }
+    constexpr auto&	link (void) const	{ return _link; }
+    constexpr auto	src (void) const	{ return link().src; }
+    constexpr auto	dest (void) const	{ return link().dest; }
 protected:
-    constexpr		ProxyB (mrid_t from, mrid_t to)		: _link {from,to} {}
+    constexpr		ProxyB (mrid_t from, mrid_t to) : _link {from,to} {}
 			ProxyB (const ProxyB&) = delete;
     void		operator= (const ProxyB&) = delete;
-    constexpr auto&	linkw (void) noexcept			{ return _link; }
-    Msg&		create_msg (methodid_t imethod, streamsize sz) noexcept;
-    Msg&		create_msg (methodid_t imethod, streamsize sz, Msg::fdoffset_t fdo) noexcept;
-    void		forward_msg (Msg&& msg) noexcept;
+    constexpr auto&	linkw (void)		{ return _link; }
+    Msg&		create_msg (methodid_t imethod, streamsize sz);
+    Msg&		create_msg (methodid_t imethod, streamsize sz, Msg::fdoffset_t fdo);
+    void		forward_msg (Msg&& msg);
 #ifdef NDEBUG	// CommitMsg only does debug checking
-    void		commit_msg (Msg&, ostream&) noexcept	{ }
+    void		commit_msg (Msg&, ostream&) {}
 #else
-    void		commit_msg (Msg& msg, ostream& os) noexcept;
+    void		commit_msg (Msg& msg, ostream& os);
 #endif
-    inline void		send (methodid_t imethod)		{ create_msg (imethod, 0); }
+    inline void		send (methodid_t imethod)
+			    { create_msg (imethod, 0); }
     template <typename... Args>
     inline void		send (methodid_t imethod, const Args&... args) {
 			    auto& msg = create_msg (imethod, variadic_stream_size(args...));
@@ -237,9 +238,9 @@ private:
 class Proxy : public ProxyB {
 public:
     constexpr		Proxy (mrid_t from, mrid_t to=mrid_New)	: ProxyB (from,to) {}
-    void		create_dest_as (iid_t iid) noexcept;
-    void		create_dest_with (iid_t iid, pfn_factory_t fac) noexcept;
-    void		free_id (void) noexcept;
+    void		create_dest_as (iid_t iid);
+    void		create_dest_with (iid_t iid, pfn_factory_t fac);
+    void		free_id (void);
 };
 class ProxyR : public ProxyB {
 public:
@@ -259,22 +260,22 @@ public:
     using pfn_factory_t = ProxyB::pfn_factory_t;
     //}}}2--------------------------------------------------------------
 public:
-    virtual		~Msger (void) noexcept		{ }
+    virtual		~Msger (void)			{ }
     constexpr auto&	creator_link (void) const	{ return _link; }
     constexpr auto	creator_id (void) const		{ return creator_link().src; }
     constexpr auto	msger_id (void) const		{ return creator_link().dest; }
     constexpr auto	flag (unsigned f) const		{ return get_bit (_flags,f); }
-    static void		error (const char* fmt, ...) noexcept PRINTFARGS(1,2);
-    static void		error_libc (const char* f) noexcept;
-    virtual bool	dispatch (Msg&) noexcept	{ return false; }
-    virtual bool	on_error (mrid_t, const string&) noexcept
+    static void		error (const char* fmt, ...) PRINTFARGS(1,2);
+    static void		error_libc (const char* f);
+    virtual bool	dispatch (Msg&)	{ return false; }
+    virtual bool	on_error (mrid_t, const string&)
 			    { set_unused(); return false; }
-    virtual void	on_msger_destroyed (mrid_t mid) noexcept
+    virtual void	on_msger_destroyed (mrid_t mid)
 			    { if (mid == creator_id()) set_unused(); }
 protected:
     explicit constexpr	Msger (const Msg::Link& l)	:_link(l),_flags() {}
     explicit constexpr	Msger (mrid_t id)		:_link{mrid_App,id},_flags(bit_mask(f_Static)) {}
-			Msger (void) noexcept;
+			Msger (void);
 			Msger (const Msger&) = delete;
     void		operator= (const Msger&) = delete;
     constexpr void	set_flag (unsigned f, bool v = true)	{ set_bit (_flags,f,v); }

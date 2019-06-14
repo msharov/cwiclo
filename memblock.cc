@@ -11,7 +11,7 @@
 namespace cwiclo {
 
 /// Reads the object from stream \p s
-void cmemlink::link_read (istream& is, size_type elsize) noexcept
+void cmemlink::link_read (istream& is, size_type elsize)
 {
     assert (!capacity() && "allocated memory in cmemlink; deallocate or unlink first");
     size_type n; is >> n; n *= elsize;
@@ -29,7 +29,7 @@ void cmemlink::link_read (istream& is, size_type elsize) noexcept
     link (p, n);
 }
 
-void cmemlink::write (ostream& os, size_type elsize) const noexcept
+void cmemlink::write (ostream& os, size_type elsize) const
 {
     auto sz = size();
     if (sz)
@@ -39,7 +39,7 @@ void cmemlink::write (ostream& os, size_type elsize) const noexcept
     os.align (stream_align<size_type>::value);
 }
 
-int cmemlink::write_file (const char* filename) const noexcept
+int cmemlink::write_file (const char* filename) const
 {
     int fd = open (filename, O_WRONLY| O_TRUNC| O_CREAT| O_CLOEXEC, S_IRWXU);
     if (fd < 0)
@@ -54,7 +54,7 @@ int cmemlink::write_file (const char* filename) const noexcept
 // This method ensures that filename will always be valid, with
 // incomplete or otherwise failed writes will end up in a temp file.
 //
-int cmemlink::write_file_atomic (const char* filename) const noexcept
+int cmemlink::write_file_atomic (const char* filename) const
 {
     char tmpfilename [PATH_MAX];
     snprintf (ARRAY_BLOCK(tmpfilename), "%s.XXXXXX", filename);
@@ -77,7 +77,7 @@ int cmemlink::write_file_atomic (const char* filename) const noexcept
 
 //----------------------------------------------------------------------
 
-auto memlink::insert (const_iterator ii, size_type n) noexcept -> iterator
+auto memlink::insert (const_iterator ii, size_type n) -> iterator
 {
     assert (data() || !n);
     auto istart = p2i (ii);
@@ -85,7 +85,7 @@ auto memlink::insert (const_iterator ii, size_type n) noexcept -> iterator
     return istart;
 }
 
-auto memlink::erase (const_iterator ie, size_type n) noexcept -> iterator
+auto memlink::erase (const_iterator ie, size_type n) -> iterator
 {
     assert (data() || !n);
     auto istart = p2i (ie);
@@ -95,7 +95,7 @@ auto memlink::erase (const_iterator ie, size_type n) noexcept -> iterator
 
 //----------------------------------------------------------------------
 
-inline static auto next_capacity (memblock::size_type cap) noexcept
+inline static auto next_capacity (memblock::size_type cap)
 {
     // Allocate to next power of 2 size block
     auto nshift = log2p1 (cap-1);
@@ -110,7 +110,7 @@ inline static auto next_capacity (memblock::size_type cap) noexcept
     return newcap;
 }
 
-void memblock::reserve (size_type cap) noexcept
+void memblock::reserve (size_type cap)
 {
     if ((cap += zero_terminated()) <= capacity())
 	return;
@@ -123,7 +123,7 @@ void memblock::reserve (size_type cap) noexcept
     set_capacity (newcap);
 }
 
-void memblock::deallocate (void) noexcept
+void memblock::deallocate (void)
 {
     assert ((!capacity() || data()) && "Internal error: space allocated, but the pointer is nullptr");
     auto d = capacity() ? data() : nullptr;
@@ -131,7 +131,7 @@ void memblock::deallocate (void) noexcept
     free (d);
 }
 
-void memblock::shrink_to_fit (void) noexcept
+void memblock::shrink_to_fit (void)
 {
     assert (capacity() && "call copy_link first");
     auto cap = size()+zero_terminated();
@@ -139,7 +139,7 @@ void memblock::shrink_to_fit (void) noexcept
     link (pointer (_realloc (data(), cap)), size());
 }
 
-void memblock::resize (size_type sz) noexcept
+void memblock::resize (size_type sz)
 {
     reserve (sz);
     memlink::resize (sz);
@@ -147,13 +147,13 @@ void memblock::resize (size_type sz) noexcept
 	*end() = 0;
 }
 
-void memblock::assign (const_pointer p, size_type sz) noexcept
+void memblock::assign (const_pointer p, size_type sz)
 {
     resize (sz);
     copy_n (p, sz, data());
 }
 
-auto memblock::insert (const_iterator start, size_type n) noexcept -> iterator
+auto memblock::insert (const_iterator start, size_type n) -> iterator
 {
     const auto ip = start - begin();
     assert (ip <= size());
@@ -161,7 +161,7 @@ auto memblock::insert (const_iterator start, size_type n) noexcept -> iterator
     return memlink::insert (iat(ip), n);
 }
 
-auto memblock::insert (const_iterator ip, const_pointer s, size_type n) noexcept -> iterator
+auto memblock::insert (const_iterator ip, const_pointer s, size_type n) -> iterator
 {
     auto ipw = insert (ip,n);
     copy_n (s, n, ipw);
@@ -169,7 +169,7 @@ auto memblock::insert (const_iterator ip, const_pointer s, size_type n) noexcept
 }
 
 /// Shifts the data in the linked block from \p start + \p n to \p start.
-auto memblock::erase (const_iterator start, size_type n) noexcept -> iterator
+auto memblock::erase (const_iterator start, size_type n) -> iterator
 {
     const auto ep = start - begin();
     assert (ep + n <= size());
@@ -178,7 +178,7 @@ auto memblock::erase (const_iterator start, size_type n) noexcept -> iterator
     return iat (ep);
 }
 
-memblock::iterator memblock::replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn) noexcept
+memblock::iterator memblock::replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn)
 {
     auto dsz = difference_type(sn) - ipn;
     auto ipw = (dsz > 0 ? insert (ip, dsz) : erase (ip, -dsz));
@@ -187,7 +187,7 @@ memblock::iterator memblock::replace (const_iterator ip, size_type ipn, const_po
 }
 
 /// Reads the object from stream \p s
-void memblock::read (istream& is, size_type elsize) noexcept
+void memblock::read (istream& is, size_type elsize)
 {
     size_type n; is >> n; n *= elsize;
     auto nskip = ceilg (n, stream_align<size_type>::value);
@@ -200,7 +200,7 @@ void memblock::read (istream& is, size_type elsize) noexcept
     is.read (data(), nskip);
 }
 
-int memblock::read_file (const char* filename) noexcept
+int memblock::read_file (const char* filename)
 {
     int fd = open (filename, O_RDONLY);
     if (fd < 0)
@@ -215,12 +215,12 @@ int memblock::read_file (const char* filename) noexcept
 
 //----------------------------------------------------------------------
 
-memblaz::~memblaz (void) noexcept
+memblaz::~memblaz (void)
 {
     wipe();
 }
 
-void memblaz::reserve (size_type cap) noexcept
+void memblaz::reserve (size_type cap)
 {
     if (cap <= capacity())
 	return;
@@ -230,7 +230,7 @@ void memblaz::reserve (size_type cap) noexcept
     swap (move(r));
 }
 
-void memblaz::shrink_to_fit (void) noexcept
+void memblaz::shrink_to_fit (void)
 {
     memblaz r;
     r.manage (_realloc (nullptr, size()), size());
@@ -238,25 +238,25 @@ void memblaz::shrink_to_fit (void) noexcept
     swap (move(r));
 }
 
-void memblaz::deallocate (void) noexcept
+void memblaz::deallocate (void)
 {
     wipe();
     memblock::deallocate();
 }
 
-void memblaz::resize (size_type sz) noexcept
+void memblaz::resize (size_type sz)
 {
     reserve (sz);
     memlink::resize (sz);
 }
 
-void memblaz::assign (const_pointer p, size_type sz) noexcept
+void memblaz::assign (const_pointer p, size_type sz)
 {
     wipe();
     memblock::assign (p, sz);
 }
 
-auto memblaz::insert (const_iterator start, size_type n) noexcept -> iterator
+auto memblaz::insert (const_iterator start, size_type n) -> iterator
 {
     const auto ip = start - begin();
     assert (ip <= size());
@@ -264,14 +264,14 @@ auto memblaz::insert (const_iterator start, size_type n) noexcept -> iterator
     return memlink::insert (iat(ip), n);
 }
 
-auto memblaz::insert (const_iterator ip, const_pointer s, size_type n) noexcept -> iterator
+auto memblaz::insert (const_iterator ip, const_pointer s, size_type n) -> iterator
 {
     auto ipw = insert (ip,n);
     copy_n (s, n, ipw);
     return ipw;
 }
 
-memblaz::iterator memblaz::replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn) noexcept
+memblaz::iterator memblaz::replace (const_iterator ip, size_type ipn, const_pointer s, size_type sn)
 {
     auto dsz = difference_type(sn) - ipn;
     auto ipw = (dsz > 0 ? insert (ip, dsz) : erase (ip, -dsz));
@@ -280,13 +280,13 @@ memblaz::iterator memblaz::replace (const_iterator ip, size_type ipn, const_poin
 }
 
 /// Reads the object from stream \p s
-void memblaz::read (istream& is, size_type elsize) noexcept
+void memblaz::read (istream& is, size_type elsize)
 {
     wipe();
     memblock::read (is, elsize);
 }
 
-int memblaz::read_file (const char* filename) noexcept
+int memblaz::read_file (const char* filename)
 {
     wipe();
     return memblock::read_file (filename);

@@ -48,7 +48,7 @@ public:
     void	wait_rdWr (fd_t fd, mstime_t t = TimerNone)	{ watch (WatchCmd::ReadWrite, fd, t); }
 
     template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_watch())
 	    return false;
 	auto is = msg.read();
@@ -58,8 +58,8 @@ public:
 	o->Timer_watch (cmd, fd, timer);
 	return true;
     }
-    static int	make_nonblocking (fd_t fd) noexcept;
-    static mstime_t now (void) noexcept;
+    static int	make_nonblocking (fd_t fd);
+    static mstime_t now (void);
 };
 
 //----------------------------------------------------------------------
@@ -73,7 +73,7 @@ public:
     void	timer (fd_t fd)			{ send (m_timer(), fd); }
 
     template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_timer())
 	    return false;
 	o->TimerR_timer (msg.read().read<fd_t>());
@@ -91,7 +91,7 @@ public:
     void	signal (int sig)	{ send (m_signal(), sig); }
 
     template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_signal())
 	    return false;
 	o->Signal_signal (msg.read().read<int>());
@@ -111,40 +111,40 @@ public:
     enum { f_Quitting = Msger::f_Last, f_DebugMsgTrace, f_Last };
 public:
     static auto&	instance (void)			{ return *s_pApp; }
-    static void		install_signal_handlers (void) noexcept;
+    static void		install_signal_handlers (void);
     void		process_args (argc_t, argv_t)	{ }
-    int			run (void) noexcept;
-    Msg::Link&		create_link (Msg::Link& l, iid_t iid) noexcept;
-    Msg::Link&		create_link_with (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept;
-    inline Msg&		create_msg (Msg::Link& l, methodid_t mid, streamsize size, Msg::fdoffset_t fdo = Msg::NoFdIncluded) noexcept
+    int			run (void);
+    Msg::Link&		create_link (Msg::Link& l, iid_t iid);
+    Msg::Link&		create_link_with (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac);
+    inline Msg&		create_msg (Msg::Link& l, methodid_t mid, streamsize size, Msg::fdoffset_t fdo = Msg::NoFdIncluded)
 			    { return _outq.emplace_back (create_link (l,interface_of_method(mid)),mid,size,fdo); }
-    inline void		forward_msg (Msg&& msg, Msg::Link& l) noexcept
+    inline void		forward_msg (Msg&& msg, Msg::Link& l)
 			    { _outq.emplace_back (move(msg), create_link(l,msg.interface())); }
-    mrid_t		register_singleton_msger (Msger* m) noexcept;
-    static iid_t	interface_by_name (const char* iname, streamsize inamesz) noexcept;
-    msgq_t::size_type	has_messages_for (mrid_t mid) const noexcept;
+    mrid_t		register_singleton_msger (Msger* m);
+    static iid_t	interface_by_name (const char* iname, streamsize inamesz);
+    msgq_t::size_type	has_messages_for (mrid_t mid) const;
     constexpr auto	has_timers (void) const		{ return _timers.size(); }
     bool		valid_msger_id (mrid_t id)const	{ assert (_msgers.size() == _creators.size()); return id <= _msgers.size(); }
     constexpr void	quit (void)			{ set_flag (f_Quitting); }
     constexpr void	quit (int ec)			{ s_exit_code = ec; quit(); }
     auto		exit_code (void) const		{ return s_exit_code; }
     auto&		errors (void) const		{ return _errors; }
-    void		free_mrid (mrid_t id) noexcept;
-    void		message_loop_once (void) noexcept;
-    void		delete_msger (mrid_t mid) noexcept;
-    unsigned		get_poll_timer_list (pollfd* pfd, unsigned pfdsz, int& timeout) const noexcept;
-    void		check_poll_timers (const pollfd* fds) noexcept;
-    bool		forward_error (mrid_t oid, mrid_t eoid) noexcept;
+    void		free_mrid (mrid_t id);
+    void		message_loop_once (void);
+    void		delete_msger (mrid_t mid);
+    unsigned		get_poll_timer_list (pollfd* pfd, unsigned pfdsz, int& timeout) const;
+    void		check_poll_timers (const pollfd* fds);
+    bool		forward_error (mrid_t oid, mrid_t eoid);
 #ifdef NDEBUG
-    void		errorv (const char* fmt, va_list args) noexcept	{ _errors.appendv (fmt, args); }
+    void		errorv (const char* fmt, va_list args)	{ _errors.appendv (fmt, args); }
 #else
-    void		errorv (const char* fmt, va_list args) noexcept;
+    void		errorv (const char* fmt, va_list args);
 #endif
 protected:
-			App (void) noexcept;
-			~App (void) noexcept override;
-    [[noreturn]] static void fatal_signal_handler (int sig) noexcept;
-    static void		msg_signal_handler (int sig) noexcept;
+			App (void);
+			~App (void) override;
+    [[noreturn]] static void fatal_signal_handler (int sig);
+    static void		msg_signal_handler (int sig);
 private:
     //{{{2 MsgerFactoryMap ---------------------------------------------
     // Maps a factory to an interface
@@ -161,9 +161,9 @@ public:
 	explicit	Timer (const Msg::Link& l)
 			    : Msger(l),_nextfire(PTimer::TimerNone),_reply(l),_cmd(),_fd(-1)
 			    { App::instance().add_timer (this); }
-			~Timer (void) noexcept override;
-	bool		dispatch (Msg& msg) noexcept override;
-	inline void	Timer_watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms) noexcept;
+			~Timer (void) override;
+	bool		dispatch (Msg& msg) override;
+	inline void	Timer_watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms);
 	constexpr void	stop (void)		{ set_flag (f_Unused); _cmd = PTimer::WatchCmd::Stop; _fd = -1; _nextfire = PTimer::TimerNone; }
 	void		fire (void)		{ _reply.timer (_fd); stop(); }
 	auto		fd (void) const		{ return _fd; }
@@ -178,17 +178,17 @@ public:
     };
     //}}}2--------------------------------------------------------------
 private:
-    mrid_t		allocate_mrid (mrid_t creator) noexcept;
+    mrid_t		allocate_mrid (mrid_t creator);
     auto		msgerp_by_id (mrid_t id)	{ return _msgers[id]; }
-    inline static auto	msger_factory_for (iid_t id) noexcept;
-    [[nodiscard]] inline static Msger*	create_msger_with (const Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept;
-    [[nodiscard]] inline static auto	create_msger (const Msg::Link& l, iid_t iid) noexcept;
-    inline void		process_input_queue (void) noexcept;
-    inline void		delete_unused_msgers (void) noexcept;
-    inline void		forward_received_signals (void) noexcept;
+    inline static auto	msger_factory_for (iid_t id);
+    [[nodiscard]] inline static Msger*	create_msger_with (const Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac);
+    [[nodiscard]] inline static auto	create_msger (const Msg::Link& l, iid_t iid);
+    inline void		process_input_queue (void);
+    inline void		delete_unused_msgers (void);
+    inline void		forward_received_signals (void);
     void		add_timer (Timer* t)	{ _timers.push_back (t); }
     void		remove_timer (Timer* t)	{ remove (_timers, t); }
-    void		run_timers (void) noexcept;
+    void		run_timers (void);
 private:
     msgq_t		_outq;
     msgq_t		_inq;

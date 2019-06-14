@@ -22,12 +22,12 @@ public:
 private:
     // This object can only be constructed by the compiler when the
     // {1,2,3} syntax is used, so the constructor must be private
-    constexpr		initializer_list (const_iterator p, size_type sz) noexcept : _data(p), _size(sz) {}
+    constexpr		initializer_list (const_iterator p, size_type sz) : _data(p), _size(sz) {}
 public:
-    constexpr		initializer_list (void)noexcept	: _data(nullptr), _size(0) {}
-    constexpr auto	size (void) const noexcept	{ return _size; }
-    constexpr auto	begin (void) const noexcept	{ return _data; }
-    constexpr auto	end (void) const noexcept	{ return begin()+size(); }
+    constexpr		initializer_list (void)	: _data(nullptr), _size(0) {}
+    constexpr auto	size (void) const	{ return _size; }
+    constexpr auto	begin (void) const	{ return _data; }
+    constexpr auto	end (void) const	{ return begin()+size(); }
     constexpr auto&	operator[] (size_type i) const	{ return begin()[i]; }
 private:
     iterator		_data;
@@ -38,8 +38,8 @@ private:
 //}}}-------------------------------------------------------------------
 //{{{ new and delete
 
-extern "C" [[nodiscard]] void* _realloc (void* p, size_t n) noexcept MALLOCLIKE MALLOCLIKE_ARG(2);
-extern "C" [[nodiscard]] void* _alloc (size_t n) noexcept MALLOCLIKE MALLOCLIKE_ARG(1);
+extern "C" [[nodiscard]] void* _realloc (void* p, size_t n) MALLOCLIKE MALLOCLIKE_ARG(2);
+extern "C" [[nodiscard]] void* _alloc (size_t n) MALLOCLIKE MALLOCLIKE_ARG(1);
 
 #if __clang__
 // clang may have reasons to want a delete symbol, but in cwiclo all
@@ -50,10 +50,10 @@ extern "C" [[nodiscard]] void* _alloc (size_t n) noexcept MALLOCLIKE MALLOCLIKE_
 
 [[nodiscard]] inline void* operator new (size_t n)	{ return _alloc(n); }
 [[nodiscard]] inline void* operator new[] (size_t n)	{ return _alloc(n); }
-inline void  operator delete (void* p) noexcept		{ free(p); }
-inline void  operator delete[] (void* p) noexcept	{ free(p); }
-inline void  operator delete (void* p, size_t) noexcept	{ free(p); }
-inline void  operator delete[] (void* p, size_t) noexcept { free(p); }
+inline void  operator delete (void* p)			{ free(p); }
+inline void  operator delete[] (void* p)		{ free(p); }
+inline void  operator delete (void* p, size_t)		{ free(p); }
+inline void  operator delete[] (void* p, size_t)	{ free(p); }
 
 // Default placement versions of operator new.
 [[nodiscard]] constexpr void* operator new (size_t, void* p)	{ return p; }
@@ -69,13 +69,13 @@ constexpr void  operator delete[](void*, void*)	{ }
 namespace cwiclo {
 
 template <typename T> [[nodiscard]] constexpr decltype(auto)
-forward (remove_reference_t<T>& v) noexcept { return static_cast<T&&>(v); }
+forward (remove_reference_t<T>& v) { return static_cast<T&&>(v); }
 
 template<typename T> [[nodiscard]] constexpr decltype(auto)
-forward (remove_reference_t<T>&& v) noexcept { return static_cast<T&&>(v); }
+forward (remove_reference_t<T>&& v) { return static_cast<T&&>(v); }
 
 template<typename T> [[nodiscard]] constexpr decltype(auto)
-move(T&& v) noexcept { return static_cast<remove_reference_t<T>&&>(v); }
+move(T&& v) { return static_cast<remove_reference_t<T>&&>(v); }
 
 //}}}-------------------------------------------------------------------
 //{{{ Swap algorithms
@@ -419,7 +419,7 @@ template <typename C, typename T>
 auto shift_right (C& c, size_t n)
     { return shift_right (begin(c), end(c), n); }
 
-extern "C" void brotate (void* vf, void* vm, void* vl) noexcept;
+extern "C" void brotate (void* vf, void* vm, void* vl);
 
 template <typename T>
 T* rotate (T* f, T* m, T* l)
@@ -445,7 +445,7 @@ inline constexpr auto construct_at (T* p, Args&&... args)
 
 /// Calls the destructor of \p p without calling delete.
 template <typename T>
-inline constexpr void destroy_at (T* p) noexcept
+inline constexpr void destroy_at (T* p)
     { p->~T(); }
 
 /// Calls the placement new on \p p.
@@ -467,7 +467,7 @@ constexpr auto uninitialized_default_construct_n (I f, size_t n)
 
 /// Calls the destructor on elements in range [f, l) without calling delete.
 template <typename I>
-constexpr void destroy (I f [[maybe_unused]], I l [[maybe_unused]]) noexcept
+constexpr void destroy (I f [[maybe_unused]], I l [[maybe_unused]])
 {
     if constexpr (!is_trivially_destructible<typename iterator_traits<I>::value_type>::value) {
 	for (; f < l; advance(f))
@@ -481,7 +481,7 @@ constexpr void destroy (I f [[maybe_unused]], I l [[maybe_unused]]) noexcept
 
 /// Calls the destructor on elements in range [f, f+n) without calling delete.
 template <typename I>
-constexpr void destroy_n (I f, size_t n) noexcept
+constexpr void destroy_n (I f, size_t n)
     { return destroy (f, next(f,n)); }
 
 //}}}-------------------------------------------------------------------
@@ -567,9 +567,9 @@ constexpr auto uninitialized_fill_n (I f, size_t n, const T& v)
 //}}}-------------------------------------------------------------------
 //{{{ Additional C++ ABI support
 
-extern "C" void print_backtrace (void) noexcept;
+extern "C" void print_backtrace (void);
 #ifndef UC_VERSION
-extern "C" void hexdump (const void* vp, size_t n) noexcept;
+extern "C" void hexdump (const void* vp, size_t n);
 #endif
 
 template <typename C>
@@ -584,7 +584,7 @@ inline void hexdump (const C& c)
 
 namespace std {
 
-[[noreturn]] void terminate (void) noexcept;
+[[noreturn]] void terminate (void);
 
 } // namespace std
 namespace __cxxabiv1 {
@@ -593,15 +593,15 @@ using __guard = cwiclo::atomic_flag;
 
 extern "C" {
 
-[[noreturn]] void __cxa_bad_cast (void) noexcept;
-[[noreturn]] void __cxa_bad_typeid (void) noexcept;
-[[noreturn]] void __cxa_throw_bad_array_new_length (void) noexcept;
-[[noreturn]] void __cxa_throw_bad_array_length (void) noexcept;
+[[noreturn]] void __cxa_bad_cast (void);
+[[noreturn]] void __cxa_bad_typeid (void);
+[[noreturn]] void __cxa_throw_bad_array_new_length (void);
+[[noreturn]] void __cxa_throw_bad_array_length (void);
 
 // Compiler-generated thread-safe statics initialization
-int __cxa_guard_acquire (__guard* g) noexcept;
-void __cxa_guard_release (__guard* g) noexcept;
-void __cxa_guard_abort (__guard* g) noexcept;
+int __cxa_guard_acquire (__guard* g);
+void __cxa_guard_release (__guard* g);
+void __cxa_guard_abort (__guard* g);
 
 } // extern "C"
 } // namespace __cxxabiv1

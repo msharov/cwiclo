@@ -27,21 +27,21 @@ public:
     inline explicit		vector (size_type n)		: _data() { uninitialized_default_construct_n (insert_hole(begin(),n), n); }
     inline			vector (size_type n, const T& v): _data() { uninitialized_fill_n (insert_hole(begin(),n), n, v); }
     inline			vector (const vector& v)	: _data() { uninitialized_copy_n (v.begin(), v.size(), iterator(_data.insert(_data.begin(),v.bsize()))); }
-    inline			vector (const_iterator i1, const_iterator i2) noexcept;
+    inline			vector (const_iterator i1, const_iterator i2);
     template <size_type N>
     inline			vector (const T (&a)[N])	: vector (VectorRange(a)) {}
-    inline			vector (initlist_t v) noexcept;
+    inline			vector (initlist_t v);
     inline constexpr		vector (vector&& v)		: _data (move(v._data)) {}
-    inline			~vector (void) noexcept		{ destroy_all(); }
+    inline			~vector (void)			{ destroy_all(); }
     inline auto&		operator= (const vector& v)	{ assign (v); return *this; }
     inline auto&		operator= (vector&& v)		{ assign (move(v)); return *this; }
     inline auto&		operator= (initlist_t v)	{ assign (v); return *this; }
-    bool			operator== (const vector& v) const noexcept;
-    inline bool			operator!= (const vector& v) const noexcept	{ return !(*this == v); }
+    bool			operator== (const vector& v) const;
+    inline bool			operator!= (const vector& v) const	{ return !(*this == v); }
     constexpr			operator const memlink& (void) const	{ return _data; }
     inline void			reserve (size_type n)		{ _data.reserve (n * sizeof(T)); }
-    void			resize (size_type n) noexcept;
-    void			resize (size_type n, const_reference v) noexcept;
+    void			resize (size_type n);
+    void			resize (size_type n, const_reference v);
     constexpr size_type		capacity (void) const		{ return _data.capacity() / sizeof(T);	}
     constexpr size_type		size (void) const		{ return _data.size() / sizeof(T);	}
     constexpr auto		bsize (void) const		{ return _data.size();			}
@@ -73,24 +73,24 @@ public:
     constexpr auto&		back (void) const		{ assert (!empty()); return *iback(); }
     inline constexpr void	clear (void)			{ destroy_all(); _data.clear(); }
     inline constexpr void	swap (vector&& v)		{ _data.swap (move(v._data)); }
-    inline void			deallocate (void) noexcept	{ assert (!is_linked()); destroy_all(); _data.deallocate(); }
-    inline void			shrink_to_fit (void) noexcept	{ _data.shrink_to_fit(); }
+    inline void			deallocate (void)		{ assert (!is_linked()); destroy_all(); _data.deallocate(); }
+    inline void			shrink_to_fit (void)		{ _data.shrink_to_fit(); }
     inline void			assign (const vector& v)	{ assign (v.begin(), v.end()); }
     inline void			assign (vector&& v)		{ swap (v); }
-    inline void			assign (const_iterator i1, const_iterator i2) noexcept;
+    inline void			assign (const_iterator i1, const_iterator i2);
     inline void			assign (size_type n, const T& v)	{ resize (n); fill_n (begin(), n, v); }
     inline void			assign (initlist_t v)			{ assign (v.begin(), v.end()); }
     inline auto			insert (const_iterator ip)		{ return construct_at (insert_hole (ip, 1)); }
     inline auto			insert (const_iterator ip, const T& v)	{ return emplace (ip, v); }
     inline auto			insert (const_iterator ip, T&& v)	{ return emplace (ip, move(v)); }
-    auto			insert (const_iterator ip, size_type n, const T& v) noexcept;
-    auto			insert (const_iterator ip, const_iterator i1, const_iterator i2) noexcept;
+    auto			insert (const_iterator ip, size_type n, const T& v);
+    auto			insert (const_iterator ip, const_iterator i1, const_iterator i2);
     inline auto			insert (const_iterator ip, initlist_t v)	{ return insert (ip, v.begin(), v.end()); }
     template <typename... Args>
     inline auto			emplace (const_iterator ip, Args&&... args)	{ return construct_at (insert_hole(ip,1), forward<Args>(args)...); }
     template <typename... Args>
     inline auto&		emplace_back (Args&&... args)			{ return *emplace(end(), forward<Args>(args)...); }
-    auto			erase (const_iterator ep, size_type n = 1) noexcept;
+    auto			erase (const_iterator ep, size_type n = 1);
     inline auto			erase (const_iterator ep1, const_iterator ep2)	{ assert (ep1 <= ep2); return erase (ep1, ep2 - ep1); }
     auto			replace (const_iterator rp1, const_iterator rp2, const_iterator i1, const_iterator i2)
 									{ return insert (erase (rp1, rp2), i1, i2); }
@@ -106,11 +106,11 @@ public:
     inline void			manage (pointer p, size_type n)		{ _data.manage (p, n * sizeof(T)); }
     inline constexpr bool	is_linked (void) const			{ return !_data.capacity(); }
     inline constexpr void	unlink (void)				{ _data.unlink(); }
-    inline void			copy_link (void) noexcept;
+    inline void			copy_link (void);
     inline constexpr void	link (pointer p, size_type n)		{ _data.link (memblock::pointer(p), n*sizeof(T)); }
     inline constexpr void	link (const vector& v)			{ _data.link (v); }
     inline constexpr void	link (pointer f, pointer l)		{ link (f, l-f); }
-    void			read (istream& is) noexcept {
+    void			read (istream& is) {
 				    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
 					return _data.read (is, sizeof(T));
 				    size_type n; is >> n;
@@ -130,7 +130,7 @@ public:
 					is >> ios::talign<size_type>();
 				}
     template <typename Stm>
-    constexpr void		write (Stm& os) const noexcept {
+    constexpr void		write (Stm& os) const {
 				    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
 					return _data.write (os, sizeof(T));
 				    os << size();
@@ -160,7 +160,7 @@ private:
 STREAM_ALIGN (cmemlink, stream_align<cmemlink::size_type>::value)
 namespace cwiclo {
 
-constexpr void cmemlink::write (sstream& os, size_type elsize) const noexcept
+constexpr void cmemlink::write (sstream& os, size_type elsize) const
 {
     auto sz = size();
     if (sz)
@@ -178,7 +178,7 @@ template <typename T> struct stream_align<vector<T>> {
 
 /// Copies range [\p i1, \p i2]
 template <typename T>
-vector<T>::vector (const_iterator i1, const_iterator i2) noexcept
+vector<T>::vector (const_iterator i1, const_iterator i2)
 :_data()
 {
     const auto n = i2-i1;
@@ -186,7 +186,7 @@ vector<T>::vector (const_iterator i1, const_iterator i2) noexcept
 }
 
 template <typename T>
-vector<T>::vector (initlist_t v) noexcept
+vector<T>::vector (initlist_t v)
 :_data()
 {
     uninitialized_copy_n (v.begin(), v.size(), insert_hole(begin(),v.size()));
@@ -194,7 +194,7 @@ vector<T>::vector (initlist_t v) noexcept
 
 /// Resizes the vector to contain \p n elements.
 template <typename T>
-void vector<T>::resize (size_type n) noexcept
+void vector<T>::resize (size_type n)
 {
     reserve (n);
     auto ihfirst = end(), ihlast = begin()+n;
@@ -205,7 +205,7 @@ void vector<T>::resize (size_type n) noexcept
 
 /// Resizes the vector to contain \p n elements made from \p v.
 template <typename T>
-void vector<T>::resize (size_type n, const_reference v) noexcept
+void vector<T>::resize (size_type n, const_reference v)
 {
     reserve (n);
     auto ihfirst = end(), ihlast = begin()+n;
@@ -216,7 +216,7 @@ void vector<T>::resize (size_type n, const_reference v) noexcept
 
 /// Compares two vectors
 template <typename T>
-bool vector<T>::operator== (const vector& v) const noexcept
+bool vector<T>::operator== (const vector& v) const
 {
     if constexpr (is_trivial<T>::value)
 	return _data == v._data;
@@ -230,7 +230,7 @@ bool vector<T>::operator== (const vector& v) const noexcept
 
 /// Copies the range [\p i1, \p i2]
 template <typename T>
-void vector<T>::assign (const_iterator i1, const_iterator i2) noexcept
+void vector<T>::assign (const_iterator i1, const_iterator i2)
 {
     assert (i1 <= i2);
     resize (i2 - i1);
@@ -239,7 +239,7 @@ void vector<T>::assign (const_iterator i1, const_iterator i2) noexcept
 
 /// Inserts \p n elements with value \p v at offsets \p ip.
 template <typename T>
-auto vector<T>::insert (const_iterator ip, size_type n, const T& v) noexcept
+auto vector<T>::insert (const_iterator ip, size_type n, const T& v)
 {
     auto ih = insert_hole (ip, n);
     uninitialized_fill_n (ih, n, v);
@@ -248,7 +248,7 @@ auto vector<T>::insert (const_iterator ip, size_type n, const T& v) noexcept
 
 /// Inserts range [\p i1, \p i2] at offset \p ip.
 template <typename T>
-auto vector<T>::insert (const_iterator ip, const_iterator i1, const_iterator i2) noexcept
+auto vector<T>::insert (const_iterator ip, const_iterator i1, const_iterator i2)
 {
     assert (i1 <= i2);
     auto n = i2 - i1;
@@ -259,7 +259,7 @@ auto vector<T>::insert (const_iterator ip, const_iterator i1, const_iterator i2)
 
 /// Removes \p count elements at offset \p ep.
 template <typename T>
-auto vector<T>::erase (const_iterator cep, size_type n) noexcept
+auto vector<T>::erase (const_iterator cep, size_type n)
 {
     auto ep = p2i (cep);
     destroy_n (ep, n);
@@ -267,7 +267,7 @@ auto vector<T>::erase (const_iterator cep, size_type n) noexcept
 }
 
 template <typename T>
-void vector<T>::copy_link (void) noexcept
+void vector<T>::copy_link (void)
 {
     if constexpr (is_trivial<T>::value)
 	_data.copy_link();

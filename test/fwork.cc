@@ -8,9 +8,9 @@
 class TestApp : public App {
 public:
     // Apps always use the singleton pattern
-    static auto& instance (void) noexcept { static TestApp s_app; return s_app; }
+    static auto& instance (void) { static TestApp s_app; return s_app; }
 
-    bool dispatch (Msg& msg) noexcept override {
+    bool dispatch (Msg& msg) override {
 	//
 	// Every Msger must implement the dispatch virtual,
 	// listing all interfaces it responds to. Here, the
@@ -38,7 +38,7 @@ public:
 	    quit();
     }
 private:
-    TestApp (void) noexcept
+    TestApp (void)
     : App()
     //
     // Remote Msgers are accessed through an interface proxy,

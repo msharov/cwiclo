@@ -18,7 +18,7 @@ namespace cwiclo {
 
 DEFINE_INTERFACE (COM)
 
-string PCOM::string_from_interface_list (const iid_t* elist) noexcept // static
+string PCOM::string_from_interface_list (const iid_t* elist) // static
 {
     string elstr;
     if (elist && *elist) {
@@ -29,14 +29,14 @@ string PCOM::string_from_interface_list (const iid_t* elist) noexcept // static
     return elstr;
 }
 
-Msg PCOM::export_msg (const string& elstr) noexcept // static
+Msg PCOM::export_msg (const string& elstr) // static
 {
     Msg msg (Msg::Link{}, PCOM::m_export(), stream_size_of(elstr), Msg::NoFdIncluded);
     msg.write() << elstr;
     return msg;
 }
 
-Msg PCOM::error_msg (const string& errmsg) noexcept // static
+Msg PCOM::error_msg (const string& errmsg) // static
 {
     Msg msg (Msg::Link{}, PCOM::m_error(), stream_size_of(errmsg), Msg::NoFdIncluded);
     msg.write() << errmsg;
@@ -48,7 +48,7 @@ Msg PCOM::error_msg (const string& errmsg) noexcept // static
 
 DEFINE_INTERFACE (Extern)
 
-auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) noexcept -> fd_t
+auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) -> fd_t
 {
     auto fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, IPPROTO_IP);
     if (fd < 0)
@@ -63,7 +63,7 @@ auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) noexcept -> fd_t
 }
 
 /// Create local socket with given path
-auto PExtern::connect_local (const char* path) noexcept -> fd_t
+auto PExtern::connect_local (const char* path) -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -76,7 +76,7 @@ auto PExtern::connect_local (const char* path) noexcept -> fd_t
 }
 
 /// Create local socket of the given name in the system standard location for such
-auto PExtern::connect_system_local (const char* sockname) noexcept -> fd_t
+auto PExtern::connect_system_local (const char* sockname) -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -89,7 +89,7 @@ auto PExtern::connect_system_local (const char* sockname) noexcept -> fd_t
 }
 
 /// Create local socket of the given name in the user standard location for such
-auto PExtern::connect_user_local (const char* sockname) noexcept -> fd_t
+auto PExtern::connect_user_local (const char* sockname) -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -104,7 +104,7 @@ auto PExtern::connect_user_local (const char* sockname) noexcept -> fd_t
     return connect (pointer_cast<sockaddr>(&addr), sizeof(addr));
 }
 
-auto PExtern::connect_ip4 (in_addr_t ip, in_port_t port) noexcept -> fd_t
+auto PExtern::connect_ip4 (in_addr_t ip, in_port_t port) -> fd_t
 {
     sockaddr_in addr = {};
     addr.sin_family = PF_INET;
@@ -126,11 +126,11 @@ auto PExtern::connect_ip4 (in_addr_t ip, in_port_t port) noexcept -> fd_t
 }
 
 /// Create local IPv4 socket at given port on the loopback interface
-auto PExtern::connect_local_ip4 (in_port_t port) noexcept -> fd_t
+auto PExtern::connect_local_ip4 (in_port_t port) -> fd_t
     { return PExtern::connect_ip4 (INADDR_LOOPBACK, port); }
 
 /// Create local IPv6 socket at given ip and port
-auto PExtern::connect_ip6 (in6_addr ip, in_port_t port) noexcept -> fd_t
+auto PExtern::connect_ip6 (in6_addr ip, in_port_t port) -> fd_t
 {
     sockaddr_in6 addr = {};
     addr.sin6_family = PF_INET6;
@@ -144,7 +144,7 @@ auto PExtern::connect_ip6 (in6_addr ip, in_port_t port) noexcept -> fd_t
 }
 
 /// Create local IPv6 socket at given ip and port
-auto PExtern::connect_local_ip6 (in_port_t port) noexcept -> fd_t
+auto PExtern::connect_local_ip6 (in_port_t port) -> fd_t
 {
     sockaddr_in6 addr = {};
     addr.sin6_family = PF_INET6;
@@ -154,7 +154,7 @@ auto PExtern::connect_local_ip6 (in_port_t port) noexcept -> fd_t
     return connect (pointer_cast<sockaddr>(&addr), sizeof(addr));
 }
 
-auto PExtern::launch_pipe (const char* exe, const char* arg) noexcept -> fd_t
+auto PExtern::launch_pipe (const char* exe, const char* arg) -> fd_t
 {
     // Check if executable exists before the fork to allow proper error handling
     char exepath [PATH_MAX];
@@ -197,7 +197,7 @@ DEFINE_INTERFACE (ExternR)
 //}}}-------------------------------------------------------------------
 //{{{ Extern
 
-Extern::Extern (const Msg::Link& l) noexcept
+Extern::Extern (const Msg::Link& l)
 : Msger (l)
 ,_sockfd (-1)
 ,_timer (msger_id())
@@ -214,13 +214,13 @@ Extern::Extern (const Msg::Link& l) noexcept
     extern_list().push_back (this);
 }
 
-Extern::~Extern (void) noexcept
+Extern::~Extern (void)
 {
     Extern_close();
     remove (extern_list(), this);
 }
 
-bool Extern::dispatch (Msg& msg) noexcept
+bool Extern::dispatch (Msg& msg)
 {
     return PTimerR::dispatch (this,msg)
 	|| PExtern::dispatch (this,msg)
@@ -228,25 +228,25 @@ bool Extern::dispatch (Msg& msg) noexcept
 	|| Msger::dispatch (msg);
 }
 
-void Extern::queue_outgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid) noexcept
+void Extern::queue_outgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid)
 {
     _outq.emplace_back (mid, move(body), fdo, extid);
     TimerR_timer (_sockfd);
 }
 
-Extern::RelayProxy* Extern::relay_proxy_by_id (mrid_t id) noexcept
+Extern::RelayProxy* Extern::relay_proxy_by_id (mrid_t id)
 {
     return linear_search_if (_relays, [&](const auto& r)
 	    { return r.relay.dest() == id; });
 }
 
-Extern::RelayProxy* Extern::relay_proxy_by_extid (mrid_t extid) noexcept
+Extern::RelayProxy* Extern::relay_proxy_by_extid (mrid_t extid)
 {
     return linear_search_if (_relays, [&](const auto& r)
 	    { return r.extid == extid; });
 }
 
-mrid_t Extern::register_relay (const COMRelay* relay) noexcept
+mrid_t Extern::register_relay (const COMRelay* relay)
 {
     auto rp = relay_proxy_by_id (relay->msger_id());
     if (!rp)
@@ -255,28 +255,28 @@ mrid_t Extern::register_relay (const COMRelay* relay) noexcept
     return rp->extid;
 }
 
-void Extern::unregister_relay (const COMRelay* relay) noexcept
+void Extern::unregister_relay (const COMRelay* relay)
 {
     auto rp = relay_proxy_by_id (relay->msger_id());
     if (rp)
 	_relays.erase (rp);
 }
 
-Extern* Extern::lookup_by_id (mrid_t id) noexcept // static
+Extern* Extern::lookup_by_id (mrid_t id) // static
 {
     auto ep = linear_search_if (extern_list(), [&](const auto e)
 		{ return e->msger_id() == id; });
     return ep ? *ep : nullptr;
 }
 
-Extern* Extern::lookup_by_imported (iid_t iid) noexcept // static
+Extern* Extern::lookup_by_imported (iid_t iid) // static
 {
     auto ep = linear_search_if (extern_list(), [&](const auto e)
 		{ return e->info().is_importing(iid); });
     return ep ? *ep : nullptr;
 }
 
-Extern* Extern::lookup_by_relay_id (mrid_t rid) noexcept // static
+Extern* Extern::lookup_by_relay_id (mrid_t rid) // static
 {
     auto ep = linear_search_if (extern_list(), [&](const auto e)
 		{ return nullptr != e->relay_proxy_by_id (rid); });
@@ -286,7 +286,7 @@ Extern* Extern::lookup_by_relay_id (mrid_t rid) noexcept // static
 //}}}-------------------------------------------------------------------
 //{{{ Extern::ExtMsg
 
-Extern::ExtMsg::ExtMsg (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid) noexcept
+Extern::ExtMsg::ExtMsg (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid)
 :_body (move(body))
 ,_h { ceilg (_body.size(), Msg::Alignment::Body), extid, fdo, write_header_strings(mid) }
 {
@@ -294,7 +294,7 @@ Extern::ExtMsg::ExtMsg (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, m
     _body.shrink (_h.sz);
 }
 
-void Extern::ExtMsg::write_iovecs (iovec* iov, streamsize bw) noexcept
+void Extern::ExtMsg::write_iovecs (iovec* iov, streamsize bw)
 {
     // Setup the two iovecs, 0 for header, 1 for body
     // bw is the bytes already written in previous sendmsg call
@@ -315,7 +315,7 @@ void Extern::ExtMsg::write_iovecs (iovec* iov, streamsize bw) noexcept
     iov[1].iov_len = _h.sz - bw;
 }
 
-methodid_t Extern::ExtMsg::parse_method (void) const noexcept
+methodid_t Extern::ExtMsg::parse_method (void) const
 {
     czstri mi (_hbuf, _h.hsz-sizeof(_h));
     auto ifacename = *mi;
@@ -332,7 +332,7 @@ methodid_t Extern::ExtMsg::parse_method (void) const noexcept
     return interface_lookup_method (iface, methodname, methodnamesz);
 }
 
-void Extern::ExtMsg::debug_dump (void) const noexcept
+void Extern::ExtMsg::debug_dump (void) const
 {
     if (DEBUG_MSG_TRACE) {
 	DEBUG_PRINTF ("[X] Incoming message for extid %u of size %u = {{{\n", _h.extid, _h.sz);
@@ -345,7 +345,7 @@ void Extern::ExtMsg::debug_dump (void) const noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Extern::Extern
 
-void Extern::Extern_open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide side) noexcept
+void Extern::Extern_open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide side)
 {
     if (!attach_to_socket (fd))
 	return error ("invalid socket type");
@@ -357,13 +357,13 @@ void Extern::Extern_open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide sid
     queue_outgoing (PCOM::export_msg (eifaces), extid_COM);
 }
 
-void Extern::Extern_close (void) noexcept
+void Extern::Extern_close (void)
 {
     set_unused();
     close (exchange (_sockfd, -1));
 }
 
-bool Extern::attach_to_socket (fd_t fd) noexcept
+bool Extern::attach_to_socket (fd_t fd)
 {
     // The incoming socket must be a stream socket
     int v;
@@ -386,7 +386,7 @@ bool Extern::attach_to_socket (fd_t fd) noexcept
     return !PTimer::make_nonblocking (fd);
 }
 
-void Extern::enable_credentials_passing (bool enable) noexcept
+void Extern::enable_credentials_passing (bool enable)
 {
     if (_sockfd < 0 || !_einfo.is_unix_socket)
 	return;
@@ -398,13 +398,13 @@ void Extern::enable_credentials_passing (bool enable) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Extern::COM
 
-void Extern::COM_error (const string_view& errmsg) noexcept
+void Extern::COM_error (const string_view& errmsg)
 {
     // errors occuring on in the Extern Msger on the other side of the socket
     error ("%s", errmsg.c_str());	// report it on this side
 }
 
-void Extern::COM_export (string elist) noexcept
+void Extern::COM_export (string elist)
 {
     // Other side of the socket listing exported interfaces as a comma-separated list
     _einfo.imported.clear();
@@ -421,7 +421,7 @@ void Extern::COM_export (string elist) noexcept
     _reply.connected (&_einfo);
 }
 
-void Extern::COM_delete (void) noexcept
+void Extern::COM_delete (void)
 {
     // This happens when the Extern Msger on the other side of the socket dies
     set_unused();
@@ -430,7 +430,7 @@ void Extern::COM_delete (void) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Extern::Timer
 
-void Extern::TimerR_timer (fd_t) noexcept
+void Extern::TimerR_timer (fd_t)
 {
     if (_sockfd >= 0)
 	read_incoming();
@@ -444,7 +444,7 @@ void Extern::TimerR_timer (fd_t) noexcept
 //{{{2 write_outgoing ---------------------------------------------------
 
 // writes queued messages. Returns true if need to wait for write.
-bool Extern::write_outgoing (void) noexcept
+bool Extern::write_outgoing (void)
 {
     // write all queued messages
     while (!_outq.empty()) {
@@ -513,7 +513,7 @@ bool Extern::write_outgoing (void) noexcept
 //}}}2------------------------------------------------------------------
 //{{{2 read_incoming
 
-void Extern::read_incoming (void) noexcept
+void Extern::read_incoming (void)
 {
     for (;;) {	// Read until EAGAIN
 	// Create iovecs for input
@@ -610,7 +610,7 @@ void Extern::read_incoming (void) noexcept
     }
 }
 
-bool Extern::accept_incoming_message (void) noexcept
+bool Extern::accept_incoming_message (void)
 {
     // Validate the message using method signature
     auto method = _inmsg.parse_method();
@@ -655,7 +655,7 @@ bool Extern::accept_incoming_message (void) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ COMRelay
 
-COMRelay::COMRelay (const Msg::Link& l) noexcept
+COMRelay::COMRelay (const Msg::Link& l)
 : Msger (l)
 //
 // COMRelays can be created either by local callers sending messages to
@@ -674,7 +674,7 @@ COMRelay::COMRelay (const Msg::Link& l) noexcept
 {
 }
 
-COMRelay::~COMRelay (void) noexcept
+COMRelay::~COMRelay (void)
 {
     // The relay is destroyed when:
     // 1. The local Msger is destroyed. COM delete message is sent to the
@@ -693,7 +693,7 @@ COMRelay::~COMRelay (void) noexcept
     _extid = 0;
 }
 
-bool COMRelay::dispatch (Msg& msg) noexcept
+bool COMRelay::dispatch (Msg& msg)
 {
     // COM messages are processed here
     if (PCOM::dispatch (this, msg))
@@ -729,7 +729,7 @@ bool COMRelay::dispatch (Msg& msg) noexcept
     return true;
 }
 
-bool COMRelay::on_error (mrid_t eid, const string& errmsg) noexcept
+bool COMRelay::on_error (mrid_t eid, const string& errmsg)
 {
     // An unhandled error in the local object is forwarded to the remote
     // object. At this point it will be considered handled. The remote
@@ -745,7 +745,7 @@ bool COMRelay::on_error (mrid_t eid, const string& errmsg) noexcept
     return Msger::on_error (eid, errmsg);
 }
 
-void COMRelay::on_msger_destroyed (mrid_t id) noexcept
+void COMRelay::on_msger_destroyed (mrid_t id)
 {
     // When the Extern object is destroyed, this notification arrives from
     // the App when the Extern created this relay. Relays created by local
@@ -760,7 +760,7 @@ void COMRelay::on_msger_destroyed (mrid_t id) noexcept
     set_unused();
 }
 
-void COMRelay::COM_error (const string_view& errmsg) noexcept
+void COMRelay::COM_error (const string_view& errmsg)
 {
     // COM_error is received for errors in the remote object. The remote
     // object is destroyed and COM_delete will shortly follow. Here, create
@@ -774,12 +774,12 @@ void COMRelay::COM_error (const string_view& errmsg) noexcept
     App::instance().forward_error (_localp.dest(), _localp.src());
 }
 
-void COMRelay::COM_export (const string_view&) noexcept
+void COMRelay::COM_export (const string_view&)
 {
     // Relays never receive this message
 }
 
-void COMRelay::COM_delete (void) noexcept
+void COMRelay::COM_delete (void)
 {
     // COM_delete indicates that the remote object has been destroyed.
     _pExtern = nullptr;	// No further messages are to be sent.
@@ -790,14 +790,14 @@ void COMRelay::COM_delete (void) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ PExternServer
 
-PExternServer::~PExternServer (void) noexcept
+PExternServer::~PExternServer (void)
 {
     if (!_sockname.empty())
 	unlink (_sockname.c_str());
 }
 
 /// Create server socket bound to the given address
-auto PExternServer::bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) noexcept -> fd_t
+auto PExternServer::bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) -> fd_t
 {
     auto fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, IPPROTO_IP);
     if (fd < 0)
@@ -819,7 +819,7 @@ auto PExternServer::bind (const sockaddr* addr, socklen_t addrlen, const iid_t* 
 }
 
 /// Create local socket with given path
-auto PExternServer::bind_local (const char* path, const iid_t* eifaces) noexcept -> fd_t
+auto PExternServer::bind_local (const char* path, const iid_t* eifaces) -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -835,7 +835,7 @@ auto PExternServer::bind_local (const char* path, const iid_t* eifaces) noexcept
 }
 
 /// Create local socket of the given name in the system standard location for such
-auto PExternServer::bind_system_local (const char* sockname, const iid_t* eifaces) noexcept -> fd_t
+auto PExternServer::bind_system_local (const char* sockname, const iid_t* eifaces) -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -851,7 +851,7 @@ auto PExternServer::bind_system_local (const char* sockname, const iid_t* eiface
 }
 
 /// Create local socket of the given name in the user standard location for such
-auto PExternServer::bind_user_local (const char* sockname, const iid_t* eifaces) noexcept -> fd_t
+auto PExternServer::bind_user_local (const char* sockname, const iid_t* eifaces) -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -870,7 +870,7 @@ auto PExternServer::bind_user_local (const char* sockname, const iid_t* eifaces)
 }
 
 /// Create local IPv4 socket at given ip and port
-auto PExternServer::bind_ip4 (in_addr_t ip, in_port_t port, const iid_t* eifaces) noexcept -> fd_t
+auto PExternServer::bind_ip4 (in_addr_t ip, in_port_t port, const iid_t* eifaces) -> fd_t
 {
     sockaddr_in addr = {};
     addr.sin_family = PF_INET,
@@ -884,11 +884,11 @@ auto PExternServer::bind_ip4 (in_addr_t ip, in_port_t port, const iid_t* eifaces
 }
 
 /// Create local IPv4 socket at given port on the loopback interface
-auto PExternServer::bind_local_ip4 (in_port_t port, const iid_t* eifaces) noexcept -> fd_t
+auto PExternServer::bind_local_ip4 (in_port_t port, const iid_t* eifaces) -> fd_t
     { return bind_ip4 (INADDR_LOOPBACK, port, eifaces); }
 
 /// Create local IPv6 socket at given ip and port
-auto PExternServer::bind_ip6 (in6_addr ip, in_port_t port, const iid_t* eifaces) noexcept -> fd_t
+auto PExternServer::bind_ip6 (in6_addr ip, in_port_t port, const iid_t* eifaces) -> fd_t
 {
     sockaddr_in6 addr = {};
     addr.sin6_family = PF_INET6;
@@ -898,7 +898,7 @@ auto PExternServer::bind_ip6 (in6_addr ip, in_port_t port, const iid_t* eifaces)
 }
 
 /// Create local IPv6 socket at given ip and port
-auto PExternServer::bind_local_ip6 (in_port_t port, const iid_t* eifaces) noexcept -> fd_t
+auto PExternServer::bind_local_ip6 (in_port_t port, const iid_t* eifaces) -> fd_t
 {
     sockaddr_in6 addr = {};
     addr.sin6_family = PF_INET6;
@@ -910,7 +910,7 @@ auto PExternServer::bind_local_ip6 (in_port_t port, const iid_t* eifaces) noexce
 //}}}-------------------------------------------------------------------
 //{{{ ExternServer
 
-bool ExternServer::on_error (mrid_t eid, const string& errmsg) noexcept
+bool ExternServer::on_error (mrid_t eid, const string& errmsg)
 {
     if (_timer.dest() == eid || msger_id() == eid)
 	return false;	// errors in listened socket are fatal
@@ -919,7 +919,7 @@ bool ExternServer::on_error (mrid_t eid, const string& errmsg) noexcept
     return true;
 }
 
-void ExternServer::on_msger_destroyed (mrid_t mid) noexcept
+void ExternServer::on_msger_destroyed (mrid_t mid)
 {
     DEBUG_PRINTF ("[X] Client connection %hu dropped\n", mid);
     remove_if (_conns, [&](const auto& e) { return e.dest() == mid; });
@@ -927,7 +927,7 @@ void ExternServer::on_msger_destroyed (mrid_t mid) noexcept
 	set_unused();
 }
 
-bool ExternServer::dispatch (Msg& msg) noexcept
+bool ExternServer::dispatch (Msg& msg)
 {
     return PTimerR::dispatch (this, msg)
 	|| PExternServer::dispatch (this, msg)
@@ -935,7 +935,7 @@ bool ExternServer::dispatch (Msg& msg) noexcept
 	|| Msger::dispatch (msg);
 }
 
-void ExternServer::TimerR_timer (PTimer::fd_t) noexcept
+void ExternServer::TimerR_timer (PTimer::fd_t)
 {
     for (int cfd; 0 <= (cfd = accept (_sockfd, nullptr, nullptr));) {
 	DEBUG_PRINTF ("[X] Client connection accepted on fd %d\n", cfd);
@@ -951,7 +951,7 @@ void ExternServer::TimerR_timer (PTimer::fd_t) noexcept
     }
 }
 
-void ExternServer::ExternServer_open (int fd, const iid_t* eifaces, PExternServer::WhenEmpty closeWhenEmpty) noexcept
+void ExternServer::ExternServer_open (int fd, const iid_t* eifaces, PExternServer::WhenEmpty closeWhenEmpty)
 {
     assert (_sockfd == -1 && "each ExternServer instance can only listen to one socket");
     if (PTimer::make_nonblocking (fd))
@@ -962,13 +962,13 @@ void ExternServer::ExternServer_open (int fd, const iid_t* eifaces, PExternServe
     TimerR_timer (_sockfd);
 }
 
-void ExternServer::ExternServer_close (void) noexcept
+void ExternServer::ExternServer_close (void)
 {
     set_unused();
     _timer.stop();
 }
 
-void ExternServer::ExternR_connected (const Extern::Info* einfo) noexcept
+void ExternServer::ExternR_connected (const Extern::Info* einfo)
 {
     _reply.connected (einfo);
 }

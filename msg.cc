@@ -9,7 +9,7 @@
 
 namespace cwiclo {
 
-methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, size_t mnamesz) noexcept
+methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, size_t mnamesz)
 {
     for (methodid_t __restrict__ mid = iid+iid[-1]; mid[0]; mid += mid[0])
 	if (equal_n (mname, mnamesz, mid+2, mid[0]-2))
@@ -19,7 +19,7 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 
 //----------------------------------------------------------------------
 
-Msg::Msg (const Link& l, methodid_t mid, streamsize size, fdoffset_t fdo) noexcept
+Msg::Msg (const Link& l, methodid_t mid, streamsize size, fdoffset_t fdo)
 :_method (mid)
 ,_link (l)
 ,_extid (0)
@@ -31,7 +31,7 @@ Msg::Msg (const Link& l, methodid_t mid, streamsize size, fdoffset_t fdo) noexce
     zero_fill (_body.end(), ppade);	// zero out the alignment padding
 }
 
-static streamsize sigelement_size (char c) noexcept
+static streamsize sigelement_size (char c)
 {
     static const struct { char sym; uint8_t sz; } syms[] = {
 	{'y',1},{'c',1},{'b',1},{'q',2},{'n',2},{'u',4},{'i',4},
@@ -43,7 +43,7 @@ static streamsize sigelement_size (char c) noexcept
     return 0;
 }
 
-static const char* skip_one_sigelement (const char* sig) noexcept
+static const char* skip_one_sigelement (const char* sig)
 {
     auto parens = 0u;
     do {
@@ -55,7 +55,7 @@ static const char* skip_one_sigelement (const char* sig) noexcept
     return sig;
 }
 
-static streamsize sigelement_alignment (const char* sig) noexcept
+static streamsize sigelement_alignment (const char* sig)
 {
     auto sz = sigelement_size (*sig);
     if (sz)
@@ -69,7 +69,7 @@ static streamsize sigelement_alignment (const char* sig) noexcept
     return sz;
 }
 
-static bool validate_read_align (istream& is, streamsize& sz, streamsize grain) noexcept
+static bool validate_read_align (istream& is, streamsize& sz, streamsize grain)
 {
     if (!is.can_align (grain))
 	return false;
@@ -78,7 +78,7 @@ static bool validate_read_align (istream& is, streamsize& sz, streamsize grain) 
     return true;
 }
 
-static streamsize validate_sigelement (istream& is, const char*& sig) noexcept
+static streamsize validate_sigelement (istream& is, const char*& sig)
 {
     auto sz = sigelement_size (*sig);
     assert ((sz || *sig == '(' || *sig == 'a' || *sig == 's') && "invalid character in method signature");
@@ -133,7 +133,7 @@ static streamsize validate_sigelement (istream& is, const char*& sig) noexcept
     return sz;
 }
 
-streamsize Msg::validate_signature (istream is, const char* sig) noexcept // static
+streamsize Msg::validate_signature (istream is, const char* sig) // static
 {
     streamsize sz = 0;
     while (*sig) {
@@ -147,23 +147,23 @@ streamsize Msg::validate_signature (istream is, const char* sig) noexcept // sta
 
 //----------------------------------------------------------------------
 
-Msg& ProxyB::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo) noexcept
+Msg& ProxyB::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo)
 {
     return App::instance().create_msg (linkw(), mid, sz, fdo);
 }
 
-Msg& ProxyB::create_msg (methodid_t mid, streamsize sz) noexcept
+Msg& ProxyB::create_msg (methodid_t mid, streamsize sz)
 {
     return create_msg (mid, sz, Msg::NoFdIncluded);
 }
 
-void ProxyB::forward_msg (Msg&& msg) noexcept
+void ProxyB::forward_msg (Msg&& msg)
 {
     App::instance().forward_msg (move(msg), linkw());
 }
 
 #ifndef NDEBUG
-void ProxyB::commit_msg (Msg& msg, ostream& os) noexcept
+void ProxyB::commit_msg (Msg& msg, ostream& os)
 {
     assert (!os.remaining() && "Message body written size does not match requested size");
     assert (msg.size() == msg.verify() && "Message body does not match method signature");
@@ -172,17 +172,17 @@ void ProxyB::commit_msg (Msg& msg, ostream& os) noexcept
 
 //----------------------------------------------------------------------
 
-void Proxy::create_dest_as (iid_t iid) noexcept
+void Proxy::create_dest_as (iid_t iid)
 {
     App::instance().create_link (linkw(), iid);
 }
 
-void Proxy::create_dest_with (iid_t iid, pfn_factory_t fac) noexcept
+void Proxy::create_dest_with (iid_t iid, pfn_factory_t fac)
 {
     App::instance().create_link_with (linkw(), iid, fac);
 }
 
-void Proxy::free_id (void) noexcept
+void Proxy::free_id (void)
 {
     auto& app = App::instance();
     if (app.valid_msger_id (dest()))
@@ -191,12 +191,12 @@ void Proxy::free_id (void) noexcept
 
 //----------------------------------------------------------------------
 
-Msger::Msger (void) noexcept
+Msger::Msger (void)
 : Msger (App::instance().register_singleton_msger (this))
 {
 }
 
-void Msger::error (const char* fmt, ...) noexcept // static
+void Msger::error (const char* fmt, ...) // static
 {
     va_list args;
     va_start (args, fmt);
@@ -204,7 +204,7 @@ void Msger::error (const char* fmt, ...) noexcept // static
     va_end (args);
 }
 
-void Msger::error_libc (const char* f) noexcept // static
+void Msger::error_libc (const char* f) // static
 {
     error ("%s: %s", f, strerror(errno));
 }

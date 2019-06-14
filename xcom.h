@@ -15,20 +15,20 @@ class PCOM : public Proxy {
     DECLARE_INTERFACE (COM, (error,"s")(export,"s")(delete,""))
 public:
     constexpr		PCOM (mrid_t src, mrid_t dest)	: Proxy (src, dest) {}
-			~PCOM (void) noexcept		{ free_id(); }
+			~PCOM (void)			{ free_id(); }
     void		error (const string& errmsg)	{ send (m_error(), errmsg); }
     void		export_ (const string& elist)	{ send (m_export(), elist); }
     void		delete_ (void)			{ send (m_delete()); }
     void		forward_msg (Msg&& msg)		{ Proxy::forward_msg (move(msg)); }
-    static string	string_from_interface_list (const iid_t* elist) noexcept;
-    static Msg		error_msg (const string& errmsg) noexcept;
-    static Msg		export_msg (const string& elstr) noexcept;
-    static auto		export_msg (const iid_t* elist) noexcept
+    static string	string_from_interface_list (const iid_t* elist);
+    static Msg		error_msg (const string& errmsg);
+    static Msg		export_msg (const string& elstr);
+    static auto		export_msg (const iid_t* elist)
 			    { return export_msg (string_from_interface_list (elist)); }
-    static auto		delete_msg (void) noexcept
+    static auto		delete_msg (void)
 			    { return Msg (Msg::Link{}, m_delete(), 0, Msg::NoFdIncluded); }
     template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_error())
 	    o->COM_error (string_view_from_const_stream (msg.read()));
 	else if (msg.method() == m_export())
@@ -48,14 +48,14 @@ class Extern;
 
 class COMRelay : public Msger {
 public:
-    explicit		COMRelay (const Msg::Link& l) noexcept;
-			~COMRelay (void) noexcept override;
-    bool		dispatch (Msg& msg) noexcept override;
-    bool		on_error (mrid_t eid, const string& errmsg) noexcept override;
-    void		on_msger_destroyed (mrid_t id) noexcept override;
-    inline void		COM_error (const string_view& errmsg) noexcept;
-    inline void		COM_export (const string_view& elist) noexcept;
-    inline void		COM_delete (void) noexcept;
+    explicit		COMRelay (const Msg::Link& l);
+			~COMRelay (void) override;
+    bool		dispatch (Msg& msg) override;
+    bool		on_error (mrid_t eid, const string& errmsg) override;
+    void		on_msger_destroyed (mrid_t id) override;
+    inline void		COM_error (const string_view& errmsg);
+    inline void		COM_export (const string_view& elist);
+    inline void		COM_delete (void);
 private:
     Extern*	_pExtern;	// Outgoing connection object
     PCOM	_localp;	// Proxy to the local object
@@ -96,17 +96,17 @@ public:
     void	open (fd_t fd, const iid_t* eifaces, SocketSide side = SocketSide::Server)
 		    { send (m_open(), eifaces, fd, side); }
     void	open (fd_t fd)		{ open (fd, nullptr, SocketSide::Client); }
-    fd_t	connect (const sockaddr* addr, socklen_t addrlen) noexcept;
-    fd_t	connect_ip4 (in_addr_t ip, in_port_t port) noexcept;
-    fd_t	connect_ip6 (in6_addr ip, in_port_t port) noexcept;
-    fd_t	connect_local (const char* path) noexcept;
-    fd_t	connect_local_ip4 (in_port_t port) noexcept;
-    fd_t	connect_local_ip6 (in_port_t port) noexcept;
-    fd_t	connect_system_local (const char* sockname) noexcept;
-    fd_t	connect_user_local (const char* sockname) noexcept;
-    fd_t	launch_pipe (const char* exe, const char* arg) noexcept;
+    fd_t	connect (const sockaddr* addr, socklen_t addrlen);
+    fd_t	connect_ip4 (in_addr_t ip, in_port_t port);
+    fd_t	connect_ip6 (in6_addr ip, in_port_t port);
+    fd_t	connect_local (const char* path);
+    fd_t	connect_local_ip4 (in_port_t port);
+    fd_t	connect_local_ip6 (in_port_t port);
+    fd_t	connect_system_local (const char* sockname);
+    fd_t	connect_user_local (const char* sockname);
+    fd_t	launch_pipe (const char* exe, const char* arg);
     template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_open()) {
 	    auto is = msg.read();
 	    auto eifaces = is.read<const iid_t*>();
@@ -130,7 +130,7 @@ public:
     constexpr	PExternR (const Msg::Link& l)		: ProxyR(l) {}
     void	connected (const PExtern::Info* einfo)	{ send (m_connected(), einfo); }
     template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_connected())
 	    return false;
 	o->ExternR_connected (msg.read().read<const PExtern::Info*>());
@@ -147,23 +147,23 @@ public:
     using fd_t = PExtern::fd_t;
     using Info = PExtern::Info;
 public:
-    explicit		Extern (const Msg::Link& l) noexcept;
-			~Extern (void) noexcept override;
+    explicit		Extern (const Msg::Link& l);
+			~Extern (void) override;
     auto&		info (void) const	{ return _einfo; }
-    bool		dispatch (Msg& msg) noexcept override;
-    void		queue_outgoing (Msg&& msg, mrid_t extid) noexcept
+    bool		dispatch (Msg& msg) override;
+    void		queue_outgoing (Msg&& msg, mrid_t extid)
 			    { queue_outgoing (msg.method(), msg.move_body(), msg.fd_offset(), extid); }
-    static Extern*	lookup_by_id (mrid_t id) noexcept;
-    static Extern*	lookup_by_imported (iid_t id) noexcept;
-    static Extern*	lookup_by_relay_id (mrid_t rid) noexcept;
-    mrid_t		register_relay (const COMRelay* relay) noexcept;
-    void		unregister_relay (const COMRelay* relay) noexcept;
-    inline void		Extern_open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide side) noexcept;
-    void		Extern_close (void) noexcept;
-    inline void		COM_error (const string_view& errmsg) noexcept;
-    inline void		COM_export (string elist) noexcept;
-    inline void		COM_delete (void) noexcept;
-    void		TimerR_timer (fd_t fd) noexcept;
+    static Extern*	lookup_by_id (mrid_t id);
+    static Extern*	lookup_by_imported (iid_t id);
+    static Extern*	lookup_by_relay_id (mrid_t rid);
+    mrid_t		register_relay (const COMRelay* relay);
+    void		unregister_relay (const COMRelay* relay);
+    inline void		Extern_open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide side);
+    void		Extern_close (void);
+    inline void		COM_error (const string_view& errmsg);
+    inline void		COM_export (string elist);
+    inline void		COM_delete (void);
+    void		TimerR_timer (fd_t fd);
 private:
     //{{{2 ExtMsg ------------------------------------------------------
     // Msg formatted for reading/writing to socket
@@ -182,7 +182,7 @@ private:
 	};
     public:
 	constexpr		ExtMsg (void)		: _body(),_h{},_hbuf{} {}
-				ExtMsg (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid) noexcept;
+				ExtMsg (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid);
 				ExtMsg (const ExtMsg&) = delete;
 	void			operator= (const ExtMsg&) = delete;
 	constexpr auto&		header (void) const		{ return _h; }
@@ -197,11 +197,11 @@ private:
 	constexpr void		trim_body (streamsize sz)	{ _body.shrink (sz); }
 	constexpr auto&&	move_body (void)		{ return move(_body); }
 	constexpr void		set_passed_fd (fd_t fd)		{ assert (has_fd()); ostream(_body.iat(_h.fdoffset), sizeof(fd)) << fd; }
-	constexpr fd_t		passed_fd (void) const noexcept { return has_fd() ? istream(_body.iat(_h.fdoffset), sizeof(fd_t)).read<fd_t>() : -1; }
-	void			write_iovecs (iovec* iov, streamsize bw) noexcept;
+	constexpr fd_t		passed_fd (void) const { return has_fd() ? istream(_body.iat(_h.fdoffset), sizeof(fd_t)).read<fd_t>() : -1; }
+	void			write_iovecs (iovec* iov, streamsize bw);
 	constexpr auto		read (void) const		{ return istream (_body.data(), _body.size()); }
-	methodid_t		parse_method (void) const noexcept;
-	inline void		debug_dump (void) const noexcept;
+	methodid_t		parse_method (void) const;
+	inline void		debug_dump (void) const;
     private:
 	constexpr auto		header_ptr (void) const		{ return begin(_hbuf)-sizeof(_h); }
 	constexpr auto		header_ptr (void)		{ return UNCONST_MEMBER_FN (header_ptr,); }
@@ -253,18 +253,18 @@ private:
     };
     //}}}2--------------------------------------------------------------
 private:
-    void		queue_outgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid) noexcept;
-    constexpr mrid_t	create_extid_from_relay_id (mrid_t id) const noexcept
+    void		queue_outgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid);
+    constexpr mrid_t	create_extid_from_relay_id (mrid_t id) const
 			    { return id + ((_einfo.side == PExtern::SocketSide::Client) ? extid_ClientBase : extid_ServerBase); }
-    static auto&	extern_list (void) noexcept
+    static auto&	extern_list (void)
 			    { static vector<Extern*> s_externs; return s_externs; }
-    RelayProxy*		relay_proxy_by_extid (mrid_t extid) noexcept;
-    RelayProxy*		relay_proxy_by_id (mrid_t id) noexcept;
-    bool		write_outgoing (void) noexcept;
-    void		read_incoming (void) noexcept;
-    inline bool		accept_incoming_message (void) noexcept;
-    inline bool		attach_to_socket (fd_t fd) noexcept;
-    void		enable_credentials_passing (bool enable) noexcept;
+    RelayProxy*		relay_proxy_by_extid (mrid_t extid);
+    RelayProxy*		relay_proxy_by_id (mrid_t id);
+    bool		write_outgoing (void);
+    void		read_incoming (void);
+    inline bool		accept_incoming_message (void);
+    inline bool		attach_to_socket (fd_t fd);
+    void		enable_credentials_passing (bool enable);
 private:
     fd_t		_sockfd;
     PTimer		_timer;
@@ -296,20 +296,20 @@ public:
     enum class WhenEmpty : uint8_t { Remain, Close };
 public:
     constexpr	PExternServer (mrid_t caller)	: Proxy(caller),_sockname() {}
-		~PExternServer (void) noexcept;
+		~PExternServer (void);
     void	close (void)			{ send (m_close()); }
     void	open (fd_t fd, const iid_t* eifaces, WhenEmpty whenempty = WhenEmpty::Close)
 		    { send (m_open(), eifaces, fd, whenempty); }
-    fd_t	bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) noexcept NONNULL();
-    fd_t	bind_local (const char* path, const iid_t* eifaces) noexcept NONNULL();
-    fd_t	bind_user_local (const char* sockname, const iid_t* eifaces) noexcept NONNULL();
-    fd_t	bind_system_local (const char* sockname, const iid_t* eifaces) noexcept NONNULL();
-    fd_t	bind_ip4 (in_addr_t ip, in_port_t port, const iid_t* eifaces) noexcept NONNULL();
-    fd_t	bind_local_ip4 (in_port_t port, const iid_t* eifaces) noexcept NONNULL();
-    fd_t	bind_ip6 (in6_addr ip, in_port_t port, const iid_t* eifaces) noexcept NONNULL();
-    fd_t	bind_local_ip6 (in_port_t port, const iid_t* eifaces) noexcept NONNULL();
+    fd_t	bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) NONNULL();
+    fd_t	bind_local (const char* path, const iid_t* eifaces) NONNULL();
+    fd_t	bind_user_local (const char* sockname, const iid_t* eifaces) NONNULL();
+    fd_t	bind_system_local (const char* sockname, const iid_t* eifaces) NONNULL();
+    fd_t	bind_ip4 (in_addr_t ip, in_port_t port, const iid_t* eifaces) NONNULL();
+    fd_t	bind_local_ip4 (in_port_t port, const iid_t* eifaces) NONNULL();
+    fd_t	bind_ip6 (in6_addr ip, in_port_t port, const iid_t* eifaces) NONNULL();
+    fd_t	bind_local_ip6 (in_port_t port, const iid_t* eifaces) NONNULL();
     template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_open()) {
 	    auto is = msg.read();
 	    auto eifaces = is.read<const iid_t*>();
@@ -334,15 +334,15 @@ public:
     using fd_t = PExternServer::fd_t;
     enum { f_CloseWhenEmpty = Msger::f_Last, f_Last };
 public:
-    explicit constexpr	ExternServer (const Msg::Link& l) noexcept
+    explicit constexpr	ExternServer (const Msg::Link& l)
 			    : Msger(l),_conns(),_eifaces(),_timer (l.dest),_reply (l),_sockfd (-1) {}
-    bool		on_error (mrid_t eid, const string& errmsg) noexcept override;
-    void		on_msger_destroyed (mrid_t mid) noexcept override;
-    bool		dispatch (Msg& msg) noexcept override;
-    inline void		TimerR_timer (fd_t) noexcept;
-    inline void		ExternServer_open (fd_t fd, const iid_t* eifaces, PExternServer::WhenEmpty whenempty) noexcept;
-    inline void		ExternServer_close (void) noexcept;
-    inline void		ExternR_connected (const Extern::Info* einfo) noexcept;
+    bool		on_error (mrid_t eid, const string& errmsg) override;
+    void		on_msger_destroyed (mrid_t mid) override;
+    bool		dispatch (Msg& msg) override;
+    inline void		TimerR_timer (fd_t);
+    inline void		ExternServer_open (fd_t fd, const iid_t* eifaces, PExternServer::WhenEmpty whenempty);
+    inline void		ExternServer_close (void);
+    inline void		ExternR_connected (const Extern::Info* einfo);
 private:
     vector<PExtern>	_conns;
     const iid_t*	_eifaces;
