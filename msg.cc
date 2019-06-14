@@ -19,65 +19,6 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 
 //----------------------------------------------------------------------
 
-Msg& ProxyB::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo) noexcept
-{
-    return App::instance().create_msg (linkw(), mid, sz, fdo);
-}
-
-Msg& ProxyB::create_msg (methodid_t mid, streamsize sz) noexcept
-{
-    return create_msg (mid, sz, Msg::NoFdIncluded);
-}
-
-void ProxyB::forward_msg (Msg&& msg) noexcept
-{
-    App::instance().forward_msg (move(msg), linkw());
-}
-
-#ifndef NDEBUG
-void ProxyB::commit_msg (Msg& msg, ostream& os) noexcept
-{
-    assert (!os.remaining() && "Message body written size does not match requested size");
-    assert (msg.size() == msg.verify() && "Message body does not match method signature");
-}
-#endif
-
-//----------------------------------------------------------------------
-
-void Proxy::create_dest_as (iid_t iid) noexcept
-{
-    App::instance().create_link (linkw(), iid);
-}
-
-void Proxy::create_dest_with (iid_t iid, pfn_factory_t fac) noexcept
-{
-    App::instance().create_link_with (linkw(), iid, fac);
-}
-
-void Proxy::free_id (void) noexcept
-{
-    auto& app = App::instance();
-    if (app.valid_msger_id (dest()))
-	app.free_mrid (dest());
-}
-
-//----------------------------------------------------------------------
-
-void Msger::error (const char* fmt, ...) noexcept // static
-{
-    va_list args;
-    va_start (args, fmt);
-    App::instance().errorv (fmt, args);
-    va_end (args);
-}
-
-void Msger::error_libc (const char* f) noexcept // static
-{
-    error ("%s: %s", f, strerror(errno));
-}
-
-//----------------------------------------------------------------------
-
 Msg::Msg (const Link& l, methodid_t mid, streamsize size, fdoffset_t fdo) noexcept
 :_method (mid)
 ,_link (l)
@@ -202,6 +143,70 @@ streamsize Msg::validate_signature (istream is, const char* sig) noexcept // sta
 	sz += elsz;
     }
     return sz;
+}
+
+//----------------------------------------------------------------------
+
+Msg& ProxyB::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo) noexcept
+{
+    return App::instance().create_msg (linkw(), mid, sz, fdo);
+}
+
+Msg& ProxyB::create_msg (methodid_t mid, streamsize sz) noexcept
+{
+    return create_msg (mid, sz, Msg::NoFdIncluded);
+}
+
+void ProxyB::forward_msg (Msg&& msg) noexcept
+{
+    App::instance().forward_msg (move(msg), linkw());
+}
+
+#ifndef NDEBUG
+void ProxyB::commit_msg (Msg& msg, ostream& os) noexcept
+{
+    assert (!os.remaining() && "Message body written size does not match requested size");
+    assert (msg.size() == msg.verify() && "Message body does not match method signature");
+}
+#endif
+
+//----------------------------------------------------------------------
+
+void Proxy::create_dest_as (iid_t iid) noexcept
+{
+    App::instance().create_link (linkw(), iid);
+}
+
+void Proxy::create_dest_with (iid_t iid, pfn_factory_t fac) noexcept
+{
+    App::instance().create_link_with (linkw(), iid, fac);
+}
+
+void Proxy::free_id (void) noexcept
+{
+    auto& app = App::instance();
+    if (app.valid_msger_id (dest()))
+	app.free_mrid (dest());
+}
+
+//----------------------------------------------------------------------
+
+Msger::Msger (void) noexcept
+: Msger (App::instance().register_singleton_msger (this))
+{
+}
+
+void Msger::error (const char* fmt, ...) noexcept // static
+{
+    va_list args;
+    va_start (args, fmt);
+    App::instance().errorv (fmt, args);
+    va_end (args);
+}
+
+void Msger::error_libc (const char* f) noexcept // static
+{
+    error ("%s: %s", f, strerror(errno));
 }
 
 } // namespace cwiclo

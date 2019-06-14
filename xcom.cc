@@ -5,6 +5,7 @@
 
 #include "xcom.h"
 #include <fcntl.h>
+#include <syslog.h>
 #include <sys/un.h>
 #include <sys/stat.h>
 #include <paths.h>

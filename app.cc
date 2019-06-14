@@ -6,6 +6,7 @@
 #include "app.h"
 #include <fcntl.h>
 #include <signal.h>
+#include <syslog.h>
 #include <time.h>
 
 //{{{ Timer and Signal interfaces --------------------------------------
@@ -29,12 +30,44 @@ auto PTimer::now (void) noexcept -> mstime_t // static
     return mstime_t(t.tv_nsec) / 1000000 + t.tv_sec * 1000;
 }
 
+//----------------------------------------------------------------------
+
+App::Timer::~Timer (void) noexcept
+    { App::instance().remove_timer (this); }
+
+void App::Timer::Timer_watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms) noexcept
+{
+    _cmd = cmd;
+    set_unused (_cmd == PTimer::WatchCmd::Stop);
+    _fd = fd;
+    _nextfire = timeoutms + (timeoutms <= PTimer::TimerMax ? PTimer::now() : PTimer::TimerNone);
+}
+
+bool App::Timer::dispatch (Msg& msg) noexcept
+    { return PTimer::dispatch(this,msg) || Msger::dispatch(msg); }
+
 //}}}-------------------------------------------------------------------
 //{{{ App
 
 App*	App::s_pApp		= nullptr;	// static
 int	App::s_exit_code	= EXIT_SUCCESS;	// static
 uint32_t App::s_received_signals = 0;		// static
+
+//----------------------------------------------------------------------
+
+App::App (void) noexcept
+: Msger (mrid_App)
+,_outq()
+,_inq()
+,_msgers()
+,_timers()
+,_creators()
+,_errors()
+{
+    assert (!s_pApp && "there must be only one App object");
+    s_pApp = this;
+    register_singleton_msger (this);
+}
 
 App::~App (void) noexcept
 {
@@ -165,6 +198,13 @@ void App::free_mrid (mrid_t id) noexcept
     }
 }
 
+mrid_t App::register_singleton_msger (Msger* m) noexcept
+{
+    _msgers.push_back (m);
+    _creators.push_back (mrid_App);
+    return _msgers.size()-1;
+}
+
 Msger* App::create_msger_with (const Msg::Link& l, iid_t iid [[maybe_unused]], Msger::pfn_factory_t fac) noexcept // static
 {
     Msger* r = fac ? (*fac)(l) : nullptr;
@@ -252,6 +292,17 @@ void App::delete_unused_msgers (void) noexcept
 //}}}-------------------------------------------------------------------
 //{{{ Message loop
 
+int App::run (void) noexcept
+{
+    if (!errors().empty())	// Check for errors generated in ctor and ProcessArgs
+	return EXIT_FAILURE;
+    while (!flag (f_Quitting)) {
+	message_loop_once();
+	run_timers();
+    }
+    return exit_code();
+}
+
 void App::message_loop_once (void) noexcept
 {
     _inq.clear();		// input queue was processed on the last iteration
@@ -297,6 +348,48 @@ void App::process_input_queue (void) noexcept
 		return quit (EXIT_FAILURE);
 	}
     }
+}
+
+void App::run_timers (void) noexcept
+{
+    auto ntimers = has_timers();
+    if (!ntimers || flag (f_Quitting)) {
+	if (_outq.empty()) {
+	    DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
+	    quit();	// running out of packets is usually not what you want, but not exactly an error
+	}
+	return;
+    }
+
+    // Populate the fd list and find the nearest timer
+    pollfd fds [ntimers];
+    int timeout;
+    auto nfds = get_poll_timer_list (fds, ntimers, timeout);
+    if (!nfds && !timeout) {
+	if (_outq.empty()) {
+	    DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
+	    quit();	// running out of packets is usually not what you want, but not exactly an error
+	}
+	return;
+    }
+
+    // And wait
+    if (DEBUG_MSG_TRACE) {
+	DEBUG_PRINTF ("----------------------------------------------------------------------\n");
+	if (timeout > 0)
+	    DEBUG_PRINTF ("[I] Waiting for %d ms ", timeout);
+	else if (timeout < 0)
+	    DEBUG_PRINTF ("[I] Waiting indefinitely ");
+	else if (!timeout)
+	    DEBUG_PRINTF ("[I] Checking ");
+	DEBUG_PRINTF ("%u file descriptors from %u timers\n", nfds, ntimers);
+    }
+
+    // And poll
+    poll (fds, nfds, timeout);
+
+    // Then, check timers for expiration
+    check_poll_timers (fds);
 }
 
 void App::forward_received_signals (void) noexcept

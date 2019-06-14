@@ -6,7 +6,6 @@
 #pragma once
 #include "msg.h"
 #include <sys/poll.h>
-#include <syslog.h>
 
 //{{{ Debugging macros -------------------------------------------------
 namespace cwiclo {
@@ -114,13 +113,14 @@ public:
     static auto&	instance (void)			{ return *s_pApp; }
     static void		install_signal_handlers (void) noexcept;
     void		process_args (argc_t, argv_t)	{ }
-    inline int		run (void) noexcept;
+    int			run (void) noexcept;
     Msg::Link&		create_link (Msg::Link& l, iid_t iid) noexcept;
     Msg::Link&		create_link_with (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac) noexcept;
     inline Msg&		create_msg (Msg::Link& l, methodid_t mid, streamsize size, Msg::fdoffset_t fdo = Msg::NoFdIncluded) noexcept
 			    { return _outq.emplace_back (create_link (l,interface_of_method(mid)),mid,size,fdo); }
     inline void		forward_msg (Msg&& msg, Msg::Link& l) noexcept
 			    { _outq.emplace_back (move(msg), create_link(l,msg.interface())); }
+    mrid_t		register_singleton_msger (Msger* m) noexcept;
     static iid_t	interface_by_name (const char* iname, streamsize inamesz) noexcept;
     msgq_t::size_type	has_messages_for (mrid_t mid) const noexcept;
     constexpr auto	has_timers (void) const		{ return _timers.size(); }
@@ -141,7 +141,7 @@ public:
     void		errorv (const char* fmt, va_list args) noexcept;
 #endif
 protected:
-    inline		App (void) noexcept;
+			App (void) noexcept;
 			~App (void) noexcept override;
     [[noreturn]] static void fatal_signal_handler (int sig) noexcept;
     static void		msg_signal_handler (int sig) noexcept;
@@ -158,12 +158,11 @@ public:
     friend class Timer;
     class Timer : public Msger {
     public:
-	explicit	Timer (const Msg::Link& l) : Msger(l),_nextfire(PTimer::TimerNone),_reply(l),_cmd(),_fd(-1)
+	explicit	Timer (const Msg::Link& l)
+			    : Msger(l),_nextfire(PTimer::TimerNone),_reply(l),_cmd(),_fd(-1)
 			    { App::instance().add_timer (this); }
-			~Timer (void) noexcept override
-			    { App::instance().remove_timer (this); }
-	bool		dispatch (Msg& msg) noexcept override
-			    { return PTimer::dispatch(this,msg) || Msger::dispatch(msg); }
+			~Timer (void) noexcept override;
+	bool		dispatch (Msg& msg) noexcept override;
 	inline void	Timer_watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms) noexcept;
 	constexpr void	stop (void)		{ set_flag (f_Unused); _cmd = PTimer::WatchCmd::Stop; _fd = -1; _nextfire = PTimer::TimerNone; }
 	void		fire (void)		{ _reply.timer (_fd); stop(); }
@@ -189,7 +188,7 @@ private:
     inline void		forward_received_signals (void) noexcept;
     void		add_timer (Timer* t)	{ _timers.push_back (t); }
     void		remove_timer (Timer* t)	{ remove (_timers, t); }
-    inline void		run_timers (void) noexcept;
+    void		run_timers (void) noexcept;
 private:
     msgq_t		_outq;
     msgq_t		_inq;
@@ -202,84 +201,6 @@ private:
     static uint32_t	s_received_signals;
     static const MsgerFactoryMap s_msger_factories[];
 };
-
-//----------------------------------------------------------------------
-
-App::App (void) noexcept
-: Msger (mrid_App)
-,_outq()
-,_inq()
-,_msgers()
-,_timers()
-,_creators()
-,_errors()
-{
-    assert (!s_pApp && "there must be only one App object");
-    s_pApp = this;
-    _msgers.push_back (this);
-    _creators.push_back (mrid_App);
-}
-
-int App::run (void) noexcept
-{
-    if (!errors().empty())	// Check for errors generated in ctor and ProcessArgs
-	return EXIT_FAILURE;
-    while (!flag (f_Quitting)) {
-	message_loop_once();
-	run_timers();
-    }
-    return exit_code();
-}
-
-void App::run_timers (void) noexcept
-{
-    auto ntimers = has_timers();
-    if (!ntimers || flag (f_Quitting)) {
-	if (_outq.empty()) {
-	    DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
-	    quit();	// running out of packets is usually not what you want, but not exactly an error
-	}
-	return;
-    }
-
-    // Populate the fd list and find the nearest timer
-    pollfd fds [ntimers];
-    int timeout;
-    auto nfds = get_poll_timer_list (fds, ntimers, timeout);
-    if (!nfds && !timeout) {
-	if (_outq.empty()) {
-	    DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
-	    quit();	// running out of packets is usually not what you want, but not exactly an error
-	}
-	return;
-    }
-
-    // And wait
-    if (DEBUG_MSG_TRACE) {
-	DEBUG_PRINTF ("----------------------------------------------------------------------\n");
-	if (timeout > 0)
-	    DEBUG_PRINTF ("[I] Waiting for %d ms ", timeout);
-	else if (timeout < 0)
-	    DEBUG_PRINTF ("[I] Waiting indefinitely ");
-	else if (!timeout)
-	    DEBUG_PRINTF ("[I] Checking ");
-	DEBUG_PRINTF ("%u file descriptors from %u timers\n", nfds, ntimers);
-    }
-
-    // And poll
-    poll (fds, nfds, timeout);
-
-    // Then, check timers for expiration
-    check_poll_timers (fds);
-}
-
-void App::Timer::Timer_watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms) noexcept
-{
-    _cmd = cmd;
-    set_unused (_cmd == PTimer::WatchCmd::Stop);
-    _fd = fd;
-    _nextfire = timeoutms + (timeoutms <= PTimer::TimerMax ? PTimer::now() : PTimer::TimerNone);
-}
 
 //}}}-------------------------------------------------------------------
 //{{{ main template

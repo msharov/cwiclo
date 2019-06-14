@@ -273,7 +273,8 @@ public:
 			    { if (mid == creator_id()) set_unused(); }
 protected:
     explicit constexpr	Msger (const Msg::Link& l)	:_link(l),_flags() {}
-    explicit constexpr	Msger (mrid_t id)		:_link{id,id},_flags(bit_mask(f_Static)) {}
+    explicit constexpr	Msger (mrid_t id)		:_link{mrid_App,id},_flags(bit_mask(f_Static)) {}
+			Msger (void) noexcept;
 			Msger (const Msger&) = delete;
     void		operator= (const Msger&) = delete;
     constexpr void	set_flag (unsigned f, bool v = true)	{ set_bit (_flags,f,v); }
