@@ -48,7 +48,7 @@ public:
     void	wait_rdWr (fd_t fd, mstime_t t = TimerNone)	{ watch (WatchCmd::ReadWrite, fd, t); }
 
     template <typename O>
-    inline static bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.method() != m_watch())
 	    return false;
 	auto is = msg.read();
@@ -73,7 +73,7 @@ public:
     void	timer (fd_t fd)			{ send (m_timer(), fd); }
 
     template <typename O>
-    inline static bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.method() != m_timer())
 	    return false;
 	o->TimerR_timer (msg.read().read<fd_t>());
@@ -91,7 +91,7 @@ public:
     void	signal (int sig)	{ send (m_signal(), sig); }
 
     template <typename O>
-    inline static bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.method() != m_signal())
 	    return false;
 	o->Signal_signal (msg.read().read<int>());

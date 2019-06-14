@@ -210,7 +210,7 @@ public:
     void		ask (const string& prompt, Type type = Type())
 			    { send (m_ask(), type, uint16_t(0), prompt); }
     template <typename O>
-    inline static bool	dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.method() != m_ask())
 	    return false;
 	auto is = msg.read();
@@ -233,7 +233,7 @@ public:
     explicit		PMessageBoxR (const Msg::Link& l) : ProxyR (l) {}
     void		reply (Answer answer) { send (m_answer(), answer); }
     template <typename O>
-    inline static bool	dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.method() != m_answer())
 	    return false;
 	o->MessageBoxR_reply (msg.read().read<Answer>());

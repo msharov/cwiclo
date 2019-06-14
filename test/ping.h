@@ -53,7 +53,7 @@ public:
     // indicates whether the message was accepted.
     //
     template <typename O>
-    inline static bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.method() == m_ping()) {
 	    // Each method unmarshals the arguments and calls the handling object
 	    auto is = msg.read();
@@ -79,7 +79,7 @@ public:
 			// create a message that only marshals arguments.
     void		ping (uint32_t v) { send (m_ping(), v); }
     template <typename O>
-    inline static bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.method() != m_ping())
 	    return false;
 	o->PingR_ping (msg.read().read<uint32_t>());

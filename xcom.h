@@ -28,7 +28,7 @@ public:
     static auto		delete_msg (void) noexcept
 			    { return Msg (Msg::Link{}, m_delete(), 0, Msg::NoFdIncluded); }
     template <typename O>
-    inline static bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.method() == m_error())
 	    o->COM_error (string_view_from_const_stream (msg.read()));
 	else if (msg.method() == m_export())
@@ -106,7 +106,7 @@ public:
     fd_t	connect_user_local (const char* sockname) noexcept;
     fd_t	launch_pipe (const char* exe, const char* arg) noexcept;
     template <typename O>
-    inline static bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.method() == m_open()) {
 	    auto is = msg.read();
 	    auto eifaces = is.read<const iid_t*>();
@@ -130,7 +130,7 @@ public:
     constexpr	PExternR (const Msg::Link& l)		: ProxyR(l) {}
     void	connected (const PExtern::Info* einfo)	{ send (m_connected(), einfo); }
     template <typename O>
-    inline static bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.method() != m_connected())
 	    return false;
 	o->ExternR_connected (msg.read().read<const PExtern::Info*>());
@@ -309,7 +309,7 @@ public:
     fd_t	bind_ip6 (in6_addr ip, in_port_t port, const iid_t* eifaces) noexcept NONNULL();
     fd_t	bind_local_ip6 (in_port_t port, const iid_t* eifaces) noexcept NONNULL();
     template <typename O>
-    inline static bool dispatch (O* o, const Msg& msg) noexcept {
+    inline static constexpr bool dispatch (O* o, const Msg& msg) noexcept {
 	if (msg.method() == m_open()) {
 	    auto is = msg.read();
 	    auto eifaces = is.read<const iid_t*>();
