@@ -11,7 +11,7 @@
 
 namespace std {
 
-void terminate (void) { abort(); }
+void terminate (void) noexcept { abort(); }
 
 } // namespace std
 namespace __cxxabiv1 {
@@ -31,9 +31,9 @@ TERMINATE_ALIAS (__cxa_throw_bad_array_new_length)
 TERMINATE_ALIAS (__cxa_throw_bad_array_length)
 #undef TERMINATE_ALIAS
 
-int __cxa_guard_acquire (__guard* g) { return !g->test_and_set(); }
-void __cxa_guard_release (__guard*) {}
-void __cxa_guard_abort (__guard* g) { g->clear(); }
+int __cxa_guard_acquire (__guard* g) noexcept { return !g->test_and_set(); }
+void __cxa_guard_release (__guard*) noexcept {}
+void __cxa_guard_abort (__guard* g) noexcept { g->clear(); }
 
 } // extern "C"
 } // namespace __cxxabiv1

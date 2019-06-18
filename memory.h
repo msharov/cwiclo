@@ -584,7 +584,7 @@ inline void hexdump (const C& c)
 
 namespace std {
 
-[[noreturn]] void terminate (void);
+[[noreturn]] void terminate (void) noexcept;
 
 } // namespace std
 namespace __cxxabiv1 {
@@ -593,15 +593,18 @@ using __guard = cwiclo::atomic_flag;
 
 extern "C" {
 
-[[noreturn]] void __cxa_bad_cast (void);
-[[noreturn]] void __cxa_bad_typeid (void);
-[[noreturn]] void __cxa_throw_bad_array_new_length (void);
-[[noreturn]] void __cxa_throw_bad_array_length (void);
+[[noreturn]] void __cxa_call_unexpected (void) noexcept;
+[[noreturn]] void __cxa_pure_virtual (void) noexcept;
+[[noreturn]] void __cxa_deleted_virtual (void) noexcept;
+[[noreturn]] void __cxa_bad_cast (void) noexcept;
+[[noreturn]] void __cxa_bad_typeid (void) noexcept;
+[[noreturn]] void __cxa_throw_bad_array_new_length (void) noexcept;
+[[noreturn]] void __cxa_throw_bad_array_length (void) noexcept;
 
 // Compiler-generated thread-safe statics initialization
-int __cxa_guard_acquire (__guard* g);
-void __cxa_guard_release (__guard* g);
-void __cxa_guard_abort (__guard* g);
+int __cxa_guard_acquire (__guard* g) noexcept;
+void __cxa_guard_release (__guard* g) noexcept;
+void __cxa_guard_abort (__guard* g) noexcept;
 
 } // extern "C"
 } // namespace __cxxabiv1
