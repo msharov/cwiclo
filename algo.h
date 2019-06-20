@@ -6,8 +6,115 @@
 #pragma once
 #include "memory.h"
 
-//{{{ Searching algorithms
+//{{{ zstri
 namespace cwiclo {
+
+class zstri {
+public:
+    using value_type		= char;
+    using pointer		= char*;
+    using const_pointer		= const char*;
+    using reference		= char&;
+    using const_reference	= const char&;
+    using difference_type	= unsigned;
+public:
+    constexpr		zstri (pointer s, difference_type n = UINT_MAX) NONNULL()
+			    :_s(s),_n(n) {}
+    template <difference_type N>
+    constexpr		zstri (value_type (&a)[N]) :zstri(begin(a),N) {}
+    constexpr		zstri (const zstri& i) = default;
+    inline static auto	next (pointer s, difference_type& n) NONNULL() {
+			    #if __x86__
+			    if constexpr (!compile_constant(strlen(s)) || !compile_constant(n))
+				__asm__("repnz scasb":"+D"(s),"+c"(n):"a"(0):"cc","memory");
+			    else
+			    #endif
+			    { auto l = __builtin_strnlen(s, n); l += !!l; s += l; n -= l; }
+			    return s;
+			}
+    inline static auto	next (const_pointer s, difference_type& n) NONNULL()
+			    { return const_cast<const_pointer> (zstri::next (const_cast<pointer>(s),n)); }
+    inline static auto	next (pointer s) NONNULL()
+			    { difference_type n = UINT_MAX; return next(s,n); }
+    inline static auto	next (const_pointer s) NONNULL()
+			    { difference_type n = UINT_MAX; return next(s,n); }
+    inline static bool	compare (pointer& s, const_pointer t, difference_type n) NONNULL() {
+			    #if __x86__ && __clang__
+				bool r;
+				__asm__("repz\tcmpsb\n\tsete\t%3":"+D"(s),"+S"(t),"+c"(n),"=r"(r)::"cc","memory");
+				return r;
+			    #elif __x86__
+				bool e,l;
+				__asm__("repz\tcmpsb":"+D"(s),"+S"(t),"+c"(n),"=@cce"(e),"=@ccl"(l)::"memory");
+				return e;
+			    #else
+				return 0 == __builtin_memcmp (s, t, n);
+			    #endif
+			}
+    inline static bool	compare (const_pointer& s, const_pointer t, difference_type n) NONNULL()
+			    { return compare (const_cast<pointer&>(s),t,n); }
+    inline static bool	compare (const void* s, const void* t, difference_type n) NONNULL()
+			    { auto ps = static_cast<const_pointer>(s), pt = static_cast<const_pointer>(t);
+				return compare (ps, pt, n); }
+    constexpr auto	remaining (void) const	{ return _n; }
+    constexpr auto	base (void) const	{ return _s; }
+    constexpr auto&	operator* (void) const	{ return _s; }
+    inline auto&	operator++ (void)	{ _s = next(_s,_n); return *this; }
+    inline auto		operator++ (int)	{ auto o(*this); ++*this; return o; }
+    inline auto&	operator+= (unsigned n)	{ while (n--) ++*this;  return *this; }
+    inline auto		operator+ (unsigned n) const	{ auto r(*this); r += n; return r; }
+    constexpr		operator bool (void) const	{ return remaining(); }
+    constexpr bool	operator== (const zstri& i) const	{ return base() == i.base(); }
+    constexpr bool	operator!= (const zstri& i) const	{ return base() != i.base(); }
+    constexpr bool	operator< (const zstri& i) const	{ return base() < i.base(); }
+    constexpr bool	operator<= (const zstri& i) const	{ return base() <= i.base(); }
+    constexpr bool	operator> (const zstri& i) const	{ return i < *this; }
+    constexpr bool	operator>= (const zstri& i) const	{ return i <= *this; }
+private:
+    pointer		_s;
+    difference_type	_n;
+};
+
+class czstri {
+public:
+    using value_type		= zstri::value_type;
+    using const_pointer		= zstri::const_pointer;
+    using pointer		= const_pointer;
+    using const_reference	= zstri::const_reference;
+    using reference		= const_reference;
+    using difference_type	= zstri::difference_type;
+public:
+    constexpr		czstri (pointer s, difference_type n = UINT_MAX) NONNULL()
+			    :_s(s),_n(n) {}
+    template <difference_type N>
+    constexpr		czstri (const value_type (&a)[N]) : czstri (begin(a),N) {}
+    constexpr		czstri (const zstri& i) : czstri (i.base(),i.remaining()) {}
+    constexpr		czstri (const czstri& i) = default;
+    inline static auto	next (pointer s, difference_type& n) NONNULL()
+			    { return zstri::next (s,n); }
+    inline static bool	compare (pointer& s, pointer t, difference_type n) NONNULL()
+			    { return zstri::compare (s,t,n); }
+    constexpr auto	remaining (void) const	{ return _n; }
+    constexpr auto	base (void) const	{ return _s; }
+    constexpr auto&	operator* (void) const	{ return _s; }
+    inline auto&	operator++ (void)	{ _s = next(_s,_n); return *this; }
+    inline auto		operator++ (int)	{ auto o(*this); ++*this; return o; }
+    inline auto&	operator+= (unsigned n)	{ while (n--) ++*this; return *this; }
+    inline auto		operator+ (unsigned n) const	{ auto r(*this); r += n; return r; }
+    constexpr		operator bool (void) const	{ return remaining(); }
+    constexpr bool	operator== (const czstri& i) const	{ return base() == i.base(); }
+    constexpr bool	operator!= (const czstri& i) const	{ return base() != i.base(); }
+    constexpr bool	operator< (const czstri& i) const	{ return base() < i.base(); }
+    constexpr bool	operator<= (const czstri& i) const	{ return base() <= i.base(); }
+    constexpr bool	operator> (const czstri& i) const	{ return i < *this; }
+    constexpr bool	operator>= (const czstri& i) const	{ return i <= *this; }
+private:
+    pointer		_s;
+    difference_type	_n;
+};
+
+//}}}-------------------------------------------------------------------
+//{{{ Searching algorithms
 
 template <typename I, typename T>
 constexpr auto find (I f, I l, const T& v)
@@ -121,19 +228,8 @@ bool equal_n (I1 i1, size_t n, I2 i2)
 {
     using value1_type = make_unsigned_t<remove_const_t<typename iterator_traits<I1>::value_type>>;
     using value2_type = make_unsigned_t<remove_const_t<typename iterator_traits<I2>::value_type>>;
-    if constexpr (is_trivial<value1_type>::value && is_same<value1_type,value2_type>::value) {
-	#if __x86__ && __clang__
-	    bool r;
-	    __asm__("repz\tcmpsb\n\tsete\t%3":"+D"(i1),"+S"(i2),"+c"(n),"=r"(r)::"cc","memory");
-	    return r;
-	#elif __x86__
-	    bool e,l;
-	    __asm__("repz\tcmpsb":"+D"(i1),"+S"(i2),"+c"(n),"=@cce"(e),"=@ccl"(l)::"memory");
-	    return e;
-	#else
-	    return 0 == __builtin_memcmp (i1, i2, n);
-	#endif
-    }
+    if constexpr (is_trivial<value1_type>::value && is_same<value1_type,value2_type>::value)
+	return zstri::compare (i1, i2, n *= sizeof(value1_type));
     while (n--)
 	if (!(i1 == i2))
 	    return false;
@@ -154,93 +250,6 @@ inline bool equal (I1 i1f, I1 i1l, I2 i2f, I2 i2l)
 template <typename C, typename I>
 inline bool equal (const C& c, I i)
     { return equal_n (begin(c), size(c), i); }
-
-//}}}-------------------------------------------------------------------
-//{{{ zstri
-
-class zstri {
-public:
-    using value_type		= char;
-    using pointer		= char*;
-    using const_pointer		= const char*;
-    using reference		= char&;
-    using const_reference	= const char&;
-    using difference_type	= unsigned;
-public:
-    constexpr		zstri (pointer s, difference_type n = UINT_MAX) NONNULL()
-			    :_s(s),_n(n) {}
-    template <difference_type N>
-    constexpr		zstri (value_type (&a)[N]) :zstri(begin(a),N) {}
-    constexpr		zstri (const zstri& i) = default;
-    inline static auto	next (pointer s, difference_type& n) NONNULL() {
-			    #if __x86__
-			    if (!compile_constant(strlen(s)) || !compile_constant(n))
-				__asm__("repnz scasb":"+D"(s),"+c"(n):"a"(0):"cc","memory");
-			    else
-			    #endif
-			    { auto l = strnlen(s, n); l += !!l; s += l; n -= l; }
-			    return s;
-			}
-    inline static auto	next (const_pointer s, difference_type& n) NONNULL()
-			    { return const_cast<const_pointer> (zstri::next (const_cast<pointer>(s),n)); }
-    inline static auto	next (pointer s) NONNULL()
-			    { difference_type n = UINT_MAX; return next(s,n); }
-    inline static auto	next (const_pointer s) NONNULL()
-			    { difference_type n = UINT_MAX; return next(s,n); }
-    constexpr auto	remaining (void) const	{ return _n; }
-    constexpr auto	base (void) const	{ return _s; }
-    constexpr auto&	operator* (void) const	{ return _s; }
-    inline auto&	operator++ (void)	{ _s = next(_s,_n); return *this; }
-    inline auto		operator++ (int)	{ auto o(*this); ++*this; return o; }
-    inline auto&	operator+= (unsigned n)	{ while (n--) ++*this;  return *this; }
-    inline auto		operator+ (unsigned n) const	{ auto r(*this); r += n; return r; }
-    constexpr		operator bool (void) const	{ return remaining(); }
-    constexpr bool	operator== (const zstri& i) const	{ return base() == i.base(); }
-    constexpr bool	operator!= (const zstri& i) const	{ return base() != i.base(); }
-    constexpr bool	operator< (const zstri& i) const	{ return base() < i.base(); }
-    constexpr bool	operator<= (const zstri& i) const	{ return base() <= i.base(); }
-    constexpr bool	operator> (const zstri& i) const	{ return i < *this; }
-    constexpr bool	operator>= (const zstri& i) const	{ return i <= *this; }
-private:
-    pointer		_s;
-    difference_type	_n;
-};
-
-class czstri {
-public:
-    using value_type		= zstri::value_type;
-    using const_pointer		= zstri::const_pointer;
-    using pointer		= const_pointer;
-    using const_reference	= zstri::const_reference;
-    using reference		= const_reference;
-    using difference_type	= zstri::difference_type;
-public:
-    constexpr		czstri (pointer s, difference_type n = UINT_MAX) NONNULL()
-			    :_s(s),_n(n) {}
-    template <difference_type N>
-    constexpr		czstri (const value_type (&a)[N]) : czstri (begin(a),N) {}
-    constexpr		czstri (const zstri& i) : czstri (i.base(),i.remaining()) {}
-    constexpr		czstri (const czstri& i) = default;
-    inline static auto	next (pointer s, difference_type& n) NONNULL()
-			    { return zstri::next (s,n); }
-    constexpr auto	remaining (void) const	{ return _n; }
-    constexpr auto	base (void) const	{ return _s; }
-    constexpr auto&	operator* (void) const	{ return _s; }
-    inline auto&	operator++ (void)	{ _s = next(_s,_n); return *this; }
-    inline auto		operator++ (int)	{ auto o(*this); ++*this; return o; }
-    inline auto&	operator+= (unsigned n)	{ while (n--) ++*this; return *this; }
-    inline auto		operator+ (unsigned n) const	{ auto r(*this); r += n; return r; }
-    constexpr		operator bool (void) const	{ return remaining(); }
-    constexpr bool	operator== (const czstri& i) const	{ return base() == i.base(); }
-    constexpr bool	operator!= (const czstri& i) const	{ return base() != i.base(); }
-    constexpr bool	operator< (const czstri& i) const	{ return base() < i.base(); }
-    constexpr bool	operator<= (const czstri& i) const	{ return base() <= i.base(); }
-    constexpr bool	operator> (const czstri& i) const	{ return i < *this; }
-    constexpr bool	operator>= (const czstri& i) const	{ return i <= *this; }
-private:
-    pointer		_s;
-    difference_type	_n;
-};
 
 //}}}-------------------------------------------------------------------
 //{{{ scope_exit
