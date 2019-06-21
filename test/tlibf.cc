@@ -121,6 +121,21 @@ void LibTestApp::test_utility (void) // static
     printf ("\nequal(abcd,abcd) = %u\n", equal("abcd","abcd"));
     printf ("equal(abcd,acbd) = %u\n", equal("abcd","acbd"));
     printf ("equal(,) = %u\n", equal("",""));
+
+    static constexpr const char mzstr[] = "one\0" "two\0" "three\0" "four\0" "five";
+    constexpr auto mzstrn = czstri::nstrs(mzstr);
+    printf ("mzstr:");
+    for (czstri i (mzstr); i; ++i)
+	printf (" %s", *i);
+    printf ("\nmzstr.nstrs = %u\n", mzstrn);
+    printf ("mzstr.nstrs = %u\n", zstri::nstrs(begin(mzstr),size(mzstr)));
+    printf ("mzstr[0] = %s\n", czstri::at(0,mzstr));
+    printf ("mzstr[2] = %s\n", czstri::at(2,mzstr));
+    printf ("mzstr[4] = %s\n", czstri::at(4,mzstr));
+    printf ("mzstr[\"one\"] = %u\n", czstri::index("one",mzstr,mzstrn));
+    printf ("mzstr[\"four\"] = %u\n", czstri::index("four",mzstr,mzstrn));
+    printf ("mzstr[\"five\"] = %u\n", czstri::index("five",mzstr,mzstrn));
+    printf ("mzstr[\"eight\"] = %u\n", czstri::index("eight",mzstr,mzstrn));
 }
 //}}}
 //{{{ test_memlink

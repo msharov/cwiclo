@@ -10,6 +10,27 @@
 namespace cwiclo {
 #ifndef UC_VERSION
 
+zstri::index_type zstri::nstrs (const_pointer p, difference_type n) // static
+{
+    index_type ns = 0;
+    for (czstri i (p,n); i; ++i) ++ns;
+    return ns;
+}
+
+zstri::index_type zstri::index (const_pointer k, const_pointer p, difference_type n, index_type nf) // static
+{
+    difference_type ksz = strlen(k)+1;
+    for (index_type i = 0; n; ++i) {
+	auto np = next (p,n);
+	if (np-p == ksz && compare (p, k, ksz))
+	    return i;
+	p = np;
+    }
+    return nf;
+}
+
+//----------------------------------------------------------------------
+
 const char* executable_in_path (const char* efn, char* exe, size_t exesz)
 {
     if (efn[0] == '/' || (efn[0] == '.' && (efn[1] == '/' || efn[1] == '.'))) {
