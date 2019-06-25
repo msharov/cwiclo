@@ -74,8 +74,7 @@ public:
 			    }
 			    return n;
 			}
-    static pointer	at (index_type i, pointer p, difference_type n) NONNULL()
-			    { return *(zstri(p,n) += i); }
+    static pointer	at (index_type i, pointer p, difference_type n) NONNULL();
     template <difference_type N>
     static pointer	at (index_type i, const value_type (&a)[N])
 			    { return at (i, begin(a), size(a)); }
@@ -128,7 +127,7 @@ public:
     static constexpr index_type	nstrs (const value_type (&a)[N])
 			    { return zstri::nstrs (a); }
     static pointer	at (index_type i, pointer p, difference_type n) NONNULL()
-			    { return *(czstri(p,n) += i); }
+			    { return zstri::at (i,const_cast<zstri::pointer>(p),n); }
     template <difference_type N>
     static pointer	at (index_type i, const value_type (&a)[N])
 			    { return at (i, begin(a), size(a)); }

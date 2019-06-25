@@ -17,6 +17,12 @@ zstri::index_type zstri::nstrs (const_pointer p, difference_type n) // static
     return ns;
 }
 
+zstri::pointer zstri::at (index_type i, pointer p, difference_type n) // static
+{
+    assert (i < nstrs(p,n) && "zstri index out of range");
+    return *(zstri(p,n) += i);
+}
+
 zstri::index_type zstri::index (const_pointer k, const_pointer p, difference_type n, index_type nf) // static
 {
     difference_type ksz = strlen(k)+1;
