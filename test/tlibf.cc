@@ -482,7 +482,7 @@ void LibTestApp::test_string (void) // static
     auto poundfound = s1.find ("#");
     if (poundfound)
 	printf ("# found at\t%s\n", poundfound);
-    printf ("[456] found at\t%s\n", s1.find_first_of ("456"));
+    printf ("[456] found at\t%s\n", s1.find_first_of ("456",s1.iat(2)));
 
     s2.clear();
     assert (!*s2.end());
