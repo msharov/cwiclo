@@ -50,7 +50,7 @@ int string::appendf (const char* fmt, ...)
 
 int string::assignv (const char* fmt, va_list args)
 {
-    resize(0);
+    clear();
     return insertv (begin(), fmt, args);
 }
 

@@ -64,7 +64,8 @@ public:
     inline constexpr void	link (const_pointer p, size_type n, bool z)	{ link (const_cast<pointer>(p), n, z); }
     inline constexpr void	link (const cmemlink& v)	{ link (v.begin(), v.size(), v.zero_terminated()); }
     inline constexpr void	resize (size_type sz)		{ _size = sz; }
-    inline constexpr void	clear (void)			{ resize(0); }
+    inline constexpr void	shrink (size_type sz)		{ assert (sz <= max(capacity(),size())); resize (sz); }
+    inline constexpr void	clear (void)			{ shrink (0); }
     void		link_read (istream& is, size_type elsize = sizeof(value_type));
     inline void		read (istream& is, size_type elsize = sizeof(value_type))	{ link_read (is, elsize); }
     void		write (ostream& os, size_type elsize = sizeof(value_type)) const;
@@ -155,7 +156,6 @@ public:
     inline auto&		operator= (memblock&& v)	{ assign (move(v)); return *this; }
     void			reserve (size_type sz);
     void			resize (size_type sz);
-    inline void			clear (void)			{ resize(0); }
     inline void			copy_link (void)		{ resize (size()); }
     iterator			insert (const_iterator start, size_type n);
     iterator			insert (const_iterator ip, const_pointer s, size_type n);
@@ -208,6 +208,7 @@ public:
     using memblock::link;
     using memblock::unlink;
     using memblock::manage;
+    using memblock::shrink;
     using memblock::erase;
     using memblock::write;
     using memblock::write_file;
@@ -227,7 +228,6 @@ public:
     inline void			assign (const cmemlink& v)	{ assign (v.data(), v.size()); }
     inline void			assign (const memblaz& v)	{ assign (v.data(), v.size()); }
     inline constexpr void	assign (memblaz&& v)		{ swap (move(v)); }
-    constexpr void		clear (void)			{ shrink(0); }
     constexpr auto&		operator[] (size_type i)	{ return at (i); }
     constexpr auto&		operator[] (size_type i) const	{ return at (i); }
     inline auto&		operator= (const cmemlink& v)	{ assign (v); return *this; }
@@ -239,9 +239,8 @@ public:
     inline bool			operator!= (const memblaz& v) const	{ return memblock::operator!= (v); }
     inline constexpr const memblock&	mb (void) const			{ return *this; }
     inline void			copy_link (void)		{ resize (size()); }
-    void			allocate (size_type sz)	{ assert (!capacity()); memblock::resize(sz); }
-    inline constexpr void	shrink (size_type sz)	{ assert (sz <= capacity()); memlink::resize(sz); }
-    inline constexpr void	wipe (void)		{ zero_fill_n (data(), capacity()); }
+    void			allocate (size_type sz)		{ assert (!capacity()); memblock::resize(sz); }
+    inline constexpr void	wipe (void)			{ zero_fill_n (data(), capacity()); }
     void			reserve (size_type sz);
     void			resize (size_type sz);
     iterator			insert (const_iterator start, size_type n);
