@@ -170,19 +170,17 @@ mrid_t App::allocate_mrid (mrid_t creator)
 	assert (id <= mrid_Last && "mrid_t address space exhausted; please ensure somebody is freeing them");
 	error ("no more mrids");
 	return id;
-    } else if (id >= _creators.size()) {
+    } else if (id == _creators.size()) {
 	_msgers.push_back (nullptr);
 	_creators.push_back (creator);
-    } else {
-	assert (!_msgers[id]);
+    } else
 	_creators[id] = creator;
-    }
     return id;
 }
 
 void App::free_mrid (mrid_t id)
 {
-    assert (valid_msger_id(id));
+    assert (valid_msger_id (id));
     auto m = _msgers[id];
     if (!m && id == _msgers.size()-1) {
 	DEBUG_PRINTF ("mrid %hu deallocated\n", id);
@@ -200,9 +198,10 @@ void App::free_mrid (mrid_t id)
 
 mrid_t App::register_singleton_msger (Msger* m)
 {
-    _msgers.push_back (m);
-    _creators.push_back (mrid_App);
-    return _msgers.size()-1;
+    auto id = allocate_mrid (mrid_App);
+    if (id <= mrid_Last)
+	_msgers[id] = m;
+    return id;
 }
 
 Msger* App::create_msger_with (const Msg::Link& l, iid_t iid [[maybe_unused]], Msger::pfn_factory_t fac) // static
