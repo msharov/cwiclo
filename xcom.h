@@ -156,7 +156,7 @@ public:
     static Extern*	lookup_by_id (mrid_t id);
     static Extern*	lookup_by_imported (iid_t id);
     static Extern*	lookup_by_relay_id (mrid_t rid);
-    mrid_t		register_relay (const COMRelay* relay);
+    mrid_t		register_relay (COMRelay* relay);
     void		unregister_relay (const COMRelay* relay);
     inline void		Extern_open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide side);
     void		Extern_close (void);
@@ -223,12 +223,16 @@ private:
     //}}}2--------------------------------------------------------------
     //{{{2 RelayProxy
     struct RelayProxy {
-	const COMRelay*	pRelay;
+	COMRelay*	pRelay;
 	PCOM		relay;
 	mrid_t		extid;
     public:
 	constexpr RelayProxy (mrid_t src, mrid_t dest, mrid_t eid)
 	    : pRelay(), relay(src,dest), extid(eid) {}
+	~RelayProxy (void) {
+	    if (pRelay)	// Outgoing connections do not create a link from relay to extern and so need to be notified explicitly of extern's destruction.
+		pRelay->on_msger_destroyed (relay.src());
+	}
 	RelayProxy (const RelayProxy&) = delete;
 	void operator= (const RelayProxy&) = delete;
     };

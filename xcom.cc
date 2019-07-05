@@ -246,7 +246,7 @@ Extern::RelayProxy* Extern::relay_proxy_by_extid (mrid_t extid)
 	    { return r.extid == extid; });
 }
 
-mrid_t Extern::register_relay (const COMRelay* relay)
+mrid_t Extern::register_relay (COMRelay* relay)
 {
     auto rp = relay_proxy_by_id (relay->msger_id());
     if (!rp)
@@ -682,8 +682,8 @@ COMRelay::~COMRelay (void)
     // 2. The remote object is destroyed. The relay is marked unused in
     //    COMRelay_COM_delete and the extern pointer is reset to prevent
     //    further messages to remote object. Here, no message is sent.
-    // 3. The Extern object is destroyed. pExtern is reset in
-    //    COMRelay_ObjectDestroyed, and no message is sent here.
+    // 3. The Extern object is destroyed. pExtern is reset in the dtor of
+    //    RelayProxy in the Extern object, calling COMRelay on_msger_destroyed.
     if (_pExtern) {
 	if (_extid)
 	    _pExtern->queue_outgoing (PCOM::delete_msg(), _extid);
