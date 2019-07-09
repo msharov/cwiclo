@@ -209,6 +209,7 @@ public:
     using memblock::unlink;
     using memblock::manage;
     using memblock::shrink;
+    using memblock::clear;
     using memblock::erase;
     using memblock::write;
     using memblock::write_file;

@@ -55,7 +55,7 @@ public:
     void		on_msger_destroyed (mrid_t id) override;
     inline void		COM_error (const string_view& errmsg);
     inline void		COM_export (const string_view& elist);
-    inline void		COM_delete (void);
+    void		COM_delete (void);
 private:
     Extern*	_pExtern;	// Outgoing connection object
     PCOM	_localp;	// Proxy to the local object
@@ -229,10 +229,6 @@ private:
     public:
 	constexpr RelayProxy (mrid_t src, mrid_t dest, mrid_t eid)
 	    : pRelay(), relay(src,dest), extid(eid) {}
-	~RelayProxy (void) {
-	    if (pRelay)	// Outgoing connections do not create a link from relay to extern and so need to be notified explicitly of extern's destruction.
-		pRelay->on_msger_destroyed (relay.src());
-	}
 	RelayProxy (const RelayProxy&) = delete;
 	void operator= (const RelayProxy&) = delete;
     };

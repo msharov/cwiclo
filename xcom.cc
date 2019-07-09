@@ -218,6 +218,12 @@ Extern::~Extern (void)
 {
     Extern_close();
     remove (extern_list(), this);
+    // Outgoing connections do not create a link from relay to extern and so need to be notified explicitly of extern's destruction.
+    for (auto& rp : _relays) {
+	if (rp.pRelay)
+	    rp.pRelay->on_msger_destroyed (msger_id());
+	rp.pRelay = nullptr;
+    }
 }
 
 bool Extern::dispatch (Msg& msg)
@@ -684,11 +690,9 @@ COMRelay::~COMRelay (void)
     //    further messages to remote object. Here, no message is sent.
     // 3. The Extern object is destroyed. pExtern is reset in the dtor of
     //    RelayProxy in the Extern object, calling COMRelay on_msger_destroyed.
-    if (_pExtern) {
-	if (_extid)
-	    _pExtern->queue_outgoing (PCOM::delete_msg(), _extid);
-	_pExtern->unregister_relay (this);
-    }
+    if (_pExtern && _extid)
+	_pExtern->queue_outgoing (PCOM::delete_msg(), _extid);
+    COM_delete();
     _pExtern = nullptr;
     _extid = 0;
 }
@@ -782,6 +786,8 @@ void COMRelay::COM_export (const string_view&)
 void COMRelay::COM_delete (void)
 {
     // COM_delete indicates that the remote object has been destroyed.
+    if (_pExtern)
+	_pExtern->unregister_relay (this);
     _pExtern = nullptr;	// No further messages are to be sent.
     _extid = 0;
     set_unused();	// The relay and local object are to be destroyed.
