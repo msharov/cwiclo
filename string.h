@@ -85,8 +85,8 @@ public:
     inline auto		replace (const_iterator f, const_iterator l, const string& s)			{ return replace (f, l, s.begin(), s.end()); }
     iterator		replace (const_iterator f, const_iterator l, size_type n, value_type c);
 
-    constexpr auto	find (const_reference c, const_iterator fi) const	{ return const_iterator (__builtin_strchr (fi, c)); }
-    constexpr auto	find (const_pointer s, const_iterator fi) const		{ return const_iterator (__builtin_strstr (fi, s)); }
+    constexpr auto	find (const_reference c, const_iterator fi) const	{ return fi ? const_iterator (__builtin_strchr (fi, c)) : fi; }
+    constexpr auto	find (const_pointer s, const_iterator fi) const		{ return fi ? const_iterator (__builtin_strstr (fi, s)) : fi; }
     constexpr auto	find (const string& s, const_iterator fi) const		{ return find (s.c_str(), fi); }
     constexpr auto	find (const_reference c) const				{ return find (c, begin()); }
     constexpr auto	find (const_pointer s) const				{ return find (s, begin()); }
@@ -99,7 +99,7 @@ public:
     constexpr auto	find (const_pointer s)					{ return UNCONST_MEMBER_FN (find,s); }
     constexpr auto	find (const string& s)					{ return UNCONST_MEMBER_FN (find,s); }
 
-    inline auto		rfind (const_reference c, const_iterator fi) const	{ return const_iterator (memrchr (begin(), c, fi-begin())); }
+    inline auto		rfind (const_reference c, const_iterator fi) const	{ return fi ? const_iterator (memrchr (begin(), c, fi-begin())) : fi; }
     const_iterator	rfind (const_pointer s, const_iterator fi) const;
     inline auto		rfind (const string& s, const_iterator fi) const	{ return rfind (s.c_str(), fi); }
     inline auto		rfind (const_reference c) const				{ return rfind (c, end()); }
@@ -113,11 +113,11 @@ public:
     inline auto		rfind (const_pointer s)					{ return UNCONST_MEMBER_FN (rfind,s); }
     inline auto		rfind (const string& s)					{ return UNCONST_MEMBER_FN (rfind,s); }
 
-    constexpr auto	find_first_of (const_pointer s, const_iterator fi)const	{ auto rsz = __builtin_strcspn (fi, s); return fi+rsz < end() ? fi+rsz : nullptr; }
+    constexpr auto	find_first_of (const_pointer s, const_iterator fi)const	{ if (!fi) return fi; auto rsz = __builtin_strcspn (fi, s); return fi+rsz < end() ? fi+rsz : nullptr; }
     constexpr auto	find_first_of (const string& s, const_iterator fi)const	{ return find_first_of (s.c_str(), fi); }
     constexpr auto	find_first_of (const_pointer s) const			{ return find_first_of (s, begin()); }
     constexpr auto	find_first_of (const string& s) const			{ return find_first_of (s, begin()); }
-    constexpr auto	find_first_not_of (const_pointer s, const_iterator fi) const	{ auto rsz = __builtin_strspn (fi, s); return fi+rsz < end() ? fi+rsz : nullptr; }
+    constexpr auto	find_first_not_of (const_pointer s, const_iterator fi) const	{ if (!fi) return fi; auto rsz = __builtin_strspn (fi, s); return fi+rsz < end() ? fi+rsz : nullptr; }
     constexpr auto	find_first_not_of (const string& s, const_iterator fi) const	{ return find_first_not_of (s.c_str(), fi); }
     constexpr auto	find_first_not_of (const_pointer s) const		{ return find_first_not_of (s, begin()); }
     constexpr auto	find_first_not_of (const string& s) const		{ return find_first_not_of (s, begin()); }

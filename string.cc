@@ -90,8 +90,10 @@ string::iterator string::replace (const_iterator f, const_iterator l, size_type 
 
 auto string::rfind (const_pointer s, const_iterator fi) const -> const_iterator
 {
-    fi -= strlen(s);
     const_iterator r = nullptr;
+    if (!fi)
+	return r;
+    fi -= strlen(s);
     for (auto h = begin(); (h = strstr(h,s)) && h < fi; ++h)
 	r = h;
     return r;
