@@ -75,13 +75,13 @@ public:
 			    return n;
 			}
     static pointer	at (index_type i, pointer p, difference_type n) NONNULL();
-    template <difference_type N>
-    static pointer	at (index_type i, const value_type (&a)[N])
-			    { return at (i, begin(a), size(a)); }
+    template <typename I, difference_type N>
+    static pointer	at (I i, const value_type (&a)[N])
+			    { return at (index_type(i), begin(a), size(a)); }
     static index_type	index (const_pointer k, const_pointer p, difference_type n, index_type nf) NONNULL();
-    template <difference_type N>
-    static index_type	index (const_pointer k, const value_type (&a)[N], index_type nf)
-			    { return index (k, begin(a), size(a), nf); }
+    template <typename I, difference_type N>
+    static I		index (const_pointer k, const value_type (&a)[N], I nf)
+			    { return I (index (k, begin(a), size(a), index_type(nf))); }
 private:
     pointer		_s;
     difference_type	_n;
@@ -128,14 +128,14 @@ public:
 			    { return zstri::nstrs (a); }
     static pointer	at (index_type i, pointer p, difference_type n) NONNULL()
 			    { return zstri::at (i,const_cast<zstri::pointer>(p),n); }
-    template <difference_type N>
-    static pointer	at (index_type i, const value_type (&a)[N])
-			    { return at (i, begin(a), size(a)); }
+    template <typename I, difference_type N>
+    static pointer	at (I i, const value_type (&a)[N])
+			    { return at (index_type(i), begin(a), size(a)); }
     static index_type	index (const_pointer k, const_pointer p, difference_type n, index_type nf) NONNULL()
 			    { return zstri::index (k,p,n,nf); }
-    template <difference_type N>
-    static index_type	index (const_pointer k, const value_type (&a)[N], index_type nf)
-			    { return index (k, begin(a), size(a), nf); }
+    template <typename I, difference_type N>
+    static I		index (const_pointer k, const value_type (&a)[N], I nf)
+			    { return I (index (k, begin(a), size(a), index_type(nf))); }
 private:
     pointer		_s;
     difference_type	_n;
