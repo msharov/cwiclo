@@ -130,20 +130,10 @@ public:
 					is >> ios::talign<size_type>();
 				}
     template <typename Stm>
-    constexpr void		write (Stm& os) const {
+    inline constexpr void	write (Stm& os) const {
 				    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
 					return _data.write (os, sizeof(T));
-				    os << size();
-				    if constexpr (stream_align<T>::value > stream_align<size_type>::value)
-					os << ios::talign<T>();
-				    if constexpr (is_trivially_copyable<T>::value) {
-					if constexpr (Stm::is_writing)
-					    copy_n (begin(), size(), os.template ptr<T>());
-					os.skip (bsize());
-				    } else for (const auto& i : *this)
-					os << i;
-				    if constexpr (stream_align<T>::value < stream_align<size_type>::value)
-					os << ios::talign<size_type>();
+				    os.write_array (data(), size());
 				}
 protected:
     inline auto			insert_hole (const_iterator ip, size_type n)

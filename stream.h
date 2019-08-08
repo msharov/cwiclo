@@ -187,6 +187,12 @@ public:
 				}
     template <typename T>
     inline constexpr auto&	operator<< (const T& v) { write(v); return *this; }
+    template <typename T>
+    constexpr void		write_array (const T* a, uint32_t n);
+    template <typename T, cmemlink::size_type N>
+    constexpr void		write_array (const T (&a)[N]) { write_array (ARRAY_BLOCK(a)); }
+    template <typename T, cmemlink::size_type N>
+    inline constexpr auto&	operator<< (const T (&a)[N]) { write_array(a); return *this; }
 private:
     inline constexpr const_pointer alignptr (streamsize g) const __restrict__
 				    { return const_pointer (ceilg (uintptr_t(_p), g)); }
@@ -247,6 +253,12 @@ public:
 				}
     template <typename T>
     inline constexpr auto&	operator<< (const T& v) { write(v); return *this; }
+    template <typename T>
+    constexpr void		write_array (const T* a [[maybe_unused]], uint32_t n);
+    template <typename T, cmemlink::size_type N>
+    constexpr void		write_array (const T (&a)[N]) { write_array (ARRAY_BLOCK(a)); }
+    template <typename T, cmemlink::size_type N>
+    inline constexpr auto&	operator<< (const T (&a)[N]) { write_array(a); return *this; }
 private:
     streampos			_sz;
 };
@@ -319,5 +331,36 @@ private:
 };
 
 } // namespace ios
+//}}}-------------------------------------------------------------------
+//{{{ stream write_array
+
+template <typename T>
+constexpr void ostream::write_array (const T* a, uint32_t n)
+{
+    write (n);
+    if constexpr (stream_align<T>::value > alignof(n))
+	align (stream_align<T>::value);
+    if constexpr (is_trivially_copyable<T>::value)
+	seek (pointer_cast<value_type> (copy_n (a, n, ptr<T>())));
+    else for (auto i = 0u; i < n; ++i)
+	write (a[i]);
+    if constexpr (stream_align<T>::value < alignof(n))
+	align (alignof(n));
+}
+
+template <typename T>
+constexpr void sstream::write_array (const T* a [[maybe_unused]], uint32_t n)
+{
+    write (n);
+    if constexpr (stream_align<T>::value > alignof(n))
+	align (stream_align<T>::value);
+    if constexpr (is_trivially_copyable<T>::value)
+	skip (n*sizeof(T));
+    else for (auto i = 0u; i < n; ++i)
+	write (a[i]);
+    if constexpr (stream_align<T>::value < alignof(n))
+	align (alignof(n));
+}
+
 } // namespace cwiclo
 //}}}-------------------------------------------------------------------

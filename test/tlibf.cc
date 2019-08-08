@@ -588,7 +588,8 @@ void LibTestApp::test_streams (void) // static
     ss << ios::talign<double>() << d;
     ss << si;
     ss << usi;
-    static const char hello[] = "Hello world!";
+    static constexpr const char hello[] = "Hello world!";
+    ss << hello;
     ss.write_strz (hello);
 
     memblock b;
@@ -607,6 +608,7 @@ void LibTestApp::test_streams (void) // static
     os << ios::talign<double>() << d;
     os << si;
     os << usi;
+    os << hello;
     os.write_strz (hello);
     if (!os.remaining())
 	printf ("Correct number of bytes written\n");
@@ -632,6 +634,8 @@ void LibTestApp::test_streams (void) // static
     is >> ios::talign<double>() >> d;
     is >> si;
     is >> usi;
+    string shello;
+    is >> shello;
     auto rhello = is.read_strz();
     if (!is.remaining())
 	printf ("Correct number of bytes read\n");
@@ -650,9 +654,11 @@ void LibTestApp::test_streams (void) // static
 	"double:  %.15f\n"
 	"short:   0x%04X\n"
 	"u_short: 0x%04X\n"
+	"shello:  %s\n"
 	"hello:   %s\n",
 	static_cast<int>(c), static_cast<int>(uc), static_cast<int>(bv),
-	i, ui, li, uli, f, d, static_cast<int>(si), static_cast<int>(usi), rhello);
+	i, ui, li, uli, f, d, static_cast<int>(si), static_cast<int>(usi),
+	shello.c_str(), rhello);
 
     if (isatty (STDOUT_FILENO)) {
 	printf ("\nBinary dump:\n");
