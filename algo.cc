@@ -10,20 +10,20 @@
 namespace cwiclo {
 #ifndef UC_VERSION
 
-zstri::index_type zstri::nstrs (const_pointer p, difference_type n) // static
+zstr::index_type zstr::nstrs (const_pointer p, difference_type n) // static
 {
     index_type ns = 0;
-    for (czstri i (p,n); i; ++i) ++ns;
+    for (auto i = in(p,n); i; ++i) ++ns;
     return ns;
 }
 
-zstri::pointer zstri::at (index_type i, pointer p, difference_type n) // static
+zstr::const_pointer zstr::at (index_type i, const_pointer p, difference_type n) // static
 {
-    assert (i < nstrs(p,n) && "zstri index out of range");
-    return *(zstri(p,n) += i);
+    assert (i < nstrs(p,n) && "zstr index out of range");
+    return *(in(p,n) += i);
 }
 
-zstri::index_type zstri::index (const_pointer k, const_pointer p, difference_type n, index_type nf) // static
+zstr::index_type zstr::index (const_pointer k, const_pointer p, difference_type n, index_type nf) // static
 {
     difference_type ksz = strlen(k)+1;
     for (index_type i = 0; n; ++i) {

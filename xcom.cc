@@ -323,7 +323,7 @@ void Extern::ExtMsg::write_iovecs (iovec* iov, streamsize bw)
 
 methodid_t Extern::ExtMsg::parse_method (void) const
 {
-    czstri mi (_hbuf, _h.hsz-sizeof(_h));
+    zstr::cii mi (_hbuf, _h.hsz-sizeof(_h));
     auto ifacename = *mi;
     auto methodname = *++mi;
     if (!mi.remaining())
