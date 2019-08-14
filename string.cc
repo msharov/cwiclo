@@ -8,6 +8,13 @@
 
 namespace cwiclo {
 
+string::iterator string::insert (const_iterator ip, wchar_t c)
+{
+    auto ioi = utf8::out (memblock::insert (ip, utf8::obytes(c)));
+    *ioi++ = c;
+    return ioi.base();
+}
+
 int string::insertv (const_iterator cip, const char* fmt, va_list args)
 {
     auto ip = p2i (cip);
@@ -76,7 +83,7 @@ bool string::operator== (const_pointer s) const
     return strlen(s) == size() && 0 == strcmp (c_str(), s);
 }
 
-string::iterator string::replace (const_iterator f, const_iterator l, size_type n, value_type c)
+string::iterator string::replace (const_iterator f, const_iterator l, value_type c, size_type n)
 {
     auto dsz = difference_type(n) - (l-f);
     if (dsz > 0)

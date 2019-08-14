@@ -142,6 +142,141 @@ private:
 };
 
 //}}}-------------------------------------------------------------------
+//{{{ utf8
+// stream iterators that read and write UTF-8 encoded characters.
+// The encoding is defined as follows:
+//
+// U-00000000 - U-0000007F: 0xxxxxxx
+// U-00000080 - U-000007FF: 110xxxxx 10xxxxxx
+// U-00000800 - U-0000FFFF: 1110xxxx 10xxxxxx 10xxxxxx
+// U-00010000 - U-001FFFFF: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+// U-00200000 - U-03FFFFFF: 111110xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+// U-04000000 - U-7FFFFFFF: 1111110x 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+// U-80000000 - U-FFFFFFFF: 11111110 100000xx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx 10xxxxxx
+
+//----------------------------------------------------------------------
+
+class utf8 {
+public:
+    //{{{2 Byte counters -----------------------------------------------
+
+    // Returns the number of bytes in the character whose first char is c
+    static constexpr auto ibytes (char c)
+    {
+	// Count the leading bits. Header bits are 1 * nBytes followed by a 0.
+	//	0 - single byte character. Take 7 bits (0xFF >> 1)
+	//	1 - error, in the middle of the character. Take 6 bits (0xFF >> 2)
+	//	    so you will keep reading invalid entries until you hit the next character.
+	//	>2 - multibyte character. Take remaining bits, and get the next bytes.
+	//
+	unsigned char mask = 0x80;
+	unsigned n = 0;
+	for (; c & mask; ++n)
+	    mask >>= 1;
+	return n+!n; // A sequence is always at least 1 byte.
+    }
+
+    /// Returns the number of bytes required to UTF-8 encode v.
+    static constexpr auto obytes (wchar_t v)
+	{ return unsigned(v) < 0x80 ? 1u : (log2p1(v)+3)/5u; }
+
+    static constexpr auto obytes (const wchar_t* f, const wchar_t* l)
+    {
+	auto n = 0u;
+	for (; f < l; ++f)
+	    n += obytes(*f);
+	return n;
+    }
+
+    template <size_t N>
+    static constexpr auto obytes (const wchar_t (&a)[N])
+	{ return obytes (begin(a), end(a)); }
+
+    //}}}2--------------------------------------------------------------
+    //{{{2 Input iterator
+
+    template <typename I>
+    class ii {
+    public:
+	using value_type	= typename iterator_traits<I>::value_type;
+	using pointer		= typename iterator_traits<I>::pointer;
+	using reference		= typename iterator_traits<I>::reference;
+	using difference_type	= typename iterator_traits<I>::difference_type;
+    public:
+	explicit constexpr	ii (const I& i)		:_i(i) {}
+	constexpr auto		base (void) const	{ return _i; }
+	constexpr auto		operator* (void) const {
+				    auto n = ibytes (*_i);
+				    wchar_t v = *_i & (0xff >> n);	// First byte contains bits after the header.
+				    for (auto i = _i; --n && *++i;)	// Each subsequent byte has 6 bits.
+					v = (v << 6) | (*i & 0x3f);
+				    return v;
+				}
+	constexpr auto&		operator++ (void)	{ _i += ibytes(*_i); return *this; }
+	constexpr auto		operator++ (int)	{ ii v (*this); operator++(); return v; }
+	constexpr auto&		operator+= (unsigned n)	{ while (n--) operator++(); return *this; }
+	constexpr auto		operator+ (unsigned n)	{ ii v (*this); return v += n; }
+	constexpr bool		operator== (const ii& i) const	{ return _i == i._i; }
+	constexpr bool		operator== (const I& i) const	{ return _i == i; }
+	constexpr bool		operator!= (const ii& i) const	{ return _i != i._i; }
+	constexpr bool		operator!= (const I& i) const	{ return _i != i; }
+	constexpr bool		operator< (const ii& i) const	{ return _i < i._i; }
+	constexpr bool		operator< (const I& i) const	{ return _i < i; }
+	constexpr auto		operator- (const ii& i) const {
+				    difference_type d = 0;
+				    for (auto f (i); f < *this; ++f,++d) {}
+				    return d;
+				}
+    private:
+	I			_i;
+    };
+
+    template <typename I> static constexpr auto in (const I& i) { return ii<I>(i); }
+
+    //}}}2--------------------------------------------------------------
+    //{{{2 Output iterator
+
+    template <typename O>
+    class oi {
+    public:
+	using value_type	= typename iterator_traits<O>::value_type;
+	using pointer		= typename iterator_traits<O>::pointer;
+	using reference		= typename iterator_traits<O>::reference;
+	using difference_type	= typename iterator_traits<O>::difference_type;
+    public:
+	explicit constexpr	oi (const O& o) : _o(o) {}
+	constexpr auto&		operator= (wchar_t v) {
+				    auto n = obytes (v);
+				    if (n <= 1) // If only one byte, there is no header.
+					*_o++ = v;
+				    else {	// Write the bits 6 bits at a time, except for the first one.
+					wchar_t btw = n * 6;
+					*_o++ = ((v >> (btw -= 6)) & 0x3f) | (0xff << (8 - n));
+					while (btw)
+					    *_o++ = ((v >> (btw -= 6)) & 0x3f) | 0x80;
+				    }
+				    return *this;
+				}
+	constexpr auto&		base (void) const		{ return _o; }
+	constexpr auto&		operator* (void)		{ return *this; }
+	constexpr auto&		operator++ (void)		{ return *this; }
+	constexpr auto&		operator++ (int)		{ return *this; }
+	constexpr bool		operator== (const oi& o) const	{ return _o == o._o; }
+	constexpr bool		operator== (const O& o) const	{ return _o == o; }
+	constexpr bool		operator!= (const oi& o) const	{ return _o != o._o; }
+	constexpr bool		operator!= (const O& o) const	{ return _o != o; }
+	constexpr bool		operator< (const oi& o) const	{ return _o < o._o; }
+	constexpr bool		operator< (const O& o) const	{ return _o < o; }
+    private:
+	O			_o;
+    };
+
+    template <typename O> static constexpr auto out (const O& o) { return oi<O>(o); }
+
+    //}}}2--------------------------------------------------------------
+};
+
+//}}}-------------------------------------------------------------------
 //{{{ Searching algorithms
 
 template <typename I, typename T>

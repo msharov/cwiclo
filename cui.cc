@@ -190,7 +190,7 @@ void CursesWindow::Editbox::on_key (key_t k)
     else if (k == KEY_DC && _cpos < _text.size())
 	_text.erase (_text.iat(_cpos));
     else if (isprint(k))
-	_text.insert (_text.iat(_cpos++), k);
+	_text.insert (_text.iat(_cpos++), char(k));
     posclip();
 }
 

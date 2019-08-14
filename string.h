@@ -21,22 +21,31 @@ public:
     constexpr auto	c_str (void) const				{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
     constexpr auto&	back (void) const				{ return at(size()-1); }
     constexpr auto&	back (void)					{ return at(size()-1); }
-    inline void		push_back (const_reference c)			{ resize(size()+1); back() = c; }
-    auto		insert (const_iterator ip, const_reference c, size_type n = 1)	{ return fill_n (memblock::insert (ip, n), n, c); }
+    constexpr auto	wbegin (void) const				{ return utf8::in (begin()); }
+    constexpr auto	wend (void) const				{ return utf8::in (end()); }
+    constexpr auto	wiat (size_type i) const			{ return wbegin()+i; }
+    constexpr size_type	length (void) const				{ return wend()-wbegin(); }
+    inline void		push_back (char c)				{ resize(size()+1); back() = c; }
+    auto		insert (const_iterator ip, value_type c, size_type n = 1)	{ return fill_n (memblock::insert (ip, n), n, c); }
     inline auto		insert (const_iterator ip, const_pointer s, size_type n)	{ return memblock::insert (ip, s, n); }
     inline auto		insert (const_iterator ip, const string& s)			{ return insert (ip, s.c_str(), s.size()); }
     inline auto		insert (const_iterator ip, const_pointer s)			{ return insert (ip, s, strlen(s)); }
     inline auto		insert (const_iterator ip, const_pointer f, const_iterator l)	{ return insert (ip, f, l-f); }
+    iterator		insert (const_iterator ip, wchar_t c);
     int			insertv (const_iterator ip, const char* fmt, va_list args);
     int			insertf (const_iterator ip, const char* fmt, ...) PRINTFARGS(3,4);
 			using memblock::append;
+    inline auto		append (char c, size_type n = 1)		{ return insert (end(), c, n); }
     inline auto	   	append (const_pointer s)			{ return append (s, strlen(s)); }
     inline auto		append (const_iterator i1, const_iterator i2)	{ assert (i1<=i2); return append (i1, i2-i1); }
+    inline auto		append (wchar_t c)				{ return insert (end(), c); }
     int			appendv (const char* fmt, va_list args);
     int			appendf (const char* fmt, ...) PRINTFARGS(2,3);
 			using memblock::assign;
+    inline void		assign (value_type c)				{ assign (&c, 1); }
     inline void	    	assign (const_pointer s)			{ assign (s, strlen(s)); }
     inline void		assign (const_iterator i1, const_iterator i2)	{ assert (i1<=i2); assign (i1, i2-i1); }
+    void		assign (wchar_t c)				{ clear(); append (c); }
     int			assignv (const char* fmt, va_list args);
     int			assignf (const char* fmt, ...) PRINTFARGS(2,3);
     inline static auto	create_from_file (const char* filename)		{ string r; r.read_file (filename); return r; }
@@ -45,33 +54,38 @@ public:
     static int		compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2);
     auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
     auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
-    auto		compare (const_reference c) const		{ return compare (begin(), end(), &c, &c+1); }
+    auto		compare (char c) const				{ return compare (begin(), end(), &c, &c+1); }
     inline constexpr void	swap (string&& s)			{ memblock::swap (move(s)); }
     inline auto&	operator= (const string& s)			{ assign (s); return *this; }
     inline auto&	operator= (const_pointer s)			{ assign (s); return *this; }
-    inline auto&	operator= (const_reference c)			{ resize (1); back() = c; return *this; }
+    inline auto&	operator= (char c)				{ assign (c); return *this; }
+    inline auto&	operator= (wchar_t c)				{ assign (c); return *this; }
     inline auto&	operator+= (const string& s)			{ append (s); return *this; }
     inline auto&	operator+= (const_pointer s)			{ append (s); return *this; }
-    inline auto&	operator+= (const_reference c)			{ push_back (c); return *this; }
-    inline auto		operator+ (const string& s) const		{ auto r (*this); r += s; return r; }
+    inline auto&	operator+= (char c)				{ push_back (c); return *this; }
+    inline auto&	operator+= (wchar_t c)				{ append (c); return *this; }
+    inline auto		operator+ (const string& s) const		{ auto r (*this); return r += s; }
+    inline auto		operator+ (const_pointer s) const		{ auto r (*this); return r += s; }
+    inline auto		operator+ (char c) const			{ auto r (*this); return r += c; }
+    inline auto		operator+ (wchar_t c) const			{ auto r (*this); return r += c; }
     inline bool		operator== (const string& s) const		{ return memblock::operator== (s); }
     bool		operator== (const_pointer s) const;
-    constexpr bool	operator== (const_reference c) const		{ return size() == 1 && c == at(0); }
+    constexpr bool	operator== (char c) const			{ return size() == 1 && c == at(0); }
     inline bool		operator!= (const string& s) const		{ return !operator== (s); }
     inline bool		operator!= (const_pointer s) const		{ return !operator== (s); }
-    constexpr bool	operator!= (const_reference c) const		{ return !operator== (c); }
+    constexpr bool	operator!= (char c) const			{ return !operator== (c); }
     inline bool		operator< (const string& s) const		{ return 0 > compare (s); }
     inline bool		operator< (const_pointer s) const		{ return 0 > compare (s); }
-    inline bool		operator< (const_reference c) const		{ return 0 > compare (c); }
+    inline bool		operator< (char c) const			{ return 0 > compare (c); }
     inline bool		operator> (const string& s) const		{ return 0 < compare (s); }
     inline bool		operator> (const_pointer s) const		{ return 0 < compare (s); }
-    inline bool		operator> (const_reference c) const		{ return 0 < compare (c); }
+    inline bool		operator> (char c) const			{ return 0 < compare (c); }
     inline bool		operator<= (const string& s) const		{ return 0 >= compare (s); }
     inline bool		operator<= (const_pointer s) const		{ return 0 >= compare (s); }
-    inline bool		operator<= (const_reference c) const		{ return 0 >= compare (c); }
+    inline bool		operator<= (char c) const			{ return 0 >= compare (c); }
     inline bool		operator>= (const string& s) const		{ return 0 <= compare (s); }
     inline bool		operator>= (const_pointer s) const		{ return 0 <= compare (s); }
-    inline bool		operator>= (const_reference c) const		{ return 0 <= compare (c); }
+    inline bool		operator>= (char c) const			{ return 0 <= compare (c); }
     inline		operator const string_view& (void) const	{ return reinterpret_cast<const string_view&>(*this); }
     inline auto		erase (const_iterator ep, size_type n = 1)	{ return memblock::erase (ep, n); }
     inline auto		erase (const_iterator f, const_iterator l)	{ assert (f<=l); return erase (f, l-f); }
@@ -83,33 +97,33 @@ public:
     inline auto		replace (const_iterator f, const_iterator l, const_pointer s)			{ return replace (f, l, s, strlen(s)); }
     inline auto		replace (const_iterator f, const_iterator l, const_pointer i1,const_pointer i2)	{ return replace (f, l, i1, i2-i1); }
     inline auto		replace (const_iterator f, const_iterator l, const string& s)			{ return replace (f, l, s.begin(), s.end()); }
-    iterator		replace (const_iterator f, const_iterator l, size_type n, value_type c);
+    iterator		replace (const_iterator f, const_iterator l, value_type c, size_type n = 1);
 
-    constexpr auto	find (const_reference c, const_iterator fi) const	{ return fi ? const_iterator (__builtin_strchr (fi, c)) : fi; }
-    constexpr auto	find (const_pointer s, const_iterator fi) const		{ return fi ? const_iterator (__builtin_strstr (fi, s)) : fi; }
-    constexpr auto	find (const string& s, const_iterator fi) const		{ return find (s.c_str(), fi); }
-    constexpr auto	find (const_reference c) const				{ return find (c, begin()); }
-    constexpr auto	find (const_pointer s) const				{ return find (s, begin()); }
-    constexpr auto	find (const string& s) const				{ return find (s, begin()); }
+    constexpr auto	find (char c, const_iterator fi) const		{ return fi ? const_iterator (__builtin_strchr (fi, c)) : fi; }
+    constexpr auto	find (const_pointer s, const_iterator fi) const	{ return fi ? const_iterator (__builtin_strstr (fi, s)) : fi; }
+    constexpr auto	find (const string& s, const_iterator fi) const	{ return find (s.c_str(), fi); }
+    constexpr auto	find (char c) const				{ return find (c, begin()); }
+    constexpr auto	find (const_pointer s) const			{ return find (s, begin()); }
+    constexpr auto	find (const string& s) const			{ return find (s, begin()); }
 
-    constexpr auto	find (const_reference c, const_iterator fi)		{ return UNCONST_MEMBER_FN (find,c,fi); }
-    constexpr auto	find (const_pointer s, const_iterator fi)		{ return UNCONST_MEMBER_FN (find,s,fi); }
-    constexpr auto	find (const string& s, const_iterator fi)		{ return UNCONST_MEMBER_FN (find,s,fi); }
-    constexpr auto	find (const_reference c)				{ return UNCONST_MEMBER_FN (find,c); }
-    constexpr auto	find (const_pointer s)					{ return UNCONST_MEMBER_FN (find,s); }
-    constexpr auto	find (const string& s)					{ return UNCONST_MEMBER_FN (find,s); }
+    constexpr auto	find (char c, const_iterator fi)		{ return UNCONST_MEMBER_FN (find,c,fi); }
+    constexpr auto	find (const_pointer s, const_iterator fi)	{ return UNCONST_MEMBER_FN (find,s,fi); }
+    constexpr auto	find (const string& s, const_iterator fi)	{ return UNCONST_MEMBER_FN (find,s,fi); }
+    constexpr auto	find (char c)					{ return UNCONST_MEMBER_FN (find,c); }
+    constexpr auto	find (const_pointer s)				{ return UNCONST_MEMBER_FN (find,s); }
+    constexpr auto	find (const string& s)				{ return UNCONST_MEMBER_FN (find,s); }
 
-    inline auto		rfind (const_reference c, const_iterator fi) const	{ return fi ? const_iterator (memrchr (begin(), c, fi-begin())) : fi; }
+    inline auto		rfind (char c, const_iterator fi) const	{ return fi ? const_iterator (memrchr (begin(), c, fi-begin())) : fi; }
     const_iterator	rfind (const_pointer s, const_iterator fi) const;
     inline auto		rfind (const string& s, const_iterator fi) const	{ return rfind (s.c_str(), fi); }
-    inline auto		rfind (const_reference c) const				{ return rfind (c, end()); }
+    inline auto		rfind (char c) const					{ return rfind (c, end()); }
     inline auto		rfind (const_pointer s) const				{ return rfind (s, end()); }
     inline auto		rfind (const string& s) const				{ return rfind (s, end()); }
 
-    inline auto		rfind (const_reference c, const_iterator fi)		{ return UNCONST_MEMBER_FN (rfind,c,fi); }
+    inline auto		rfind (char c, const_iterator fi)			{ return UNCONST_MEMBER_FN (rfind,c,fi); }
     inline auto		rfind (const_pointer s, const_iterator fi)		{ return UNCONST_MEMBER_FN (rfind,s,fi); }
     inline auto		rfind (const string& s, const_iterator fi)		{ return UNCONST_MEMBER_FN (rfind,s,fi); }
-    inline auto		rfind (const_reference c)				{ return UNCONST_MEMBER_FN (rfind,c); }
+    inline auto		rfind (char c)						{ return UNCONST_MEMBER_FN (rfind,c); }
     inline auto		rfind (const_pointer s)					{ return UNCONST_MEMBER_FN (rfind,s); }
     inline auto		rfind (const string& s)					{ return UNCONST_MEMBER_FN (rfind,s); }
 
@@ -161,34 +175,34 @@ public:
 
     inline bool		operator== (const string& s) const	{ return str() == s; }
     inline bool		operator== (const_pointer s) const	{ return str() == s; }
-    constexpr bool	operator== (const_reference c) const	{ return str() == c; }
+    constexpr bool	operator== (char c) const		{ return str() == c; }
     inline bool		operator!= (const string& s) const	{ return str() != s; }
     inline bool		operator!= (const_pointer s) const	{ return str() != s; }
-    constexpr bool	operator!= (const_reference c) const	{ return str() != c; }
+    constexpr bool	operator!= (char c) const		{ return str() != c; }
     inline bool		operator< (const string& s) const	{ return str() < s; }
     inline bool		operator< (const_pointer s) const	{ return str() < s; }
-    inline bool		operator< (const_reference c) const	{ return str() < c; }
+    inline bool		operator< (char c) const		{ return str() < c; }
     inline bool		operator> (const string& s) const	{ return str() > s; }
     inline bool		operator> (const_pointer s) const	{ return str() > s; }
-    inline bool		operator> (const_reference c) const	{ return str() > c; }
+    inline bool		operator> (char c) const		{ return str() > c; }
     inline bool		operator<= (const string& s) const	{ return str() <= s; }
     inline bool		operator<= (const_pointer s) const	{ return str() <= s; }
-    inline bool		operator<= (const_reference c) const	{ return str() <= c; }
+    inline bool		operator<= (char c) const		{ return str() <= c; }
     inline bool		operator>= (const string& s) const	{ return str() >= s; }
     inline bool		operator>= (const_pointer s) const	{ return str() >= s; }
-    inline bool		operator>= (const_reference c) const	{ return str() >= c; }
+    inline bool		operator>= (char c) const		{ return str() >= c; }
 
-    constexpr auto	find (const_reference c, const_iterator fi) const	{ return str().find (c, fi); }
+    constexpr auto	find (char c, const_iterator fi) const	{ return str().find (c, fi); }
     constexpr auto	find (const_pointer s, const_iterator fi) const		{ return str().find (s, fi); }
     constexpr auto	find (const string& s, const_iterator fi) const		{ return str().find (s, fi); }
-    constexpr auto	find (const_reference c) const				{ return str().find (c); }
+    constexpr auto	find (char c) const					{ return str().find (c); }
     constexpr auto	find (const_pointer s) const				{ return str().find (s); }
     constexpr auto	find (const string& s) const				{ return str().find (s); }
 
-    inline auto		rfind (const_reference c, const_iterator fi) const	{ return str().rfind (c, fi); }
+    inline auto		rfind (char c, const_iterator fi) const	{ return str().rfind (c, fi); }
     inline auto		rfind (const_pointer s, const_iterator fi) const	{ return str().rfind (s, fi); }
     inline auto		rfind (const string& s, const_iterator fi) const	{ return str().rfind (s, fi); }
-    inline auto		rfind (const_reference c) const				{ return str().rfind (c); }
+    inline auto		rfind (char c) const					{ return str().rfind (c); }
     inline auto		rfind (const_pointer s) const				{ return str().rfind (s); }
     inline auto		rfind (const string& s) const				{ return str().rfind (s); }
 
