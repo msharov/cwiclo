@@ -42,7 +42,7 @@ public:
     inline constexpr auto	remaining (void) const __restrict__	{ return size(); }
     inline constexpr auto	iat (streampos n) const __restrict__	{ return begin()+n; }
     template <typename T = char>
-    inline constexpr auto	ptr (void) const __restrict__		{ return reinterpret_cast<const T*>(begin()); }
+    inline constexpr auto	ptr (void) const __restrict__		{ return pointer_cast<T>(begin()); }
     inline constexpr void	seek (const_pointer p) __restrict__	{ assert (p <= end()); _p = p; }
     inline constexpr void	skip (streamsize sz) __restrict__	{ seek (iat(sz)); }
     inline constexpr void	unread (streamsize sz) __restrict__	{ seek (begin() - sz); }
@@ -105,7 +105,7 @@ public:
     inline constexpr auto&	operator>> (T&& v) { read(v); return *this; }
 protected:
     inline constexpr const_pointer alignptr (streamsize g) const __restrict__
-				    { return const_pointer (ceilg (uintptr_t(_p), g)); }
+				    { return assume_aligned (const_pointer (ceilg (uintptr_t(_p), g)), g); }
 private:
     const_pointer		_p;
     const const_pointer		_e;
@@ -140,7 +140,7 @@ public:
     inline constexpr streamsize	size (void) const __restrict__		{ return end()-begin(); }
     inline constexpr auto	remaining (void) const __restrict__	{ return size(); }
     template <typename T = char>
-    inline constexpr auto	ptr (void) __restrict__			{ return reinterpret_cast<T*>(begin()); }
+    inline constexpr auto	ptr (void) __restrict__			{ return pointer_cast<T>(begin()); }
     inline constexpr void	seek (pointer p) __restrict__		{ assert (p <= end()); _p = p; }
     inline constexpr void	skip (streamsize sz) __restrict__	{ seek (begin()+sz); }
     inline constexpr void	zero (streamsize sz) __restrict__	{ seek (zero_fill_n (begin(), sz)); }
@@ -149,7 +149,7 @@ public:
 				    pointer __restrict__ p = begin();
 				    while (uintptr_t(p) % g)
 					*p++ = 0;
-				    seek (p);
+				    seek (assume_aligned (p,g));
 				}
     inline constexpr streamsize	alignsz (streamsize g) const	{ return alignptr(g) - begin(); }
     inline constexpr bool	can_align (streamsize g) const	{ return alignptr(g) <= end(); }
@@ -161,7 +161,7 @@ public:
     inline constexpr void	write_strz (const char* s)	{ write (s, __builtin_strlen(s)+1); }
     template <typename T>
     inline constexpr void	writet (const T& v) __restrict__ {
-				    assert(remaining() >= sizeof(T));
+				    assert (remaining() >= sizeof(T));
 				    T* __restrict__ p = ptr<T>(); *p = v;
 				    _p += sizeof(T);
 				}
@@ -195,7 +195,7 @@ public:
     inline constexpr auto&	operator<< (const T (&a)[N]) { write_array(a); return *this; }
 private:
     inline constexpr const_pointer alignptr (streamsize g) const __restrict__
-				    { return const_pointer (ceilg (uintptr_t(_p), g)); }
+				    { return assume_aligned (const_pointer (ceilg (uintptr_t(_p), g)), g); }
 private:
     pointer			_p;
     const const_pointer		_e;

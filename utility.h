@@ -212,6 +212,13 @@ template <typename T>
 [[nodiscard]] constexpr auto roundg (T n, remove_reference_t<T> g)
     { return floorg<T>(n + copy_sign<T>(n, g/2), g); }
 template <typename T>
+[[nodiscard]] constexpr auto assume_aligned (T* p, size_t g, size_t o = 0)
+    { return static_cast<T*>(__builtin_assume_aligned (p,g,o)); }
+template <typename T>
+[[nodiscard]] constexpr auto assume_aligned (const T* p, size_t g, size_t o = 0)
+    { return static_cast<const T*>(__builtin_assume_aligned (p,g,o)); }
+
+template <typename T>
 [[nodiscard]] constexpr T divide_ceil (T n1, remove_reference_t<T> n2)
     { return (n1 + copy_sign<T>(n1,n2-1)) / n2; }
 template <typename T>

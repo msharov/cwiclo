@@ -161,10 +161,10 @@ public:
     constexpr auto	dest (void) const	{ return _link.dest; }
     constexpr auto	size (void) const	{ return _body.size(); }
     constexpr auto	max_size (void) const	{ return MaxSize; }
-    constexpr auto	data (void) const	{ return _body.data(); }
-    constexpr auto	data (void)		{ return _body.data(); }
-    constexpr auto	begin (void) const	{ return _body.begin(); }
-    constexpr auto	begin (void)		{ return _body.begin(); }
+    constexpr auto	data (void) const	{ return assume_aligned (_body.data(),16); }
+    constexpr auto	data (void)		{ return assume_aligned (_body.data(),16); }
+    constexpr auto	begin (void) const	{ return assume_aligned (_body.begin(),16); }
+    constexpr auto	begin (void)		{ return assume_aligned (_body.begin(),16); }
     constexpr auto	end (void) const	{ return _body.end(); }
     constexpr auto	end (void)		{ return _body.end(); }
     constexpr auto	method (void) const	{ return _method; }

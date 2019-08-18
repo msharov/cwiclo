@@ -380,7 +380,7 @@ bool Extern::attach_to_socket (fd_t fd)
     // And it must match the family (PF_LOCAL or PF_INET)
     sockaddr_storage ss;
     l = sizeof(ss);
-    if (getsockname (fd, reinterpret_cast<sockaddr*>(&ss), &l) < 0)
+    if (getsockname (fd, pointer_cast<sockaddr>(&ss), &l) < 0)
 	return false;
     _einfo.is_unix_socket = false;
     if (ss.ss_family == PF_LOCAL)
