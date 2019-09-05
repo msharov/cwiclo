@@ -35,87 +35,83 @@ protected:
     class Ctrl {
     public:
 	enum { caret_is_visible = false };
-	enum { f_focused, f_Last };
+	enum { f_Focused, f_Disabled, f_Last };
+	using coord_t	= uint16_t;
+	using dim_t	= make_unsigned_t<coord_t>;
+	struct Point	{ coord_t x,y; };
+	struct Size	{ dim_t	x,y; };
+	struct Rect	{ coord_t x,y; dim_t w,h; };
     public:
-	constexpr		Ctrl (void)		:_w(),_flags() {}
-				Ctrl (const Ctrl&) = delete;
-				~Ctrl (void)		{ destroy(); }
-	constexpr auto		w (void) const		{ return _w; }
-	constexpr		operator WINDOW* (void)	const	{ return w(); }
-	void			operator= (const Ctrl&) = delete;
-	constexpr auto		operator-> (void) const	{ return w(); }
-	constexpr u_short	maxx (void) const	{ return getmaxx(w()); }
-	constexpr u_short	maxy (void) const	{ return getmaxy(w()); }
-	constexpr u_short	begx (void) const	{ return getbegx(w()); }
-	constexpr u_short	begy (void) const	{ return getbegy(w()); }
-	constexpr u_short	curx (void) const	{ return getcurx(w()); }
-	constexpr u_short	cury (void) const	{ return getcury(w()); }
-	void			destroy (void)
-				    { auto ow = exchange(_w,nullptr); if (ow) delwin(ow); }
-	void			create (int l, int c, int y, int x);
-	constexpr auto		flag (unsigned f) const			{ return get_bit(_flags,f); }
-	constexpr void		set_flag (unsigned f, bool v = true)	{ set_bit(_flags,f,v); }
-	constexpr auto		focused (void) const			{ return flag (f_focused); }
-	constexpr void		transfer_focus_to (Ctrl& c)		{ set_flag (f_focused, false); c.set_flag (f_focused); }
+			Ctrl (void)		:_text(),_w(),_flags() {}
+			Ctrl (const Ctrl&) = delete;
+			~Ctrl (void)		{ destroy(); }
+	auto		w (void) const		{ return _w; }
+			operator WINDOW* (void)	const	{ return w(); }
+	void		operator= (const Ctrl&) = delete;
+	auto		operator-> (void) const	{ return w(); }
+	dim_t		maxx (void) const	{ return getmaxx(w()); }
+	dim_t		maxy (void) const	{ return getmaxy(w()); }
+	coord_t		begx (void) const	{ return getbegx(w()); }
+	coord_t		begy (void) const	{ return getbegy(w()); }
+	coord_t		endx (void) const	{ return begx()+maxx(); }
+	coord_t		endy (void) const	{ return begy()+maxy(); }
+	coord_t		curx (void) const	{ return getcurx(w()); }
+	coord_t		cury (void) const	{ return getcury(w()); }
+	void		draw (void) const	{ werase (w()); }
+	void		flush_draw (void) const	{ wnoutrefresh (w()); }
+	void		destroy (void)		{ if (auto w = exchange(_w,nullptr); w) delwin(w); }
+	void		create (int l, int c, int y, int x);
+	auto		flag (unsigned f) const			{ return get_bit(_flags,f); }
+	void		set_flag (unsigned f, bool v = true)	{ set_bit(_flags,f,v); }
+	auto&		text (void) const			{ return _text; }
+	void		set_text (const string_view& t)		{ _text = t; }
+	void		set_text (const char* t)		{ _text = t; }
+	static Size	measure_text (const string_view& text);
+	auto		measure (void) const			{ return measure_text (text()); }
+	auto		focused (void) const			{ return flag (f_Focused); }
+	void		transfer_focus_to (Ctrl& c)		{ set_flag (f_Focused, false); c.set_flag (f_Focused); }
+    protected:
+	auto&		textw (void)		{ return _text; }
     private:
+	string		_text;
 	WINDOW*		_w;
-	u_short		_flags;
+	uint16_t	_flags;
     };
     //}}}---------------------------------------------------------------
     //{{{ Label
 
     class Label : public Ctrl {
     public:
-	struct Size { uint16_t	x,y; };
-    public:
-	constexpr	Label (void) : Ctrl() {}
-	static constexpr Size measure (const string_view& text) {
-			    Size sz = {};
-			    for (auto l = text.begin(), textend = text.end(); l < textend;) {
-				auto lend = text.find ('\n', l);
-				if (!lend)
-				    lend = textend;
-				sz.x = max (sz.x, lend-l+1);
-				++sz.y;
-				l = lend+1;
-			    }
-			    return sz;
-			}
-	void		draw (const char* text) const;
-	void		draw (const string_view& text) const
-			    { draw (text.c_str()); }
+			Label (void) : Ctrl() {}
+	void		draw (void) const;
     };
     //}}}---------------------------------------------------------------
     //{{{ Button
 
     class Button : public Ctrl {
     public:
-	constexpr explicit	Button (const char* t = "")	:Ctrl(),_text(t) {}
-	void			create (int c, int y, int x)	{ Ctrl::create (1,c,y,x); }
-	constexpr uint16_t	measure (void)		{ return __builtin_strlen(_text)+4; }
-	void			draw (void) const;
-	constexpr auto		text (void) const	{ return _text; }
-	constexpr void		set_text (const char* t){ _text = t; }
-    private:
-	const char*	_text;
+	explicit	Button (void)		: Ctrl() {}
+	void		create (int c, int y, int x)	{ Ctrl::create (1,c,y,x); }
+	uint16_t	measure (void)		{ return measure_text(text()).x+strlen("[  ]"); }
+	void		draw (void) const;
     };
     //}}}---------------------------------------------------------------
     //{{{ Listbox
 
     class Listbox : public Ctrl {
     public:
-	using lcount_t	= u_short;
-    public:
-	constexpr	Listbox (void)		:Ctrl(),n(),sel(),top() {}
-	constexpr void	clip_sel (void)		{ if (n && sel > n-1) sel = n-1; }
-	constexpr void	set_n (lcount_t nn)	{ n = nn; clip_sel(); }
+			Listbox (void)		:Ctrl(),n(),sel(),top() {}
+	void		clip_sel (void)		{ if (n && sel > n-1) sel = n-1; }
+	void		set_n (dim_t nn)	{ n = nn; clip_sel(); }
+	void		on_set_text (void);
+	void		set_text (const char* t)	{ Ctrl::set_text(t); on_set_text(); }
+	void		set_text (const string_view& t)	{ Ctrl::set_text(t); on_set_text(); }
 	void		on_key (key_t k);
-	template <typename drawRow>
-	inline void	draw (drawRow drf) const;
+	void		draw (void) const;
     public:
-	lcount_t	n;
-	lcount_t	sel;
-	lcount_t	top;
+	dim_t		n;
+	dim_t		sel;
+	dim_t		top;
     };
     //}}}---------------------------------------------------------------
     //{{{ Editbox
@@ -124,20 +120,79 @@ protected:
     public:
 	enum { caret_is_visible = true };
     public:
-	constexpr	Editbox (void)			:Ctrl(),_cpos(),_fc(),_text() {}
-	explicit	Editbox (const string& t)	:Ctrl(),_cpos(t.size()),_fc(),_text(t) {}
+			Editbox (void)			:Ctrl(),_cpos(),_fc() {}
 	void		create (int c, int y, int x);
-	constexpr auto&	text (void) const		{ return _text; }
-	void		set_text (const char* t)	{ _text = t; _cpos = _text.size(); _fc = 0; posclip(); }
-	void		set_text (const string& t)	{ _text = t; _cpos = _text.size(); _fc = 0; posclip(); }
+	void		on_set_text (void)		{ _cpos = text().size(); _fc = 0; posclip(); }
+	void		set_text (const char* t)	{ Ctrl::set_text(t); on_set_text(); }
+	void		set_text (const string_view& t)	{ Ctrl::set_text(t); on_set_text(); }
 	void		on_key (key_t k);
 	void		draw (void) const;
     private:
 	void		posclip (void);
     private:
-	u_short		_cpos;
+	coord_t		_cpos;
 	u_short		_fc;
-	string		_text;
+    };
+    //}}}---------------------------------------------------------------
+    //{{{ HSplitter
+    class HSplitter : public Ctrl {
+    public:
+			HSplitter (void)		: Ctrl() {}
+	void		create (int c, int y, int x)	{ Ctrl::create (1,c,y,x); }
+	void		draw (void) const {
+			    Ctrl::draw();
+			    whline (w(), 0, maxx());
+			    flush_draw();
+			}
+    };
+    //}}}---------------------------------------------------------------
+    //{{{ VSplitter
+    class VSplitter : public Ctrl {
+    public:
+			VSplitter (void)		: Ctrl() {}
+	void		create (int l, int y, int x)	{ Ctrl::create (l,1,y,x); }
+	void		draw (void) const {
+			    Ctrl::draw();
+			    wvline (w(), 0, maxy());
+			    flush_draw();
+			}
+    };
+    //}}}---------------------------------------------------------------
+    //{{{ GroupFrame
+    class GroupFrame : public Ctrl {
+    public:
+			GroupFrame (void) : Ctrl() {}
+	void		draw (void) const {
+			    Ctrl::draw();
+			    box (w(), 0, 0);
+			    auto tsz = min (text().size(), maxx()-strlen("[  ]"));
+			    if (tsz > 0) {
+				mvwhline (w(), 0, (maxx()-tsz)/2u-1, ' ', tsz+2);
+				mvwaddnstr (w(), 0, (maxx()-tsz)/2u, text().c_str(), tsz);
+			    }
+			    flush_draw();
+			}
+    };
+    //}}}---------------------------------------------------------------
+    //{{{ StatusLine
+    class StatusLine : public Ctrl {
+    public:
+	enum { f_Modified = Ctrl::f_Last, f_Last };
+    public:
+			StatusLine (void)		: Ctrl() {}
+	bool		is_modified (void) const	{ return flag (f_Modified); }
+	void		set_modified (bool v = true)	{ set_flag (f_Modified,v); }
+	void		create (int c, int y, int x) {
+			    Ctrl::create (1,c,y,x);
+			    wbkgdset (w(), A_REVERSE);
+			}
+	void		draw (void) const {
+			    Ctrl::draw();
+			    waddstr (w(), text().c_str());
+			    if (is_modified())
+				mvwaddstr (w(), 0, maxx()-strlen(" *"), " *");
+			    flush_draw();
+			}
     };
     //}}}---------------------------------------------------------------
     //{{{ Focus rotation
@@ -146,7 +201,7 @@ private:
 	{ set_flag (f_CaretOn, v); curs_set(v); }
     template <typename F>
     inline void init_ctrl_focus_iter (F& f) {
-	f.set_flag (Ctrl::f_focused);
+	f.set_flag (Ctrl::f_Focused);
 	set_input_ctrl (f);
 	if (F::caret_is_visible)
 	    set_caret_visible();
@@ -175,26 +230,6 @@ private:
     static mrid_t	s_focused;
     static uint8_t	s_nwins;
 };
-
-//{{{ Ctrls inlines ----------------------------------------------------
-
-template <typename drawRow>
-void CursesWindow::Listbox::draw (drawRow drf) const
-{
-    for (u_short y = 0, yend = min(n, top+maxy()); y < yend; ++y) {
-	if (y >= top) {
-	    wmove (w(), y-top, 0);
-	    if (y == sel && focused()) {
-		wattron (w(), A_REVERSE);
-		whline (w(), ' ', maxx()-curx());
-	    }
-	    drf (w(), y);
-	    if (y == sel)
-		wattroff (w(), A_REVERSE);
-	}
-    }
-}
-//}}}
 
 //--- MessageBox -------------------------------------------------------
 
@@ -257,11 +292,11 @@ private:
     void		done (Answer answer);
 private:
     string		_prompt;
-    Ctrl		_w;
     Label		_wmsg;
     Button		_wcancel;
     Button		_wok;
     Button		_wignore;
+    GroupFrame		_wframe;
     Type		_type;
     Answer		_answer;
     PMessageBoxR	_reply;

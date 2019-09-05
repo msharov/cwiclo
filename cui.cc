@@ -106,17 +106,31 @@ void CursesWindow::Ctrl::create (int l, int c, int y, int x)
     auto ow = exchange (_w, newwin (l,c,y,x));
     if (ow)
 	delwin (ow);
-    leaveok (*this, true);
+    leaveok (w(), true);
+}
+
+auto CursesWindow::Ctrl::measure_text (const string_view& text) -> Size
+{
+    Size sz = {};
+    for (auto l = text.begin(), textend = text.end(); l < textend;) {
+	auto lend = text.find ('\n', l);
+	if (!lend)
+	    lend = textend;
+	sz.x = max (sz.x, lend-l);
+	++sz.y;
+	l = lend+1;
+    }
+    return sz;
 }
 
 //}}}-------------------------------------------------------------------
 //{{{ CursesWindow::Label
 
-void CursesWindow::Label::draw (const char* text) const
+void CursesWindow::Label::draw (void) const
 {
-    werase (*this);
-    waddstr (*this, text);
-    wnoutrefresh (*this);
+    Ctrl::draw();
+    waddstr (w(), text().c_str());
+    flush_draw();
 }
 
 //}}}-------------------------------------------------------------------
@@ -124,22 +138,53 @@ void CursesWindow::Label::draw (const char* text) const
 
 void CursesWindow::Button::draw (void) const
 {
-    werase (*this);
+    Ctrl::draw();
     if (focused())
-	wattron (*this, A_REVERSE);
-    wattron (*this, A_BOLD);
-    waddstr (*this, "[ ");
-    waddch (*this, _text[0]);
-    wattroff (*this, A_BOLD);
-    waddstr (*this, &_text[1]);
-    wattron (*this, A_BOLD);
-    waddstr (*this, " ]");
-    wattroff (*this, A_BOLD| A_REVERSE);
-    wnoutrefresh (*this);
+	wattron (w(), A_REVERSE);
+    wattron (w(), A_BOLD);
+    waddstr (w(), "[ ");
+    waddch (w(), text()[0]);
+    wattroff (w(), A_BOLD);
+    waddstr (w(), &text()[1]);
+    wattron (w(), A_BOLD);
+    waddstr (w(), " ]");
+    wattroff (w(), A_BOLD| A_REVERSE);
+    flush_draw();
 }
 
 //}}}-------------------------------------------------------------------
 //{{{ CursesWindow::Listbox
+
+void CursesWindow::Listbox::on_set_text (void)
+{
+    set_n (zstr::nstrs (text().c_str(), text().size()));
+}
+
+void CursesWindow::Listbox::draw (void) const
+{
+    Ctrl::draw();
+    coord_t y = 0;
+    for (zstr::cii li (text().c_str(), text().size()); li; ++y) {
+	auto lt = *li;
+	auto tlen = *++li - lt - 1;
+	if (y < top)
+	    continue;
+	wmove (w(), y-top, 0);
+	if (y == sel && focused()) {
+	    wattron (w(), A_REVERSE);
+	    whline (w(), ' ', maxx());
+	}
+	auto vislen = tlen;
+	if (tlen > maxx())
+	    vislen = maxx()-1;
+	waddnstr (w(), lt, vislen);
+	if (tlen > maxx())
+	    waddch (w(), '>');
+	if (y == sel)
+	    wattroff (w(), A_REVERSE);
+    }
+    flush_draw();
+}
 
 void CursesWindow::Listbox::on_key (key_t k)
 {
@@ -155,8 +200,8 @@ void CursesWindow::Listbox::on_key (key_t k)
 void CursesWindow::Editbox::create (int c, int y, int x)
 {
     Ctrl::create (1,c,y,x);
-    leaveok (*this, false);
-    wbkgdset (*this, ' '|A_UNDERLINE);
+    leaveok (w(), false);
+    wbkgdset (w(), ' '|A_UNDERLINE);
     posclip();
 }
 
@@ -170,7 +215,7 @@ void CursesWindow::Editbox::posclip (void)
     if (w()) {
 	if (_fc+maxx() < _cpos+2)	// cursor past right edge +2 for > indicator
 	    _fc = _cpos+2-maxx();
-	while (_fc && _fc-1u+maxx() > _text.size())	// if text fits in box, no scroll
+	while (_fc && _fc-1u+maxx() > text().size())	// if text fits in box, no scroll
 	    --_fc;
     }
 }
@@ -179,31 +224,31 @@ void CursesWindow::Editbox::on_key (key_t k)
 {
     if (k == KEY_LEFT && _cpos)
 	--_cpos;
-    else if (k == KEY_RIGHT && _cpos < _text.size())
+    else if (k == KEY_RIGHT && _cpos < text().size())
 	++_cpos;
     else if (k == KEY_HOME)
 	_cpos = 0;
     else if (k == KEY_END)
-	_cpos = _text.size();
+	_cpos = text().size();
     else if ((k == KEY_BKSPACE || k == KEY_BACKSPACE) && _cpos)
-	_text.erase (_text.iat(--_cpos));
-    else if (k == KEY_DC && _cpos < _text.size())
-	_text.erase (_text.iat(_cpos));
+	textw().erase (text().iat(--_cpos));
+    else if (k == KEY_DC && _cpos < text().size())
+	textw().erase (text().iat(_cpos));
     else if (isprint(k))
-	_text.insert (_text.iat(_cpos++), char(k));
+	textw().insert (text().iat(_cpos++), char(k));
     posclip();
 }
 
 void CursesWindow::Editbox::draw (void) const
 {
-    mvwhline (*this, 0, 0, ' ', maxx());
-    waddstr (*this, _text.iat(_fc));
+    Ctrl::draw();
+    waddstr (w(), text().iat(_fc));
     if (_fc)
-	mvwaddch (*this, 0, 0, '<');
-    if (_fc+maxx() <= _text.size())
-	mvwaddch (*this, 0, maxx()-1, '>');
-    wmove (*this, 0, _cpos-_fc);
-    wnoutrefresh (*this);
+	mvwaddch (w(), 0, 0, '<');
+    if (_fc+maxx() <= text().size())
+	mvwaddch (w(), 0, maxx()-1, '>');
+    wmove (w(), 0, _cpos-_fc);
+    flush_draw();
 }
 
 //}}}-------------------------------------------------------------------
@@ -217,15 +262,18 @@ DEFINE_INTERFACE (MessageBoxR)
 MessageBox::MessageBox (const Msg::Link& l)
 : CursesWindow(l)
 ,_prompt()
-,_w()
 ,_wmsg()
-,_wcancel ("Cancel")
-,_wok ("Ok")
-,_wignore ("Ignore")
+,_wcancel()
+,_wok()
+,_wignore()
+,_wframe()
 ,_type()
 ,_answer()
 ,_reply(l)
 {
+    _wcancel.set_text ("Cancel");
+    _wok.set_text ("Ok");
+    _wignore.set_text ("Ignore");
 }
 
 bool MessageBox::dispatch (Msg& msg)
@@ -252,7 +300,8 @@ void MessageBox::MessageBox_ask (const string_view& prompt, Type type, uint16_t)
 void MessageBox::layout (void)
 {
     // measure message
-    auto lsz = Label::measure (_prompt);
+    _wmsg.set_text (_prompt);
+    auto lsz = Label::measure_text (_wmsg.text());
     lsz.y = min (lsz.y, LINES-4u);
     lsz.x = min (lsz.x, COLS-4u);
 
@@ -267,13 +316,13 @@ void MessageBox::layout (void)
     // create main dialog window
     auto wy = lsz.y+4;
     auto wx = max(lsz.x,bw)+4;
-    _w.create (wy, wx, (LINES-wy)/2u, (COLS-wx)/2u);
+    _wframe.create (wy, wx, (LINES-wy)/2u, (COLS-wx)/2u);
     // The message is just inside, centered
-    _wmsg.create (lsz.y, lsz.x, _w.begy()+1, _w.begx()+(_w.maxx()-lsz.x)/2u);
+    _wmsg.create (lsz.y, lsz.x, _wframe.begy()+1, _wframe.begx()+(_wframe.maxx()-lsz.x)/2u);
 
     // create button row, centered under message
-    auto bbeg = _w.begx()+(_w.maxx()-bw)/2u;
-    auto bry = _w.begy()+_w.maxy()-2;
+    auto bbeg = _wframe.begx()+(_wframe.maxx()-bw)/2u;
+    auto bry = _wframe.begy()+_wframe.maxy()-2;
     _wok.create (okw, bry, bbeg);
     bbeg += okw;
     if (_type == Type::YesNoCancel || _type == Type::RetryCancelIgnore) {
@@ -293,12 +342,8 @@ void MessageBox::layout (void)
 
 void MessageBox::draw (void) const
 {
-    werase (_w);
-    box (_w, 0, 0);
-    wnoutrefresh (_w);
-
-    _wmsg.draw (_prompt);
-
+    _wframe.draw();
+    _wmsg.draw();
     _wok.draw();
     if (_type != Type::Ok) {
 	_wcancel.draw();
