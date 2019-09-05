@@ -1,0 +1,81 @@
+divide_ceil(13,5) = 3
+divide_ceil(15,5) = 3
+divide_ceil(-12,5) = -3
+
+floorg(18,8) = 16
+floorg(-26,25) = -25
+
+ceilg(5,8) = 8
+ceilg(5,2) = 6
+ceilg(17,7) = 21
+ceilg(14,7) = 14
+ceilg(-26,25) = -50
+
+roundg(5,2) = 6
+roundg(-5,2) = -6
+roundg(14,7) = 14
+roundg(-1,7) = 0
+roundg(-14,25) = -25
+
+divide_round(5,2) = 3
+divide_round(-5,2) = -3
+divide_round(14,9) = 2
+divide_round(-1,7) = 0
+
+square(3) = 9
+square(-4) = 16
+
+log2p1(1) = 1
+log2p1(4) = 3
+log2p1(3827) = 12
+log2p1(0xFFFFFFF0) = 32
+
+ceil2(3) = 4
+ceil2(4) = 4
+ceil2(3827) = 4096
+ceil2(0xFFFFFFF0) = 0x100000000
+
+cvp = 1234
+vp = 4321
+unique_ptr(24) = 24
+size(c_Numbers[5]) = 5
+size({1,2,3,4,5}) = 5
+bswap(1234) = 3412
+le_to_native(1234) = ok
+native_to_le(1234) = ok
+be_to_native(1234) = ok
+native_to_be(1234) = ok
+bswap(12345678) = 78563412
+le_to_native(12345678) = ok
+native_to_le(12345678) = ok
+be_to_native(12345678) = ok
+native_to_be(12345678) = ok
+bswap(123456789ABCDEF0) = F0DEBC9A78563412
+le_to_native(123456789ABCDEF0) = ok
+native_to_le(123456789ABCDEF0) = ok
+be_to_native(123456789ABCDEF0) = ok
+native_to_be(123456789ABCDEF0) = ok
+
+absv(12) = 12
+absv(-12) = 12
+sign(12u) = 1
+sign(-12) = -1
+sign(0) = 0
+min(3,4) = 3
+min(6u,1u) = 1
+max(-3,-6) = -3
+max(-3l,6l) = 6
+
+equal(abcd,abcd) = 1
+equal(abcd,acbd) = 0
+equal(,) = 1
+mzstr: one two three four five
+mzstr.nstrs = 5
+mzstr.nstrs = 5
+mzstr[0] = one
+mzstr[2] = three
+mzstr[4] = five
+mzstr["one"] = 0
+mzstr["four"] = 3
+mzstr["five"] = 4
+mzstr["eight"] = 5
