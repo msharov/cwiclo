@@ -25,8 +25,8 @@ private:
 };
 
 BEGIN_CWICLO_APP (TestApp)
-    REGISTER_MSGER (Ping, PingMsger)
-    REGISTER_MSGER (ExternServer, ExternServer)
+    REGISTER_MSGER (PPing, PingMsger)
+    REGISTER_MSGER (PExternServer, ExternServer)
     REGISTER_EXTERNS
 END_CWICLO_APP
 

@@ -71,5 +71,5 @@ BEGIN_CWICLO_APP (TestApp)
     // Each interface must be associated with a Msger object that is to be
     // created as its implementation. Here, PingMsger responds to Ping interface.
     //
-    REGISTER_MSGER (Ping, PingMsger)
+    REGISTER_MSGER (PPing, PingMsger)
 END_CWICLO_APP

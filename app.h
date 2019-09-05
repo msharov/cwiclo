@@ -218,7 +218,7 @@ int main (A::argc_t argc, A::argv_t argv) \
     { return mainT<A> (argc, argv); }
 
 #define BEGIN_MSGERS	const App::MsgerFactoryMap App::s_msger_factories[] = {
-#define REGISTER_MSGER(iface,mgtype)	{ P##iface::interface(), &Msger::factory<mgtype> },
+#define REGISTER_MSGER(proxy,mgtype)	{ proxy::interface(), &Msger::factory<mgtype> },
 #define END_MSGERS	{nullptr,nullptr}};
 
 #define BEGIN_CWICLO_APP(A)	\

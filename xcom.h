@@ -279,12 +279,12 @@ private:
 };
 
 #define REGISTER_EXTERNS\
-    REGISTER_MSGER (Extern, Extern)\
-    REGISTER_MSGER (COM, COMRelay)\
-    REGISTER_MSGER (Timer, App::Timer)
+    REGISTER_MSGER (PExtern, Extern)\
+    REGISTER_MSGER (PCOM, COMRelay)\
+    REGISTER_MSGER (PTimer, App::Timer)
 
-#define REGISTER_EXTERN_MSGER(iface)\
-    REGISTER_MSGER (iface, COMRelay)
+#define REGISTER_EXTERN_MSGER(proxy)\
+    REGISTER_MSGER (proxy, COMRelay)
 
 //}}}-------------------------------------------------------------------
 //{{{ PExternServer
