@@ -574,11 +574,7 @@ extern "C" void hexdump (const void* vp, size_t n);
 
 template <typename C>
 inline void hexdump (const C& c)
-{
-    auto ii = begin(c);
-    using value_type = typename iterator_traits<decltype(ii)>::value_type;
-    hexdump (ii, sizeof(value_type)*size(c));
-}
+    { auto p = to_address(begin(c)); hexdump (p, sizeof(*p)*size(c)); }
 
 } // namespace cwiclo
 

@@ -19,9 +19,9 @@ enum : mrid_t {
     // The App is always the first Msger
     mrid_App,
     // mrid space is cut in half to permit direct mapping to extid on both
-    // sides of the connection. Set the exact point to 2^15-768 = 32000,
-    // 0x7d00, mostly round number in both bases; helpful in the debugger)
-    mrid_Last = numeric_limits<mrid_t>::max()/2-768-1,
+    // sides of the connection. Set the exact point to 32000 == 0x7d00, a
+    // mostly round number in both bases; helpful in the debugger.
+    mrid_Last = 32000-1,
     // placeholder requesting new msger creation
     mrid_New = numeric_limits<mrid_t>::max()-1,
     mrid_Broadcast	// indicates all msgers as destination
@@ -57,8 +57,6 @@ static constexpr const char* signature_of_method (methodid_t __restrict__ mid)
 
 // When unmarshalling a message, convert method name to local pointer in the interface
 methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, size_t mnamesz);
-
-class Msger;
 
 // Helpers for efficiently unmarshalling string_views
 constexpr auto string_view_from_const_stream (const istream& is)
@@ -129,7 +127,7 @@ public:					\
 
 // This one instantiates the i_Interface variable from above
 #define DEFINE_INTERFACE(iface)		\
-    constexpr P##iface::I##iface P##iface::i_##iface;
+    constexpr const P##iface::I##iface P##iface::i_##iface;
 
 //}}}-------------------------------------------------------------------
 //{{{ Msg
@@ -197,6 +195,8 @@ private:
 
 //}}}-------------------------------------------------------------------
 //{{{ Proxy
+
+class Msger;
 
 class ProxyB {
 public:

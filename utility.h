@@ -96,31 +96,27 @@ public:
 	else
 	    return base_type(0);
     }
-    static constexpr auto max (void) {
-	if constexpr (is_signed)
-	    return base_type(make_unsigned_t<base_type>(min())-1);
-	else
-	    return base_type(~min());
-    }
+    static constexpr auto max (void)
+	{ return base_type(make_unsigned_t<base_type>(min())-1); }
 };
 
 //}}}-------------------------------------------------------------------
-//{{{ Array macros
+//{{{ Array adapters
 
-template <typename T> constexpr decltype(auto) begin (T& c) { return c.begin(); }
-template <typename T> constexpr decltype(auto) begin (const T& c) { return c.begin(); }
-template <typename T, size_t N> constexpr auto begin (T (&a)[N]) { return &a[0]; }
-template <typename T> constexpr decltype(auto) cbegin (const T& c) { return begin(c); }
-template <typename T> constexpr decltype(auto) end (T& c) { return c.end(); }
-template <typename T> constexpr decltype(auto) end (const T& c) { return c.end(); }
-template <typename T, size_t N> constexpr auto end (T (&c)[N]) { return &c[N]; }
-template <typename T> constexpr decltype(auto) cend (const T& c) { return end(c); }
-template <typename T> constexpr auto size (const T& c) { return c.size(); }
-template <typename T, size_t N> constexpr auto size (const T (&)[N]) { return N; }
-template <typename T> [[nodiscard]] constexpr bool empty (const T& c) { return !c.size(); }
-template <typename T> constexpr decltype(auto) data (T& c) { return c.data(); }
-template <typename T> constexpr decltype(auto) data (const T& c) { return c.data(); }
-template <typename T, size_t N> constexpr auto data(T (&c)[N]) { return &c[0]; }
+template <typename T> constexpr decltype(auto)	begin (T& c)		{ return c.begin(); }
+template <typename T> constexpr decltype(auto)	begin (const T& c)	{ return c.begin(); }
+template <typename T, size_t N> constexpr auto	begin (T (&a)[N])	{ return &a[0]; }
+template <typename T> constexpr decltype(auto)	cbegin (const T& c)	{ return begin(c); }
+template <typename T> constexpr decltype(auto)	end (T& c)		{ return c.end(); }
+template <typename T> constexpr decltype(auto)	end (const T& c)	{ return c.end(); }
+template <typename T, size_t N> constexpr auto	end (T (&c)[N])		{ return &c[N]; }
+template <typename T> constexpr decltype(auto)	cend (const T& c)	{ return end(c); }
+template <typename T> constexpr auto		size (const T& c)	{ return c.size(); }
+template <typename T, size_t N> constexpr auto	size (const T (&)[N])	{ return N; }
+template <typename T> [[nodiscard]] constexpr bool empty (const T& c)	{ return !c.size(); }
+template <typename T> constexpr decltype(auto)	data (T& c)		{ return c.data(); }
+template <typename T> constexpr decltype(auto)	data (const T& c)	{ return c.data(); }
+template <typename T, size_t N> constexpr auto	data(T (&c)[N])		{ return &c[0]; }
 
 /// Expands into a ptr,size expression for the given static vector; useful as link arguments.
 #define ARRAY_BLOCK(v)	::cwiclo::data(v), ::cwiclo::size(v)
