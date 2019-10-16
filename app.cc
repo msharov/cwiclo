@@ -183,11 +183,11 @@ void App::free_mrid (mrid_t id)
     assert (valid_msger_id (id));
     auto m = _msgers[id];
     if (!m && id == _msgers.size()-1) {
-	DEBUG_PRINTF ("mrid %hu deallocated\n", id);
+	DEBUG_PRINTF ("[M] mrid %hu deallocated\n", id);
 	_msgers.pop_back();
 	_creators.pop_back();
     } else if (auto crid = _creators[id]; crid != id) {
-	DEBUG_PRINTF ("mrid %hu released\n", id);
+	DEBUG_PRINTF ("[M] mrid %hu released\n", id);
 	_creators[id] = id;
 	if (m) { // act as if the creator was destroyed
 	    assert (m->creator_id() == crid);
@@ -217,7 +217,7 @@ Msger* App::create_msger_with (const Msg::Link& l, iid_t iid [[maybe_unused]], M
 		assert (!"Failed to create Msger for the given destination. Msger constructors are not allowed to fail or throw.");
 	    }
 	} else
-	    DEBUG_PRINTF ("Created Msger %hu as %s\n", l.dest, iid);
+	    DEBUG_PRINTF ("[M] Created Msger %hu as %s\n", l.dest, iid);
     #endif
     return r;
 }
@@ -241,8 +241,12 @@ Msg::Link& App::create_link (Msg::Link& l, iid_t iid)
 	return l;
     if (l.dest == mrid_New)
 	l.dest = allocate_mrid (l.src);
-    if (l.dest < _msgers.size() && !_msgers[l.dest])
-	_msgers[l.dest] = create_msger (l, iid);
+    if (l.dest < _msgers.size() && !_msgers[l.dest]) {
+	if (_creators[l.dest] == l.src)
+	    _msgers[l.dest] = create_msger (l, iid);
+	else // messages for a deleted Msger can arrive if the sender was not yet aware of the deletion, in another process, for example, where the notification had not arrived. Condition logged, but is not usually an error.
+	    DEBUG_PRINTF ("Warning: dead destination Msger %hu can only be resurrected by creator %hu, not %hu.\n", l.dest, _creators[l.dest], l.src);
+    }
     return l;
 }
 
@@ -263,21 +267,19 @@ void App::delete_msger (mrid_t mid)
     auto crid = _creators[mid];
     if (m && !m->flag (f_Static)) {
 	delete m;
-	DEBUG_PRINTF ("Msger %hu deleted\n", mid);
+	DEBUG_PRINTF ("[M] Msger %hu deleted\n", mid);
     }
 
-    // Notify creator, if it exists
-    if (crid < _msgers.size()) {
-	if (auto cr = _msgers[crid]; cr)
-	    cr->on_msger_destroyed (mid);
-	else // or free mrid if creator is already deleted
-	    free_mrid (mid);
-    }
-
-    // Notify connected Msgers of this one's destruction
-    for (auto i = 0u; i < _creators.size(); ++i)
+    // Notify Msgers created by this one of its destruction
+    for (auto i = _creators.size(); i--;)
 	if (_creators[i] == mid)
 	    free_mrid (i);
+
+    // Notify creator, if it exists
+    if (crid < _msgers.size() && _msgers[crid])
+	_msgers[crid]->on_msger_destroyed (mid);
+    else if (crid != mid) // or free mrid if creator is already deleted
+	free_mrid (mid);
 }
 
 void App::delete_unused_msgers (void)

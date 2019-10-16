@@ -637,7 +637,7 @@ bool Extern::accept_incoming_message (void)
     if (!rp) {
 	// Verify that the requested interface is on the exported list
 	if (!_einfo.is_exporting (interface_of_method (method))) {
-	    DEBUG_PRINTF ("[XE] Incoming message requests unexported interface\n");
+	    DEBUG_PRINTF ("[XE] Incoming message requests unexported interface %s\n", interface_of_method (method));
 	    return false;
 	}
 	// Verify that the other side sets extid correctly
@@ -645,7 +645,7 @@ bool Extern::accept_incoming_message (void)
 	    DEBUG_PRINTF ("[XE] Extern connection peer allocates incorrect extids\n");
 	    return false;
 	}
-	DEBUG_PRINTF ("[X] Creating new extid link %hu\n", _inmsg.extid());
+	DEBUG_PRINTF ("[X] Creating new extid link %hu with interface %s\n", _inmsg.extid(), interface_of_method (method));
 	rp = &_relays.emplace_back (msger_id(), mrid_New, _inmsg.extid());
 	//
 	// Create a COMRelay as the destination. It will then create the
