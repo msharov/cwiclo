@@ -15,7 +15,7 @@ class PCOM : public Proxy {
     DECLARE_INTERFACE (COM, (error,"s")(export,"s")(delete,""))
 public:
     constexpr		PCOM (mrid_t src, mrid_t dest)	: Proxy (src, dest) {}
-			~PCOM (void)			{ free_id(); }
+			~PCOM (void)			{ }
     void		error (const string& errmsg)	{ send (m_error(), errmsg); }
     void		export_ (const string& elist)	{ send (m_export(), elist); }
     void		delete_ (void)			{ send (m_delete()); }
@@ -30,9 +30,9 @@ public:
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_error())
-	    o->COM_error (string_view_from_const_stream (msg.read()));
+	    o->COM_error (msg.read().read<string_view>());
 	else if (msg.method() == m_export())
-	    o->COM_export (string_view_from_const_stream (msg.read()));
+	    o->COM_export (msg.read().read<string_view>());
 	else if (msg.method() == m_delete())
 	    o->COM_delete ();
 	else
@@ -229,6 +229,8 @@ private:
     public:
 	constexpr RelayProxy (mrid_t src, mrid_t dest, mrid_t eid)
 	    : pRelay(), relay(src,dest), extid(eid) {}
+	~RelayProxy (void)	// Free ids for relays created by this Extern
+	    { if (pRelay && pRelay->creator_id() == relay.src()) relay.free_id(); }
 	RelayProxy (const RelayProxy&) = delete;
 	void operator= (const RelayProxy&) = delete;
     };

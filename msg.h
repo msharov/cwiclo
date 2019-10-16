@@ -58,26 +58,6 @@ static constexpr const char* signature_of_method (methodid_t __restrict__ mid)
 // When unmarshalling a message, convert method name to local pointer in the interface
 methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, size_t mnamesz);
 
-// Helpers for efficiently unmarshalling string_views
-constexpr auto string_view_from_const_stream (const istream& is)
-{
-    auto ssz = *is.ptr<uint32_t>();
-    auto scp = is.ptr<char>()+sizeof(ssz)-!ssz;
-    if (ssz)
-	--ssz;
-    return string_view (scp, ssz);
-}
-
-constexpr auto string_view_from_stream (istream& is)
-{
-    auto ssz = is.read<uint32_t>();
-    auto scp = is.ptr<char>()-!ssz;
-    is.skip (ceilg (ssz,sizeof(ssz)));
-    if (ssz)
-	--ssz;
-    return string_view (scp, ssz);
-}
-
 //}}}-------------------------------------------------------------------
 //{{{ Interface definition macros
 

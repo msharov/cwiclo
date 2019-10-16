@@ -5,6 +5,7 @@
 
 #pragma once
 #include "memblock.h"
+#include "stream.h"
 
 namespace cwiclo {
 
@@ -218,5 +219,29 @@ public:
     void		resize (size_type sz) = delete;
     void		clear (void) = delete;
 };
+
+//----------------------------------------------------------------------
+
+// istream read can be done more efficiently by constructing the string_view directly
+template <> inline constexpr decltype(auto) istream::read<string_view> (void) __restrict__
+{
+    auto ssz = read<uint32_t>();
+    auto scp = ptr<char>();
+    skip (ceilg (ssz,sizeof(ssz)));
+    if (ssz)
+	--ssz;
+    else
+	--scp;
+    return string_view (scp, ssz);
+}
+
+// may as well do the same for cmemlink
+template <> inline constexpr decltype(auto) istream::read<cmemlink> (void) __restrict__
+{
+    auto ssz = read<cmemlink::size_type>();
+    auto scp = ptr<cmemlink::value_type>();
+    skip (ceilg (ssz,sizeof(ssz)));
+    return cmemlink (scp, ssz);
+}
 
 } // namespace cwiclo

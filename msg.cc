@@ -91,10 +91,12 @@ static streamsize validate_sigelement (istream& is, const char*& sig)
 	auto sal = sigelement_alignment (sig);
 	if (!validate_read_align (is, sz, sal))
 	    return 0;
-	++sig;
+	++sig;		// Add up all the members of the struct
 	for (streamsize ssz; *sig && *sig != ')'; sz += ssz)
 	    if (!(ssz = validate_sigelement (is, sig)))
 		return 0;		// invalid data in buf, return 0 as error
+	assert (*sig == ')' && "unterminated struct in signature");
+	++sig;
 	if (!validate_read_align (is, sz, sal))	// align after the struct
 	    return 0;
     } else if (*sig == 'a' || *sig == 's') {		// Arrays and strings
