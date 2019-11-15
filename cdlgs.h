@@ -76,13 +76,13 @@ private:
 	wid_Ignore,
 	wid_OK
     };
-    static constexpr const Widget::Layout c_layout[] = {
-	WL_(GroupFrame,	.id=wid_Frame),
-	WL___(Label,	.id=wid_Message),
-	WL___(HBox,	.halign=Widget::HAlign::Center),
-	WL_____(Button,	.id=wid_OK),
-	WL_____(Button,	.id=wid_Cancel),
-	WL_____(Button,	.id=wid_Ignore)
+    static constexpr const Layout c_layout[] = {
+	WL_(GroupFrame,	wid_Frame),
+	WL___(Label,	wid_Message),
+	WL___(HBox,	HAlign::Center),
+	WL_____(Button,	wid_OK),
+	WL_____(Button,	wid_Cancel),
+	WL_____(Button,	wid_Ignore)
     };
 };
 

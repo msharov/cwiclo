@@ -5,7 +5,7 @@
 
 #pragma once
 #if __has_include(<curses.h>)
-#include "event.h"
+#include "uidefs.h"
 #include <curses.h>
 
 namespace cwiclo {
@@ -15,8 +15,6 @@ namespace ui {
 
 class PWidgetR : public ProxyR {
     DECLARE_INTERFACE (WidgetR, (event,SIGNATURE_Event)(modified,"qqs"))
-public:
-    using widgetid_t	= Event::widgetid_t;
 public:
     constexpr		PWidgetR (const Msg::Link& l)	: ProxyR(l) {}
     void		event (const Event& ev)		{ send (m_event(), ev); }
@@ -43,65 +41,18 @@ public:
 class Widget {
 public:
     using key_t		= Event::key_t;
-    using widgetid_t	= Event::widgetid_t;
-    enum : widgetid_t {
-	wid_None,
-	wid_First,
-	wid_Last = numeric_limits<widgetid_t>::max()
-    };
-    using coord_t	= Event::coord_t;
-    using dim_t		= Event::dim_t;
-    using Point		= Event::Point;
-    using Size		= Event::Size;
-    using Rect		= Event::Rect;
+    using Layout	= WidgetLayout;
+    using Type		= Layout::Type;
+    using HAlign	= Layout::HAlign;
+    using VAlign	= Layout::VAlign;
     using widgetvec_t	= vector<unique_ptr<Widget>>;
+    using widget_factory_t	= Widget* (*)(mrid_t owner, const Layout& l);
+    enum { f_Focused, f_CanFocus, f_HasCaret, f_Disabled, f_Modified, f_Last };
     enum { COLOR_DEFAULT = -1 };	// Curses transparent color
     enum {			// Keys that curses does not define
 	KEY_ESCAPE = '\e',
 	KEY_BKSPACE = '~'+1
     };
-    enum { f_Focused, f_CanFocus, f_HasCaret, f_Disabled, f_Modified, f_Last };
-    enum class Type : uint8_t {
-	Widget,
-	HBox,
-	VBox,
-	Label,
-	Button,
-	Listbox,
-	Editbox,
-	HSplitter,
-	VSplitter,
-	GroupFrame,
-	StatusLine
-    };
-    enum class HAlign : uint8_t { Left, Center, Right };
-    enum class VAlign : uint8_t { Top, Center, Bottom };
-    struct Layout {
-	uint8_t	level	= 0;
-	Type	type	= Type::Widget;
-	widgetid_t	id	= 0;
-	HAlign	halign	= HAlign::Left;
-	VAlign	valign	= VAlign::Top;
-    };
-    using widget_factory_t	= Widget* (*)(mrid_t owner, const Layout& l);
-    //{{{ WL_ macros ----------------------------------------------------
-    #define WL_L(l,tn,...)	{ .level=l, .type=::cwiclo::ui::Widget::Type::tn, ## __VA_ARGS__ }
-    #define WL_(tn,...)					WL_L( 1,tn, ## __VA_ARGS__)
-    #define WL___(tn,...)				WL_L( 2,tn, ## __VA_ARGS__)
-    #define WL_____(tn,...)				WL_L( 3,tn, ## __VA_ARGS__)
-    #define WL_______(tn,...)				WL_L( 4,tn, ## __VA_ARGS__)
-    #define WL_________(tn,...)				WL_L( 5,tn, ## __VA_ARGS__)
-    #define WL___________(tn,...)			WL_L( 6,tn, ## __VA_ARGS__)
-    #define WL_____________(tn,...)			WL_L( 7,tn, ## __VA_ARGS__)
-    #define WL_______________(tn,...)			WL_L( 8,tn, ## __VA_ARGS__)
-    #define WL_________________(tn,...)			WL_L( 9,tn, ## __VA_ARGS__)
-    #define WL___________________(tn,...)		WL_L(10,tn, ## __VA_ARGS__)
-    #define WL_____________________(tn,...)		WL_L(11,tn, ## __VA_ARGS__)
-    #define WL_______________________(tn,...)		WL_L(12,tn, ## __VA_ARGS__)
-    #define WL_________________________(tn,...)		WL_L(13,tn, ## __VA_ARGS__)
-    #define WL___________________________(tn,...)	WL_L(14,tn, ## __VA_ARGS__)
-    #define WL_____________________________(tn,...)	WL_L(15,tn, ## __VA_ARGS__)
-    //}}}----------------------------------------------------------------
 private:
     struct FocusNeighbors { widgetid_t first, prev, next, last; };
     void		get_focus_neighbors_for (widgetid_t w, FocusNeighbors& n) const;
@@ -111,10 +62,10 @@ public:
 			Widget (const Widget&) = delete;
     void		operator= (const Widget&) = delete;
     virtual		~Widget (void)			{ destroy(); }
-    [[nodiscard]] static Widget*	create (mrid_t owner, const Layout& l)	{ return s_factory (owner, l); }
+    [[nodiscard]] static Widget* create (mrid_t owner, const Layout& l)	{ return s_factory (owner, l); }
     auto		w (void) const			{ return _w; }
     auto&		layinfo (void) const		{ return _layinfo; }
-    auto		widget_id (void) const		{ return _layinfo.id; }
+    auto		widget_id (void) const		{ return layinfo().id(); }
 			operator WINDOW* (void)	const	{ return w(); }
     auto		operator-> (void) const		{ return w(); }
     auto&		size_hints (void) const			{ return _size_hints; }

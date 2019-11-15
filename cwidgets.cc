@@ -173,7 +173,7 @@ void Editbox::on_draw (void) const
 Widget* default_widget_factory (mrid_t owner, const Widget::Layout& lay)
 {
     const Msg::Link ol { owner, owner };
-    switch (lay.type) {
+    switch (lay.type()) {
 	case Widget::Type::Label:	return new Label (ol,lay);
 	case Widget::Type::Button:	return new Button (ol,lay);
 	case Widget::Type::Listbox:	return new Listbox (ol,lay);

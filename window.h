@@ -14,24 +14,15 @@ namespace ui {
 class CursesWindow : public Msger {
 public:
     using key_t		= Event::key_t;
-    using widgetid_t	= Event::widgetid_t;
-    enum : widgetid_t {
-	wid_None,
-	wid_First,
-	wid_Last = numeric_limits<widgetid_t>::max()
-    };
-    using coord_t	= Event::coord_t;
-    using dim_t		= Event::dim_t;
-    using Point		= Event::Point;
-    using Size		= Event::Size;
-    using Rect		= Event::Rect;
+    using Layout	= Widget::Layout;
+    using HAlign	= Widget::HAlign;
+    using VAlign	= Widget::VAlign;
+    enum { f_CaretOn = Msger::f_Last, f_Last };
     enum { COLOR_DEFAULT = -1 };	// Curses transparent color
     enum {			// Keys that curses does not define
 	KEY_ESCAPE = '\e',
 	KEY_BKSPACE = '~'+1
     };
-    enum { f_CaretOn = Msger::f_Last, f_Last };
-    using widgetvec_t	= vector<unique_ptr<Widget>>;
 public:
     explicit		CursesWindow (const Msg::Link& l);
 			~CursesWindow (void) override;

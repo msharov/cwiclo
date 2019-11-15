@@ -38,10 +38,10 @@ const Widget* Widget::widget_by_id (widgetid_t id) const
 
 const Widget::Layout* Widget::add_widgets (const Layout* f, const Layout* l)
 {
-    while (f < l && f->level > layinfo().level) {
+    while (f < l && f->level() > layinfo().level()) {
 	auto& w = _widgets.emplace_back (create (_reply.src(), *f));
 	auto nf = next(f);
-	if (nf < l && nf->level > f->level)
+	if (nf < l && nf->level() > f->level())
 	    nf = w->add_widgets (nf, l);
 	f = nf;
     }
@@ -65,7 +65,7 @@ auto Widget::measure_text (const string_view& text) -> Size
     return sz;
 }
 
-Widget::Rect Widget::compute_size_hints (void)
+Rect Widget::compute_size_hints (void)
 {
     // The returned size hints contain w/h size and x/y zero sub size counts
     Rect rsh = {};
@@ -86,7 +86,7 @@ Widget::Rect Widget::compute_size_hints (void)
 		++rsh.y;
 
 	    // Packers add up widget sizes in one direction, expand to fit them in the other
-	    if (layinfo().type == Type::HBox) {
+	    if (layinfo().type() == Type::HBox) {
 		rsh.w += sh.w;
 		rsh.h = max (rsh.h, sh.h);
 	    } else {
@@ -95,7 +95,7 @@ Widget::Rect Widget::compute_size_hints (void)
 	    }
 	}
 	// Frames add border thickness after all the subwidgets have been collected
-	if (layinfo().type == Type::GroupFrame) {
+	if (layinfo().type() == Type::GroupFrame) {
 	    rsh.w += 2;
 	    rsh.h += 2;
 	}
@@ -119,7 +119,7 @@ void Widget::place (const Rect& inarea)
     auto subpos = inarea.xy;
     auto subsz = inarea.wh;
     // Group frame starts by offsetting the frame
-    if (layinfo().type == Type::GroupFrame) {
+    if (layinfo().type() == Type::GroupFrame) {
 	++subpos.x;
 	++subpos.y;
 	subsz.w -= min (subsz.w, 2);	// may be truncated
@@ -133,9 +133,9 @@ void Widget::place (const Rect& inarea)
     if (!nexpsx) {
 	// padding may be negative if inarea is smaller than fixed
 	coord_t padding = inarea.w - fixed.w;
-	if (layinfo().halign == Widget::HAlign::Right)
+	if (layinfo().halign() == Widget::HAlign::Right)
 	    subpos.x += padding;
-	else if (layinfo().halign == Widget::HAlign::Center)
+	else if (layinfo().halign() == Widget::HAlign::Center)
 	    subpos.x += padding/2;
     }
     // Same for y
@@ -143,9 +143,9 @@ void Widget::place (const Rect& inarea)
 	extra.h = inarea.h - fixed.h;
     if (!nexpsy) {
 	coord_t padding = inarea.h - fixed.h;
-	if (layinfo().halign == HAlign::Right)
+	if (layinfo().halign() == HAlign::Right)
 	    subpos.y += padding;
-	else if (layinfo().halign == HAlign::Center)
+	else if (layinfo().halign() == HAlign::Center)
 	    subpos.y += padding/2;
     }
 
@@ -159,7 +159,7 @@ void Widget::place (const Rect& inarea)
 	warea.xy = subpos;
 
 	// Packer-type dependent area computation and subpos adjustment
-	if (layinfo().type == Type::HBox) {
+	if (layinfo().type() == Type::HBox) {
 	    auto sw = min (subsz.w, warea.w);
 	    // Add extra space, if available
 	    if (xexp && nexpsx) {
@@ -192,7 +192,7 @@ void Widget::place (const Rect& inarea)
 void Widget::resize (int l, int c, int y, int x)
 {
     set_area (x, y, c, l);
-    if (l && c && layinfo().type != Type::HBox && layinfo().type != Type::VBox) { // packing boxes have no window
+    if (l && c && layinfo().type() != Type::HBox && layinfo().type() != Type::VBox) { // packing boxes have no window
 	auto ow = exchange (_w, newwin (l,c,y,x));
 	if (ow)
 	    delwin (ow);
