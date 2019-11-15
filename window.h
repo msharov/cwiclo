@@ -49,15 +49,13 @@ public:
 			    { on_modified (wid, t); }
 protected:
     virtual void	layout (void);
-    Widget*		create_widget (const Widget::Layout& l);
-    void		create_widgets (const Widget::Layout* l, unsigned sz);
+    void		create_widgets (const Widget::Layout* f, const Widget::Layout* l);
     template <unsigned N>
     void		create_widgets (const Widget::Layout (&l)[N])
-			    { create_widgets (begin(l), size(l)); }
-    void		destroy_widgets (void)	{ _widgets.clear(); }
-    const Widget*	widget_by_id (widgetid_t id) const PURE;
-    Widget*		widget_by_id (widgetid_t id)
-			    { return UNCONST_MEMBER_FN (widget_by_id,id); }
+			    { create_widgets (begin(l), end(l)); }
+    void		destroy_widgets (void)			{ _widgets.reset(); }
+    auto		widget_by_id (widgetid_t id) const	{ return _widgets->widget_by_id(id); }
+    auto		widget_by_id (widgetid_t id)		{ return _widgets->widget_by_id(id); }
     void		set_widget_text (widgetid_t id, const char* t)
 			    { if (auto w = widget_by_id (id); w) w->set_text (t); }
     void		set_widget_text (widgetid_t id, const string& t)
@@ -77,13 +75,10 @@ protected:
     void		focus_next (void);
     void		focus_prev (void);
 private:
-    Rect		compute_size_hints (const Widget::Layout& plinfo, widgetvec_t::iterator& f, widgetvec_t::iterator l);
-    widgetvec_t::iterator layout_widget (const Rect& area, widgetvec_t::iterator f, widgetvec_t::iterator l);
-private:
     WINDOW*		_winput;
     PTimer		_uiinput;
     widgetid_t		_focused;
-    widgetvec_t		_widgets;
+    unique_ptr<Widget>	_widgets;
     static mrid_t	s_focused;
     static uint8_t	s_nwins;
 };

@@ -79,7 +79,7 @@ private:
     static constexpr const Widget::Layout c_layout[] = {
 	WL_(GroupFrame,	.id=wid_Frame),
 	WL___(Label,	.id=wid_Message),
-	WL___(HBox),
+	WL___(HBox,	.halign=Widget::HAlign::Center),
 	WL_____(Button,	.id=wid_OK),
 	WL_____(Button,	.id=wid_Cancel),
 	WL_____(Button,	.id=wid_Ignore)

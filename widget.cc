@@ -9,8 +9,11 @@
 namespace cwiclo {
 namespace ui {
 
+//{{{ Widget creation --------------------------------------------------
+
 Widget::Widget (const Msg::Link& l, const Layout& lay)
 :_text()
+,_widgets()
 ,_w()
 ,_area()
 ,_size_hints()
@@ -21,20 +24,32 @@ Widget::Widget (const Msg::Link& l, const Layout& lay)
 {
 }
 
-void Widget::resize (int l, int c, int y, int x)
+const Widget* Widget::widget_by_id (widgetid_t id) const
 {
-    set_area (x, y, c, l);
-    if (layinfo().type == Type::HBox || layinfo().type == Type::VBox)
-	return;	// packing boxes have no window
-    auto ow = exchange (_w, newwin (l,c,y,x));
-    if (ow)
-	delwin (ow);
-    leaveok (w(), true);
-    keypad (w(), true);
-    meta (w(), true);
-    nodelay (w(), true);
-    on_resize();
+    if (id == wid_None)
+	return nullptr;
+    if (widget_id() == id)
+	return this;
+    for (auto& w : _widgets)
+	if (auto sw = w->widget_by_id(id); sw)
+	    return sw;
+    return nullptr;
 }
+
+const Widget::Layout* Widget::add_widgets (const Layout* f, const Layout* l)
+{
+    while (f < l && f->level > layinfo().level) {
+	auto& w = _widgets.emplace_back (create (_reply.src(), *f));
+	auto nf = next(f);
+	if (nf < l && nf->level > f->level)
+	    nf = w->add_widgets (nf, l);
+	f = nf;
+    }
+    return f;
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ Sizing and layout
 
 auto Widget::measure_text (const string_view& text) -> Size
 {
@@ -50,6 +65,148 @@ auto Widget::measure_text (const string_view& text) -> Size
     return sz;
 }
 
+Widget::Rect Widget::compute_size_hints (void)
+{
+    // The returned size hints contain w/h size and x/y zero sub size counts
+    Rect rsh = {};
+
+    // For leaf widgets, size_hints is all that is needed
+    if (_widgets.empty())
+	rsh.wh = size_hints();
+    else {
+	// Iterate over all widgets on the same level
+	for (auto& w : _widgets) {
+	    // Get the size hints and update the aggregate
+	    auto sh = w->compute_size_hints();
+
+	    // Count expandables
+	    if (sh.x || !sh.w)
+		++rsh.x;
+	    if (sh.y || !sh.h)
+		++rsh.y;
+
+	    // Packers add up widget sizes in one direction, expand to fit them in the other
+	    if (layinfo().type == Type::HBox) {
+		rsh.w += sh.w;
+		rsh.h = max (rsh.h, sh.h);
+	    } else {
+		rsh.w = max (rsh.w, sh.w);
+		rsh.h += sh.h;
+	    }
+	}
+	// Frames add border thickness after all the subwidgets have been collected
+	if (layinfo().type == Type::GroupFrame) {
+	    rsh.w += 2;
+	    rsh.h += 2;
+	}
+    }
+    // The hints are saved in _area for the subsequent layout call
+    set_area (rsh);
+    return rsh;
+}
+
+void Widget::place (const Rect& inarea)
+{
+    // inarea contains the final laid out size of this widget.
+    // Number of expandables is in current area().xy, set in collect_size_hints.
+    //
+    auto fixed = area().wh;
+    unsigned nexpsx = area().x, nexpsy = area().y;
+    // With expandable size extracted, can place the widget where indicated.
+    resize (inarea);
+
+    // Now for the subwidgets, if there are any.
+    auto subpos = inarea.xy;
+    auto subsz = inarea.wh;
+    // Group frame starts by offsetting the frame
+    if (layinfo().type == Type::GroupFrame) {
+	++subpos.x;
+	++subpos.y;
+	subsz.w -= min (subsz.w, 2);	// may be truncated
+	subsz.h -= min (subsz.h, 2);
+    }
+    // Compute extra size for expandables
+    Size extra = {};
+    if (fixed.w < inarea.w)
+	extra.w = inarea.w - fixed.w;
+    // If no expandables, pad to align
+    if (!nexpsx) {
+	// padding may be negative if inarea is smaller than fixed
+	coord_t padding = inarea.w - fixed.w;
+	if (layinfo().halign == Widget::HAlign::Right)
+	    subpos.x += padding;
+	else if (layinfo().halign == Widget::HAlign::Center)
+	    subpos.x += padding/2;
+    }
+    // Same for y
+    if (fixed.h < inarea.h)
+	extra.h = inarea.h - fixed.h;
+    if (!nexpsy) {
+	coord_t padding = inarea.h - fixed.h;
+	if (layinfo().halign == HAlign::Right)
+	    subpos.y += padding;
+	else if (layinfo().halign == HAlign::Center)
+	    subpos.y += padding/2;
+    }
+
+    // Starting with the one after f. If there are no subwidgets, return.
+    for (auto& w : _widgets) {
+	auto warea = w->area();
+	// See if this subwidget gets extra space
+	bool xexp = warea.x || !warea.w;
+	bool yexp = warea.y || !warea.h;
+	// Widget position already computed
+	warea.xy = subpos;
+
+	// Packer-type dependent area computation and subpos adjustment
+	if (layinfo().type == Type::HBox) {
+	    auto sw = min (subsz.w, warea.w);
+	    // Add extra space, if available
+	    if (xexp && nexpsx) {
+		auto ew = extra.w/nexpsx--;	// divided equally between expandable subwidgets
+		extra.w -= ew;
+		sw += ew;
+	    }
+	    subpos.x += sw;
+	    subsz.w -= sw;
+	    warea.w = sw;
+	    warea.h = subsz.h;
+	} else {
+	    warea.w = subsz.w;
+	    auto sh = min (subsz.h, warea.h);
+	    if (yexp && nexpsy) {
+		auto eh = extra.h/nexpsy--;
+		extra.h -= eh;
+		sh += eh;
+	    }
+	    subpos.y += sh;
+	    subsz.h -= sh;
+	    warea.h = sh;
+	}
+
+	// Recurse to layout w.
+	w->place (warea);
+    }
+}
+
+void Widget::resize (int l, int c, int y, int x)
+{
+    set_area (x, y, c, l);
+    if (l && c && layinfo().type != Type::HBox && layinfo().type != Type::VBox) { // packing boxes have no window
+	auto ow = exchange (_w, newwin (l,c,y,x));
+	if (ow)
+	    delwin (ow);
+	leaveok (w(), true);
+	keypad (w(), true);
+	meta (w(), true);
+	nodelay (w(), true);
+    }
+    on_resize();
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ Content
+
 void Widget::report_modified (void)
 {
     _reply.modified (widget_id(), text());
@@ -60,16 +217,86 @@ void Widget::on_set_text (void)
     set_size_hints (measure_text (text()));
 }
 
+void Widget::draw (void) const
+{
+    on_draw();
+    wnoutrefresh (w());
+    for (auto& w : _widgets)
+	w->draw();
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ Focus
+
+void Widget::get_focus_neighbors_for (widgetid_t wid, FocusNeighbors& n) const
+{
+    if (widget_id() != wid_None && flag (f_CanFocus) && w()) {
+	n.first = min (n.first, widget_id());
+	n.last = max (n.last, widget_id());
+	// next is after wid, but closer than n.next
+	if (widget_id() > wid && widget_id() < n.next)
+	    n.next = widget_id();
+	if (widget_id() < wid && widget_id() > n.prev)
+	    n.prev = widget_id();
+    }
+    for (auto& w : _widgets)
+	w->get_focus_neighbors_for (wid, n);
+}
+
+auto Widget::get_focus_neighbors_for (widgetid_t wid) const -> FocusNeighbors
+{
+    FocusNeighbors n = { wid_Last, wid_None, wid_Last, wid_None };
+    get_focus_neighbors_for (wid, n);
+    // No widgets - n.first should be wid_None
+    if (n.first == wid_Last)
+	n.first = wid_None;
+    // Wrap around next/prev when at ends
+    if (n.prev == wid_None)
+	n.prev = n.last;
+    if (n.next == wid_Last)
+	n.next = n.first;
+    return n;
+}
+
+void Widget::focus (widgetid_t id)
+{
+    bool f = (widget_id() == id && flag (f_CanFocus));
+    for (auto& w : _widgets) {
+	w->focus (id);
+	if (w->flag (f_Focused))
+	    f = true;
+    }
+    set_flag (f_Focused, f);
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ Event handling
+
 void Widget::on_event (const Event& ev)
 {
-    if (ev.type() == Event::Type::KeyDown)
-	on_key (ev.key());
+    // KeyDown events go only to the focused widget
+    if (ev.type() == Event::Type::KeyDown) {
+	// on_key handlers are called in leaves and in focusable containers
+	if (flag (f_CanFocus))	// only call if the widget is able to handle it
+	    on_key (ev.key());
+	// Key events that the focused widget does not use are forwarded
+	// back here with the source widget id set to that widget.
+	auto focusw = linear_search_if (_widgets, [](auto& w) { return w->focused(); });
+	if (focusw)
+	    (*focusw)->on_event (ev);
+    } else
+	for (auto& w : _widgets)
+	    w->on_event (ev);
 }
 
 void Widget::on_key (key_t k)
 {
-    create_event (Event (Event::Type::KeyDown, k, widget_id()));
+    // At the end of the focus path, return unused key events to parent window
+    if (widget_id() && _widgets.empty() && flag (f_CanFocus))
+	create_event (Event (Event::Type::KeyDown, k, widget_id()));
 }
+
+//}}}-------------------------------------------------------------------
 
 } // namespace ui
 } // namespace cwiclo

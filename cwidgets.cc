@@ -63,13 +63,13 @@ void Listbox::on_draw (void) const
 	wmove (w(), y-_top, 0);
 	if (y == selection_start() && focused()) {
 	    wattron (w(), A_REVERSE);
-	    whline (w(), ' ', maxx());
+	    whline (w(), ' ', area().w);
 	}
 	auto vislen = tlen;
-	if (tlen > maxx())
-	    vislen = maxx()-1;
+	if (tlen > area().w)
+	    vislen = area().w-1;
 	waddnstr (w(), lt, vislen);
-	if (tlen > maxx())
+	if (tlen > area().w)
 	    waddch (w(), '>');
 	if (y == selection_start())
 	    wattroff (w(), A_REVERSE);
@@ -90,6 +90,16 @@ void Listbox::on_key (key_t k)
 //}}}-------------------------------------------------------------------
 //{{{ Editbox
 
+Editbox::Editbox (const Msg::Link& l, const Layout& lay)
+: Widget(l,lay)
+,_cpos()
+,_fc()
+{
+    set_flag (f_HasCaret);
+    set_flag (f_CanFocus);
+    set_size_hints (0, 1);
+}
+
 void Editbox::on_resize (void)
 {
     Widget::on_resize();
@@ -106,9 +116,9 @@ void Editbox::posclip (void)
 	    --_fc;	// adjust for clip indicator
     }
     if (w()) {
-	if (_fc+maxx() < _cpos+2)	// cursor past right edge +2 for > indicator
-	    _fc = _cpos+2-maxx();
-	while (_fc && _fc-1u+maxx() > text().size())	// if text fits in box, no scroll
+	if (_fc+area().w < _cpos+2)	// cursor past right edge +2 for > indicator
+	    _fc = _cpos+2-area().w;
+	while (_fc && _fc-1u+area().w > text().size())	// if text fits in box, no scroll
 	    --_fc;
     }
 }
@@ -118,6 +128,8 @@ void Editbox::on_set_text (void)
     _cpos = text().size();
     _fc = 0;
     posclip();
+    // An edit box must be one line only
+    set_size_hints (size_hints().w, 1);
 }
 
 void Editbox::on_key (key_t k)
@@ -150,10 +162,32 @@ void Editbox::on_draw (void) const
     waddstr (w(), text().iat(_fc));
     if (_fc)
 	mvwaddch (w(), 0, 0, '<');
-    if (_fc+maxx() <= text().size())
-	mvwaddch (w(), 0, maxx()-1, '>');
+    if (_fc+area().w <= text().size())
+	mvwaddch (w(), 0, area().w-1, '>');
     wmove (w(), 0, _cpos-_fc);
 }
+
+//}}}-------------------------------------------------------------------
+//{{{ default_widget_factory
+
+Widget* default_widget_factory (mrid_t owner, const Widget::Layout& lay)
+{
+    const Msg::Link ol { owner, owner };
+    switch (lay.type) {
+	case Widget::Type::Label:	return new Label (ol,lay);
+	case Widget::Type::Button:	return new Button (ol,lay);
+	case Widget::Type::Listbox:	return new Listbox (ol,lay);
+	case Widget::Type::Editbox:	return new Editbox (ol,lay);
+	case Widget::Type::HSplitter:	return new HSplitter (ol,lay);
+	case Widget::Type::VSplitter:	return new VSplitter (ol,lay);
+	case Widget::Type::GroupFrame:	return new GroupFrame (ol,lay);
+	case Widget::Type::StatusLine:	return new StatusLine (ol,lay);
+	default:			return new Widget (ol,lay);
+    }
+}
+
+// default_widget_factory set to default
+Widget::widget_factory_t Widget::s_factory = default_widget_factory;
 
 //}}}-------------------------------------------------------------------
 

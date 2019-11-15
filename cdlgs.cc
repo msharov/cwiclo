@@ -40,11 +40,13 @@ void MessageBox::MessageBox_ask (const string_view& prompt, Type type, uint16_t)
     // Each type of box has different number of buttons, which are last
     // in the list. Subtracting unneeded buttons generates the layout.
     if (_type == Type::Ok)
-	create_widgets (begin(c_layout), size(c_layout)-2);
+	create_widgets (begin(c_layout), end(c_layout)-2);
     else if (_type == Type::OkCancel || _type == Type::YesNo)
-	create_widgets (begin(c_layout), size(c_layout)-1);
+	create_widgets (begin(c_layout), end(c_layout)-1);
     else
 	create_widgets (c_layout);
+
+    set_widget_text (wid_Message, prompt);
 
     // Setting labels by type
     if (_type == Type::RetryCancelIgnore)
