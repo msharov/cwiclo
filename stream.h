@@ -104,7 +104,7 @@ public:
     template <typename T>
     inline constexpr auto&	operator>> (T&& v) { read(v); return *this; }
 protected:
-    inline constexpr const_pointer alignptr (streamsize g) const __restrict__
+    inline constexprg const_pointer alignptr (streamsize g) const __restrict__
 				    { return assume_aligned (const_pointer (ceilg (uintptr_t(_p), g)), g); }
 private:
     const_pointer		_p;
@@ -144,21 +144,21 @@ public:
     inline constexpr void	seek (pointer p) __restrict__		{ assert (p <= end()); _p = p; }
     inline constexpr void	skip (streamsize sz) __restrict__	{ seek (begin()+sz); }
     inline constexpr void	zero (streamsize sz) __restrict__	{ seek (zero_fill_n (begin(), sz)); }
-    inline constexpr void	align (streamsize g) __restrict__ {
+    inline constexprg void	align (streamsize g) __restrict__ {
 				    assert (can_align(g));
 				    pointer __restrict__ p = begin();
 				    while (uintptr_t(p) % g)
 					*p++ = 0;
 				    seek (assume_aligned (p,g));
 				}
-    inline constexpr streamsize	alignsz (streamsize g) const	{ return alignptr(g) - begin(); }
-    inline constexpr bool	can_align (streamsize g) const	{ return alignptr(g) <= end(); }
-    inline constexpr bool	aligned (streamsize g) const	{ return alignptr(g) == begin(); }
+    inline constexprg streamsize	alignsz (streamsize g) const __restrict__	{ return alignptr(g) - begin(); }
+    inline constexprg bool	can_align (streamsize g) const __restrict__	{ return alignptr(g) <= end(); }
+    inline constexprg bool	aligned (streamsize g) const __restrict__	{ return alignptr(g) == begin(); }
     inline constexpr void	write (const void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
 				    seek (copy_n (p, sz, begin()));
 				}
-    inline constexpr void	write_strz (const char* s)	{ write (s, __builtin_strlen(s)+1); }
+    inline constexpr void	write_strz (const char* s) __restrict__	{ write (s, __builtin_strlen(s)+1); }
     template <typename T>
     inline constexpr void	writet (const T& v) __restrict__ {
 				    assert (remaining() >= sizeof(T));
@@ -166,7 +166,7 @@ public:
 				    _p += sizeof(T);
 				}
     template <typename T>
-    inline constexpr void	write (const T& v) {
+    inline constexpr void	write (const T& v) __restrict__ {
 				    if constexpr (is_trivial<T>::value)
 					writet (v);
 				    else
@@ -188,13 +188,13 @@ public:
     template <typename T>
     inline constexpr auto&	operator<< (const T& v) { write(v); return *this; }
     template <typename T>
-    constexpr void		write_array (const T* a, uint32_t n);
+    constexpr void		write_array (const T* a, uint32_t n) __restrict__;
     template <typename T, cmemlink::size_type N>
-    constexpr void		write_array (const T (&a)[N]) { write_array (ARRAY_BLOCK(a)); }
+    constexpr void		write_array (const T (&a)[N]) __restrict__ { write_array (ARRAY_BLOCK(a)); }
     template <typename T, cmemlink::size_type N>
-    inline constexpr auto&	operator<< (const T (&a)[N]) { write_array(a); return *this; }
+    inline constexpr auto&	operator<< (const T (&a)[N]) __restrict__ { write_array(a); return *this; }
 private:
-    inline constexpr const_pointer alignptr (streamsize g) const __restrict__
+    inline constexprg const_pointer alignptr (streamsize g) const __restrict__
 				    { return assume_aligned (const_pointer (ceilg (uintptr_t(_p), g)), g); }
 private:
     pointer			_p;
@@ -335,31 +335,31 @@ private:
 //{{{ stream write_array
 
 template <typename T>
-constexpr void ostream::write_array (const T* a, uint32_t n)
+constexpr void ostream::write_array (const T* __restrict__ a, uint32_t n) __restrict__
 {
     write (n);
-    if constexpr (stream_align<T>::value > alignof(n))
+    if constexpr (stream_align<T>::value > 4)
 	align (stream_align<T>::value);
     if constexpr (is_trivially_copyable<T>::value)
 	seek (pointer_cast<value_type> (copy_n (a, n, ptr<T>())));
     else for (auto i = 0u; i < n; ++i)
 	write (a[i]);
-    if constexpr (stream_align<T>::value < alignof(n))
-	align (alignof(n));
+    if constexpr (stream_align<T>::value < 4)
+	align (4);
 }
 
 template <typename T>
 constexpr void sstream::write_array (const T* a [[maybe_unused]], uint32_t n)
 {
     write (n);
-    if constexpr (stream_align<T>::value > alignof(n))
+    if constexpr (stream_align<T>::value > 4)
 	align (stream_align<T>::value);
     if constexpr (is_trivially_copyable<T>::value)
 	skip (n*sizeof(T));
     else for (auto i = 0u; i < n; ++i)
 	write (a[i]);
-    if constexpr (stream_align<T>::value < alignof(n))
-	align (alignof(n));
+    if constexpr (stream_align<T>::value < 4)
+	align (4);
 }
 
 } // namespace cwiclo

@@ -49,7 +49,7 @@ const char* executable_in_path (const char* efn, char* exe, size_t exesz)
     if (!penv)
 	penv = "/bin:/usr/bin:.";
     char path [PATH_MAX];
-    if (size(path) < size_t(snprintf (ARRAY_BLOCK(path), "%s/%s"+strlen("%s/"), penv)))
+    if (size(path) < size_t(snprintf (ARRAY_BLOCK(path), &"%s/%s"[strlen("%s/")], penv)))
 	return nullptr;
 
     for (char *pf = path, *pl = pf; *pf; pf = pl) {

@@ -57,7 +57,7 @@ public:
 	if (msg.method() == m_ping()) {
 	    // Each method unmarshals the arguments and calls the handling object
 	    auto is = msg.read();
-	    uint32_t v; is >> v;
+	    auto v = is.read<uint32_t>();
 	    o->Ping_ping (v);	// name the handlers Interface_method by convention
 	} else
 	    return false;	// protocol errors are handled by caller

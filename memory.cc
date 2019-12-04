@@ -18,9 +18,9 @@ namespace __cxxabiv1 {
 extern "C" {
 
 #ifndef NDEBUG
-#define TERMINATE_ALIAS(name)	void name (void) { assert (!#name); std::terminate(); }
+#define TERMINATE_ALIAS(name)	void name (void) noexcept { assert (!#name); std::terminate(); }
 #else
-#define TERMINATE_ALIAS(name)	void name (void) WEAKALIAS("_ZSt9terminatev");
+#define TERMINATE_ALIAS(name)	void name (void) noexcept WEAKALIAS("_ZSt9terminatev");
 #endif
 TERMINATE_ALIAS (__cxa_call_unexpected)
 TERMINATE_ALIAS (__cxa_pure_virtual)

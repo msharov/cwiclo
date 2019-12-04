@@ -113,6 +113,7 @@ public:
 			    :_src(src),_type(t),_mods(mods),_sz(sz) {}
     constexpr auto	src (void) const	{ return _src; }
     constexpr auto	type (void) const	{ return _type; }
+    constexpr auto	mods (void) const	{ return _mods; }
     constexpr auto&	loc (void) const	{ return _pt; }
     constexpr auto	selection_start (void) const	{ return _sz.w; }
     constexpr auto	selection_end (void) const	{ return _sz.h; }

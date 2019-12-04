@@ -67,7 +67,6 @@ private:
 private:
     string		_prompt;
     Type		_type;
-    Answer		_answer;
     PMessageBoxR	_reply;
     enum {
 	wid_Frame = wid_First,

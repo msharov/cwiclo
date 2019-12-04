@@ -20,7 +20,6 @@ MessageBox::MessageBox (const Msg::Link& l)
 : CursesWindow(l)
 ,_prompt()
 ,_type()
-,_answer()
 ,_reply(l)
 {
 }

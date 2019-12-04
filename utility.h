@@ -275,7 +275,7 @@ enum class memory_order : int {
 namespace {
 
 // Use in lock wait loops to relax the CPU load
-static constexpr void tight_loop_pause (void)
+inline static void tight_loop_pause (void)
 {
     #if __x86__
 	__builtin_ia32_pause();
@@ -287,9 +287,9 @@ static constexpr void tight_loop_pause (void)
 template <typename T>
 [[nodiscard]] static constexpr T kill_dependency (T v)
     { return T(v); }
-static constexpr void atomic_thread_fence (memory_order order)
+inline static void atomic_thread_fence (memory_order order)
     { __atomic_thread_fence (int(order)); }
-static constexpr void atomic_signal_fence (memory_order order)
+inline static void atomic_signal_fence (memory_order order)
     { __atomic_signal_fence (int(order)); }
 
 } // namespace
@@ -301,9 +301,9 @@ public:
     constexpr		atomic_flag (bool v)	: _v(v) {}
     constexpr		atomic_flag (const atomic_flag&) = delete;
     void		operator= (const atomic_flag&) = delete;
-    constexpr void	clear (memory_order order = memory_order::release)
+    inline void		clear (memory_order order = memory_order::release)
 			    { __atomic_clear (&_v, int(order)); }
-    constexpr bool	test_and_set (memory_order order = memory_order::acq_rel)
+    inline bool		test_and_set (memory_order order = memory_order::acq_rel)
 			    { return __atomic_test_and_set (&_v, int(order)); }
 };
 #define ATOMIC_FLAG_INIT	{false}

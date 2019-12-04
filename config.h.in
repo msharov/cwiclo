@@ -52,9 +52,26 @@
 #else
     #define MALLOCLIKE_ARG(...)	__attribute__((alloc_size(__VA_ARGS__)))
 #endif
+#if __clang__	// clang's constexpr disallows reinterpret_cast
+    #define constexprg
+#else
+    #define constexprg constexpr
+#endif
 #if defined(NDEBUG) && !defined(inline)
     #define inline		INLINE inline
 #endif
 #if __i386__ || __x86_64__
     #define __x86__ 1
+#endif
+
+// clang incompatibilities
+#if __clang__
+namespace {
+template <typename T>
+constexpr auto __builtin_assume_aligned (T p, size_t, size_t) { return p; }
+inline static constexpr auto __builtin_strnlen (const char* p, size_t n)
+    { size_t l = 0; for (; *p && n; ++p,--n,++l){} return l; }
+}
+// clang's __restrict__ is too restrictive
+#define __restrict__
 #endif
