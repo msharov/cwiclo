@@ -17,7 +17,7 @@ DEFINE_INTERFACE (MessageBoxR)
 //----------------------------------------------------------------------
 
 MessageBox::MessageBox (const Msg::Link& l)
-: CursesWindow(l)
+: Window(l)
 ,_prompt()
 ,_type()
 ,_reply(l)
@@ -27,7 +27,7 @@ MessageBox::MessageBox (const Msg::Link& l)
 bool MessageBox::dispatch (Msg& msg)
 {
     return PMessageBox::dispatch (this, msg)
-	|| CursesWindow::dispatch (msg);
+	|| Window::dispatch (msg);
 }
 
 void MessageBox::MessageBox_ask (const string_view& prompt, Type type, uint16_t)
@@ -90,9 +90,9 @@ void MessageBox::on_key (key_t key)
 	else if (focused_widget_id() == wid_OK)
 	    done (Answer::Ok);
 	else
-	    CursesWindow::on_key (key);
+	    Window::on_key (key);
     } else
-	CursesWindow::on_key (key);
+	Window::on_key (key);
 }
 
 } // namespace ui

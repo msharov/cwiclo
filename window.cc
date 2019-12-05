@@ -13,15 +13,15 @@ namespace ui {
 
 //{{{ Statics ----------------------------------------------------------
 
-mrid_t CursesWindow::s_focused = 0;
-uint8_t CursesWindow::s_nwins = 0;
+mrid_t Window::s_focused = 0;
+uint8_t Window::s_nwins = 0;
 
 //}}}-------------------------------------------------------------------
 //{{{ Widget creation
 
-CursesWindow::CursesWindow (const Msg::Link& l)
+Window::Window (const Msg::Link& l)
 : Msger(l)
-,_winput()
+,_w()
 ,_uiinput (l.dest)
 ,_focused (wid_None)
 ,_widgets()
@@ -41,7 +41,7 @@ CursesWindow::CursesWindow (const Msg::Link& l)
     signal (SIGTSTP, SIG_IGN);	// disable Ctrl-Z
 }
 
-CursesWindow::~CursesWindow (void)
+Window::~Window (void)
 {
     if (!--s_nwins) {
 	flushinp();
@@ -49,24 +49,24 @@ CursesWindow::~CursesWindow (void)
     }
 }
 
-void CursesWindow::close (void)
+void Window::close (void)
 {
     set_unused();
     _uiinput.stop();
 }
 
-void CursesWindow::on_msger_destroyed (mrid_t mid)
+void Window::on_msger_destroyed (mrid_t mid)
 {
     Msger::on_msger_destroyed (mid);
     // Check if a child modal dialog closed
-    if (mid == s_focused && _winput) {
+    if (mid == s_focused && w()) {
 	curs_set (flag (f_CaretOn));
 	s_focused = msger_id();
 	TimerR_timer (STDIN_FILENO);
     }
 }
 
-void CursesWindow::create_widgets (const Widget::Layout* f, const Widget::Layout* l)
+void Window::create_widgets (const Widget::Layout* f, const Widget::Layout* l)
 {
     if (f >= l)
 	return;
@@ -78,14 +78,13 @@ void CursesWindow::create_widgets (const Widget::Layout* f, const Widget::Layout
 //}}}-------------------------------------------------------------------
 //{{{ Focus
 
-void CursesWindow::focus_widget (widgetid_t id)
+void Window::focus_widget (widgetid_t id)
 {
     auto newf = widget_by_id (id);
-    if (!newf || !newf->flag (Widget::f_CanFocus) || !newf->w())
+    if (!newf || !newf->flag (Widget::f_CanFocus))
 	return;
     _focused = id;
     _widgets->focus (id);
-    _winput = newf->w();
     bool newcaret = newf->flag (Widget::f_HasCaret);
     auto oldf = focused_widget();
     if (!oldf || oldf->flag (Widget::f_HasCaret) != newcaret) {
@@ -96,12 +95,12 @@ void CursesWindow::focus_widget (widgetid_t id)
     TimerR_timer (STDIN_FILENO);
 }
 
-void CursesWindow::focus_next (void)
+void Window::focus_next (void)
 {
     focus_widget (_widgets->next_focus (focused_widget_id()));
 }
 
-void CursesWindow::focus_prev (void)
+void Window::focus_prev (void)
 {
     focus_widget (_widgets->prev_focus (focused_widget_id()));
 }
@@ -109,7 +108,7 @@ void CursesWindow::focus_prev (void)
 //}}}-------------------------------------------------------------------
 //{{{ Layout
 
-void CursesWindow::layout (void)
+void Window::layout (void)
 {
     auto wh = _widgets->compute_size_hints();
 
@@ -130,7 +129,8 @@ void CursesWindow::layout (void)
 	wh.y += (LINES-wh.h)/2u;
 
     // Layout subwidgets in the computed area
-    _widgets->place (wh);
+    _widgets->place (Rect {0,0,wh.w,wh.h});
+    w().resize (wh);
 
     // Reset focus, if needed
     if (!focused_widget_id())
@@ -141,18 +141,19 @@ void CursesWindow::layout (void)
 //}}}-------------------------------------------------------------------
 //{{{ Drawing
 
-void CursesWindow::draw (void) const
+void Window::draw (void)
 {
-    _widgets->draw();
-    if (_winput)
-	wnoutrefresh (_winput);	// to show cursor
-    doupdate();
+    drawlist_t dl;
+    _widgets->draw (dl);
+    w().clear();
+    Drawlist::dispatch (&w(), dl);
+    w().refresh();
 }
 
 //}}}-------------------------------------------------------------------
 //{{{ Event handling
 
-void CursesWindow::on_event (const Event& ev)
+void Window::on_event (const Event& ev)
 {
     // KeyDown events go only to the focused widget
     if (ev.type() == Event::Type::KeyDown && (focused_widget_id() == wid_None || ev.src() != wid_None))
@@ -161,7 +162,7 @@ void CursesWindow::on_event (const Event& ev)
 	_widgets->on_event (ev);
 }
 
-void CursesWindow::on_key (key_t k)
+void Window::on_key (key_t k)
 {
     if (k == KEY_RESIZE)
 	layout();
@@ -171,11 +172,11 @@ void CursesWindow::on_key (key_t k)
 	focus_prev();
 }
 
-void CursesWindow::TimerR_timer (PTimerR::fd_t)
+void Window::TimerR_timer (PTimerR::fd_t)
 {
-    if (msger_id() != s_focused || !_winput)
+    if (msger_id() != s_focused || !w())
 	return;	// a modal dialog is active
-    for (int k; 0 < (k = wgetch (_winput));)
+    for (int k; 0 < (k = w().getch());)
 	PWidget_event (Event (Event::Type::KeyDown, key_t(k)));
     if (!flag (f_Unused) && !isendwin()) {
 	draw();
@@ -183,7 +184,7 @@ void CursesWindow::TimerR_timer (PTimerR::fd_t)
     }
 }
 
-bool CursesWindow::dispatch (Msg& msg)
+bool Window::dispatch (Msg& msg)
 {
     return PTimerR::dispatch (this, msg)
 	|| PWidgetR::dispatch (this, msg)

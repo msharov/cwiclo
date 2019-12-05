@@ -15,7 +15,8 @@ namespace ui {
 class Label : public Widget {
 public:
 		Label (const Msg::Link& l, const Layout& lay) : Widget(l,lay) {}
-    void	on_draw (void) const override;
+private:
+    DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 };
 //}}}---------------------------------------------------------------
 //{{{ Button
@@ -24,8 +25,10 @@ class Button : public Widget {
 public:
 		Button (const Msg::Link& l, const Layout& lay)
 			: Widget(l,lay) { set_flag (f_CanFocus); }
-    void	on_draw (void) const override;
+protected:
     void	on_set_text (void) override;
+private:
+    DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 };
 //}}}---------------------------------------------------------------
 //{{{ Listbox
@@ -34,12 +37,13 @@ class Listbox : public Widget {
 public:
 		Listbox (const Msg::Link& l, const Layout& lay)
 			: Widget(l,lay),_n(),_top() { set_flag (f_CanFocus); }
-    void	on_set_text (void) override;
     void	on_key (key_t k) override;
-    void	on_draw (void) const override;
+protected:
+    void	on_set_text (void) override;
 private:
     void	clip_sel (void)	{ set_selection (min (selection_start(), _n-1)); }
     void	set_n (dim_t n)	{ _n = n; clip_sel(); }
+    DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 private:
     dim_t	_n;
     dim_t	_top;
@@ -50,12 +54,13 @@ private:
 class Editbox : public Widget {
 public:
 		Editbox (const Msg::Link& l, const Layout& lay);
-    void	on_resize (void) override;
-    void	on_set_text (void) override;
     void	on_key (key_t k) override;
-    void	on_draw (void) const override;
+    void	on_resize (void) override;
+protected:
+    void	on_set_text (void) override;
 private:
     void	posclip (void);
+    DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 private:
     coord_t	_cpos;
     u_short	_fc;
@@ -67,10 +72,8 @@ class HSplitter : public Widget {
 public:
 		HSplitter (const Msg::Link& l, const Layout& lay)
 		    : Widget(l,lay) { set_size_hints (0, 1); }
-    void	on_draw (void) const override {
-		    Widget::on_draw();
-		    whline (w(), 0, area().w);
-		}
+private:
+    DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 };
 //}}}---------------------------------------------------------------
 //{{{ VSplitter
@@ -79,10 +82,8 @@ class VSplitter : public Widget {
 public:
 		VSplitter (const Msg::Link& l, const Layout& lay)
 		    : Widget(l,lay) { set_size_hints (1, 0); }
-    void	on_draw (void) const override {
-		    Widget::on_draw();
-		    wvline (w(), 0, area().h);
-		}
+private:
+    DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 };
 //}}}---------------------------------------------------------------
 //{{{ GroupFrame
@@ -91,15 +92,8 @@ class GroupFrame : public Widget {
 public:
 		GroupFrame (const Msg::Link& l, const Layout& lay)
 		    : Widget(l,lay) {}
-    void	on_draw (void) const override {
-		    Widget::on_draw();
-		    box (w(), 0, 0);
-		    auto tsz = min (text().size(), area().w-strlen("[  ]"));
-		    if (tsz > 0) {
-			mvwhline (w(), 0, (area().w-tsz)/2u-1, ' ', tsz+2);
-			mvwaddnstr (w(), 0, (area().w-tsz)/2u, text().c_str(), tsz);
-		    }
-		}
+private:
+    DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 };
 //}}}---------------------------------------------------------------
 //{{{ StatusLine
@@ -110,16 +104,8 @@ public:
 public:
 		StatusLine (const Msg::Link& l, const Layout& lay)
 		    : Widget(l,lay) { set_size_hints (0, 1); }
-    void	on_resize (void) override {
-		    Widget::on_resize();
-		    wbkgdset (w(), A_REVERSE);
-		}
-    void	on_draw (void) const override {
-		    Widget::on_draw();
-		    waddstr (w(), text().c_str());
-		    if (is_modified())
-			mvwaddstr (w(), 0, area().w-strlen(" *"), " *");
-		}
+private:
+    DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 };
 //}}}---------------------------------------------------------------
 //{{{ default_widget_factory

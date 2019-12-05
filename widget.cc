@@ -14,7 +14,6 @@ namespace ui {
 Widget::Widget (const Msg::Link& l, const Layout& lay)
 :_text()
 ,_widgets()
-,_w()
 ,_area()
 ,_size_hints()
 ,_selection()
@@ -133,9 +132,9 @@ void Widget::place (const Rect& inarea)
     if (!nexpsx) {
 	// padding may be negative if inarea is smaller than fixed
 	coord_t padding = inarea.w - fixed.w;
-	if (layinfo().halign() == Widget::HAlign::Right)
+	if (layinfo().halign() == HAlign::Right)
 	    subpos.x += padding;
-	else if (layinfo().halign() == Widget::HAlign::Center)
+	else if (layinfo().halign() == HAlign::Center)
 	    subpos.x += padding/2;
     }
     // Same for y
@@ -192,15 +191,6 @@ void Widget::place (const Rect& inarea)
 void Widget::resize (int l, int c, int y, int x)
 {
     set_area (x, y, c, l);
-    if (l && c && layinfo().type() != Type::HBox && layinfo().type() != Type::VBox) { // packing boxes have no window
-	auto ow = exchange (_w, newwin (l,c,y,x));
-	if (ow)
-	    delwin (ow);
-	leaveok (w(), true);
-	keypad (w(), true);
-	meta (w(), true);
-	nodelay (w(), true);
-    }
     on_resize();
 }
 
@@ -217,12 +207,11 @@ void Widget::on_set_text (void)
     set_size_hints (measure_text (text()));
 }
 
-void Widget::draw (void) const
+void Widget::draw (drawlist_t& dl)
 {
-    on_draw();
-    wnoutrefresh (w());
+    on_draw (dl);
     for (auto& w : _widgets)
-	w->draw();
+	w->draw (dl);
 }
 
 //}}}-------------------------------------------------------------------
@@ -230,7 +219,7 @@ void Widget::draw (void) const
 
 void Widget::get_focus_neighbors_for (widgetid_t wid, FocusNeighbors& n) const
 {
-    if (widget_id() != wid_None && flag (f_CanFocus) && w()) {
+    if (widget_id() != wid_None && flag (f_CanFocus)) {
 	n.first = min (n.first, widget_id());
 	n.last = max (n.last, widget_id());
 	// next is after wid, but closer than n.next

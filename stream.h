@@ -193,6 +193,12 @@ public:
     constexpr void		write_array (const T (&a)[N]) __restrict__ { write_array (ARRAY_BLOCK(a)); }
     template <typename T, cmemlink::size_type N>
     inline constexpr auto&	operator<< (const T (&a)[N]) __restrict__ { write_array(a); return *this; }
+    constexprg void		write_string (const char* s, uint32_t n)
+				    { write (uint32_t(n+1)); write (s, n); do { zero(1); } while (!aligned(4)); }
+    template <cmemlink::size_type N>
+    inline constexprg void	write_string (const char (&s)[N]) { write_string (ARRAY_BLOCK(s)); }
+    template <cmemlink::size_type N>
+    inline constexprg auto&	operator<< (const char (&s)[N]) { write_string(s); return *this; }
 private:
     inline constexprg const_pointer alignptr (streamsize g) const __restrict__
 				    { return assume_aligned (const_pointer (ceilg (uintptr_t(_p), g)), g); }
@@ -230,7 +236,7 @@ public:
     inline constexpr void	align (streamsize g)	{ _sz = ceilg (_sz, g); }
     inline constexpr streamsize	alignsz (streamsize g) const	{ return ceilg(_sz,g) - _sz; }
     inline constexpr bool	can_align (streamsize) const	{ return true; }
-    inline constexpr bool	aligned (streamsize g) const	{ return ceilg(_sz,g) == _sz; }
+    inline constexpr bool	aligned (streamsize g) const	{ return divisible_by (_sz, g); }
     inline constexpr void	write (const void*, streamsize sz) { skip (sz); }
     inline constexpr void	write_strz (const char* s)	{ write (s, __builtin_strlen(s)+1); }
     template <typename T>
@@ -259,6 +265,12 @@ public:
     constexpr void		write_array (const T (&a)[N]) { write_array (ARRAY_BLOCK(a)); }
     template <typename T, cmemlink::size_type N>
     inline constexpr auto&	operator<< (const T (&a)[N]) { write_array(a); return *this; }
+    inline constexpr void	write_string (const char* s, uint32_t n)
+				    { write (uint32_t(n+1)); write (s, n); do { zero(1); } while (!aligned(4)); }
+    template <cmemlink::size_type N>
+    inline constexpr void	write_string (const char (&s)[N]) { write_string (ARRAY_BLOCK(s)); }
+    template <cmemlink::size_type N>
+    inline constexpr auto&	operator<< (const char (&s)[N]) { write_string(s); return *this; }
 private:
     streampos			_sz;
 };

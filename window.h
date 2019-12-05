@@ -6,17 +6,17 @@
 #pragma once
 #if __has_include(<curses.h>)
 #include "widget.h"
+#include "termrend.h"
 #include "app.h"
 
 namespace cwiclo {
 namespace ui {
 
-class CursesWindow : public Msger {
+class Window : public Msger {
 public:
     using key_t		= Event::key_t;
     using Layout	= Widget::Layout;
-    using HAlign	= Widget::HAlign;
-    using VAlign	= Widget::VAlign;
+    using drawlist_t	= Widget::drawlist_t;
     enum { f_CaretOn = Msger::f_Last, f_Last };
     enum { COLOR_DEFAULT = -1 };	// Curses transparent color
     enum {			// Keys that curses does not define
@@ -24,11 +24,11 @@ public:
 	KEY_BKSPACE = '~'+1
     };
 public:
-    explicit		CursesWindow (const Msg::Link& l);
-			~CursesWindow (void) override;
+    explicit		Window (const Msg::Link& l);
+			~Window (void) override;
     bool		dispatch (Msg& msg) override;
     void		on_msger_destroyed (mrid_t mid) override;
-    virtual void	draw (void) const;
+    virtual void	draw (void);
     virtual void	on_event (const Event& ev);
     virtual void	on_modified (widgetid_t, const string_view&) {}
     virtual void	on_key (key_t key);
@@ -66,7 +66,10 @@ protected:
     void		focus_next (void);
     void		focus_prev (void);
 private:
-    WINDOW*		_winput;
+    auto&		w (void)	{ return _w; }
+    auto&		w (void) const	{ return _w; }
+private:
+    TerminalWindowRenderer	_w;
     PTimer		_uiinput;
     widgetid_t		_focused;
     unique_ptr<Widget>	_widgets;

@@ -5,8 +5,7 @@
 
 #pragma once
 #if __has_include(<curses.h>)
-#include "uidefs.h"
-#include <curses.h>
+#include "draw.h"
 
 namespace cwiclo {
 namespace ui {
@@ -43,12 +42,10 @@ public:
     using key_t		= Event::key_t;
     using Layout	= WidgetLayout;
     using Type		= Layout::Type;
-    using HAlign	= Layout::HAlign;
-    using VAlign	= Layout::VAlign;
+    using drawlist_t	= memblock;
     using widgetvec_t	= vector<unique_ptr<Widget>>;
     using widget_factory_t	= Widget* (*)(mrid_t owner, const Layout& l);
     enum { f_Focused, f_CanFocus, f_HasCaret, f_Disabled, f_Modified, f_Last };
-    enum { COLOR_DEFAULT = -1 };	// Curses transparent color
     enum {			// Keys that curses does not define
 	KEY_ESCAPE = '\e',
 	KEY_BKSPACE = '~'+1
@@ -61,13 +58,10 @@ public:
     explicit		Widget (const Msg::Link& l, const Layout& lay);
 			Widget (const Widget&) = delete;
     void		operator= (const Widget&) = delete;
-    virtual		~Widget (void)			{ destroy(); }
+    virtual		~Widget (void) {}
     [[nodiscard]] static Widget* create (mrid_t owner, const Layout& l)	{ return s_factory (owner, l); }
-    auto		w (void) const			{ return _w; }
-    auto&		layinfo (void) const		{ return _layinfo; }
-    auto		widget_id (void) const		{ return layinfo().id(); }
-			operator WINDOW* (void)	const	{ return w(); }
-    auto		operator-> (void) const		{ return w(); }
+    auto&		layinfo (void) const			{ return _layinfo; }
+    auto		widget_id (void) const			{ return layinfo().id(); }
     auto&		size_hints (void) const			{ return _size_hints; }
     void		set_size_hints (const Size& sh)		{ _size_hints = sh; }
     void		set_size_hints (dim_t w, dim_t h)	{ _size_hints.w = w; _size_hints.h = h; }
@@ -89,9 +83,7 @@ public:
     void		set_area (const Point& p, const Size& sz)		{ _area.xy = p; _area.wh = sz; }
     void		set_area (const Point& p)		{ _area.xy = p; }
     void		set_area (const Size& sz)		{ _area.wh = sz; }
-    void		draw (void) const;
-    virtual void	on_draw (void) const			{ werase (w()); }
-    void		destroy (void)				{ if (auto w = exchange(_w,nullptr); w) delwin(w); }
+    void		draw (drawlist_t& dl);
     void		resize (int l, int c, int y, int x);
     void		resize (const Rect& r)			{ resize (r.h, r.w, r.y, r.x); }
     auto		flag (unsigned f) const			{ return get_bit(_flags,f); }
@@ -120,9 +112,10 @@ protected:
     void		report_selection (void)
 			    { create_event (Event (Event::Type::Selection, _selection, 0, widget_id())); }
 private:
+    virtual void	on_draw (drawlist_t&) const {}
+private:
     string		_text;
     widgetvec_t		_widgets;
-    WINDOW*		_w;
     Rect		_area;
     Size		_size_hints;
     Size		_selection;
@@ -132,6 +125,28 @@ private:
     // Declared here, set by default to one in cwidgets.cc, creating all core widgets
     static widget_factory_t	s_factory;
 };
+
+//----------------------------------------------------------------------
+
+#define DEFINE_WIDGET_WRITE_DRAWLIST(widget, dltype, dlw)\
+	void widget::on_draw (drawlist_t& dl) const {	\
+	    dltype::Writer<sstream> dlss;		\
+	    dlss.viewport (area());			\
+	    write_drawlist (dlss);			\
+	    dl.reserve (dl.size()+dlss.size());		\
+	    dltype::Writer<ostream> dlos (ostream (dl.end(), dlss.size()));\
+	    dlos.viewport (area());			\
+	    write_drawlist (dlos);			\
+	    assert (dlss.size() == dltype::validate (istream (dl.end(), dlss.size()))\
+		    && "Drawlist template size incorrectly computed");\
+	    dl.shrink (dl.size()+dlss.size());		\
+	}						\
+	template <typename S>				\
+	void widget::write_drawlist (dltype::Writer<S>& dlw) const
+#define DECLARE_WIDGET_WRITE_DRAWLIST(dltype)		\
+	void on_draw (drawlist_t& dl) const override;	\
+	template <typename S>				\
+	void write_drawlist (dltype::Writer<S>& drw) const
 
 } // namespace ui
 } // namespace cwiclo

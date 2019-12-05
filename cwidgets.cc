@@ -6,40 +6,40 @@
 #if __has_include(<curses.h>)
 #include "cwidgets.h"
 #include <ctype.h>
+#include <curses.h>
+#undef vline
+#undef hline
+#undef box
 
 namespace cwiclo {
 namespace ui {
 
 //{{{ Label ------------------------------------------------------------
 
-void Label::on_draw (void) const
-{
-    Widget::on_draw();
-    waddstr (w(), text().c_str());
-}
+DEFINE_WIDGET_WRITE_DRAWLIST (Label, Drawlist, drw)
+    { drw.text (text()); }
 
 //}}}-------------------------------------------------------------------
 //{{{ Button
-
-void Button::on_draw (void) const
-{
-    Widget::on_draw();
-    if (focused())
-	wattron (w(), A_REVERSE);
-    wattron (w(), A_BOLD);
-    waddstr (w(), "[ ");
-    waddch (w(), text()[0]);
-    wattroff (w(), A_BOLD);
-    waddstr (w(), &text()[1]);
-    wattron (w(), A_BOLD);
-    waddstr (w(), " ]");
-    wattroff (w(), A_BOLD| A_REVERSE);
-}
 
 void Button::on_set_text (void)
 {
     Widget::on_set_text();
     set_size_hints (strlen("[ ") + size_hints().w + strlen (" ]"), size_hints().h);
+}
+
+DEFINE_WIDGET_WRITE_DRAWLIST (Button, Drawlist, drw)
+{
+    if (focused())
+	drw.fill_color (IColor::DefaultForeground);
+    drw.panel (area().wh, PanelType::Button);
+    drw.move_by (2, 0);
+    drw.draw_color (IColor::DefaultBold);
+    if (!text().empty()) {
+	drw.text (text()[0]);
+	drw.draw_color (IColor::DefaultForeground);
+	drw.text (text().iat(1));
+    }
 }
 
 //}}}-------------------------------------------------------------------
@@ -51,31 +51,6 @@ void Listbox::on_set_text (void)
     clip_sel();
 }
 
-void Listbox::on_draw (void) const
-{
-    Widget::on_draw();
-    coord_t y = 0;
-    for (zstr::cii li (text().c_str(), text().size()); li; ++y) {
-	auto lt = *li;
-	auto tlen = *++li - lt - 1;
-	if (y < _top)
-	    continue;
-	wmove (w(), y-_top, 0);
-	if (y == selection_start() && focused()) {
-	    wattron (w(), A_REVERSE);
-	    whline (w(), ' ', area().w);
-	}
-	auto vislen = tlen;
-	if (tlen > area().w)
-	    vislen = area().w-1;
-	waddnstr (w(), lt, vislen);
-	if (tlen > area().w)
-	    waddch (w(), '>');
-	if (y == selection_start())
-	    wattroff (w(), A_REVERSE);
-    }
-}
-
 void Listbox::on_key (key_t k)
 {
     if ((k == 'k' || k == KEY_UP) && selection_start())
@@ -85,6 +60,27 @@ void Listbox::on_key (key_t k)
     else
 	return Widget::on_key (k);
     report_selection();
+}
+
+DEFINE_WIDGET_WRITE_DRAWLIST (Listbox, Drawlist, drw)
+{
+    drw.panel (area().wh, PanelType::Listbox);
+    coord_t y = 0;
+    for (zstr::cii li (text().c_str(), text().size()); li; ++y) {
+	auto lt = *li;
+	auto tlen = *++li - lt - 1;
+	if (y < _top)
+	    continue;
+	drw.move_to (0, y-_top);
+	if (y == selection_start() && focused())
+	    drw.panel (area().w, 1, PanelType::Selection);
+	auto vislen = tlen;
+	if (tlen > area().w)
+	    vislen = area().w-1;
+	drw.text (lt, vislen);
+	if (tlen > area().w)
+	    drw.text ('>');
+    }
 }
 
 //}}}-------------------------------------------------------------------
@@ -103,8 +99,6 @@ Editbox::Editbox (const Msg::Link& l, const Layout& lay)
 void Editbox::on_resize (void)
 {
     Widget::on_resize();
-    leaveok (w(), false);
-    wbkgdset (w(), ' '|A_UNDERLINE);
     posclip();
 }
 
@@ -115,7 +109,7 @@ void Editbox::posclip (void)
 	if (_fc > 0)
 	    --_fc;	// adjust for clip indicator
     }
-    if (w()) {
+    if (area().w) {
 	if (_fc+area().w < _cpos+2)	// cursor past right edge +2 for > indicator
 	    _fc = _cpos+2-area().w;
 	while (_fc && _fc-1u+area().w > text().size())	// if text fits in box, no scroll
@@ -156,15 +150,61 @@ void Editbox::on_key (key_t k)
     posclip();
 }
 
-void Editbox::on_draw (void) const
+DEFINE_WIDGET_WRITE_DRAWLIST (Editbox, Drawlist, drw)
 {
-    Widget::on_draw();
-    waddstr (w(), text().iat(_fc));
-    if (_fc)
-	mvwaddch (w(), 0, 0, '<');
-    if (_fc+area().w <= text().size())
-	mvwaddch (w(), 0, area().w-1, '>');
-    wmove (w(), 0, _cpos-_fc);
+    drw.panel (area().wh, PanelType::Editbox);
+    if (!text().empty())
+	drw.text (text().iat(_fc));
+    if (_fc) {
+	drw.move_to (0, 0);
+	drw.text ('<');
+    }
+    if (_fc+area().w <= text().size()) {
+	drw.move_to (area().w-1, 0);
+	drw.text ('>');
+    }
+    drw.move_to (_cpos-_fc, 0);
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ HSplitter
+
+DEFINE_WIDGET_WRITE_DRAWLIST (HSplitter, Drawlist, drw)
+    { drw.hline (area().w); }
+
+//}}}-------------------------------------------------------------------
+//{{{ VSplitter
+
+DEFINE_WIDGET_WRITE_DRAWLIST (VSplitter, Drawlist, drw)
+    { drw.vline (area().h); }
+
+//}}}-------------------------------------------------------------------
+//{{{ GroupFrame
+
+DEFINE_WIDGET_WRITE_DRAWLIST (GroupFrame, Drawlist, drw)
+{
+    drw.box (area().wh);
+    auto tsz = min (text().size(), area().w-2);
+    if (tsz > 0) {
+	drw.move_to ((area().w-tsz)/2u-1, 0);
+	drw.bar (tsz+2, 1);
+	drw.move_by (1, 0);
+	drw.text (text().c_str(), tsz);
+    }
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ StatusLine
+
+DEFINE_WIDGET_WRITE_DRAWLIST (StatusLine, Drawlist, drw)
+{
+    drw.panel (area(), PanelType::StatusBar);
+    drw.move_by (1, 0);
+    drw.text (text());
+    if (is_modified()) {
+	drw.move_to (area().w-strlen(" *"), 0);
+	drw.text (" *");
+    }
 }
 
 //}}}-------------------------------------------------------------------

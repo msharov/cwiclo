@@ -94,6 +94,9 @@ public:
     constexpr void	pop_back (void)		{ shrink (size()-1); }
     constexpr void	clear (void)		{ shrink (0); }
 
+    template <typename Stm> // Override cmemlink's write to support lack of terminating 0
+    inline constexpr void write (Stm& os) const	{ os.write_string (begin(), size()); }
+
     inline auto		replace (const_iterator f, const_iterator l, const_pointer s, size_type slen)	{ return memblock::replace (f, l-f, s, slen); }
     inline auto		replace (const_iterator f, const_iterator l, const_pointer s)			{ return replace (f, l, s, strlen(s)); }
     inline auto		replace (const_iterator f, const_iterator l, const_pointer i1,const_pointer i2)	{ return replace (f, l, i1, i2-i1); }
@@ -218,6 +221,9 @@ public:
 
     void		resize (size_type sz) = delete;
     void		clear (void) = delete;
+
+    template <typename Stm> // Override cmemlink's write to support lack of terminating 0
+    inline constexpr void write (Stm& os) const { os.write_string (begin(), size()); }
 };
 
 //----------------------------------------------------------------------

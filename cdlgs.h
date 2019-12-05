@@ -54,7 +54,7 @@ public:
 
 //}}}-------------------------------------------------------------------
 
-class MessageBox : public CursesWindow {
+class MessageBox : public Window {
     using Type = PMessageBox::Type;
     using Answer = PMessageBox::Answer;
 public:
