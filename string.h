@@ -229,7 +229,7 @@ public:
 //----------------------------------------------------------------------
 
 // istream read can be done more efficiently by constructing the string_view directly
-template <> inline constexpr decltype(auto) istream::read<string_view> (void) __restrict__
+template <> inline constexpr decltype(auto) istream::read<string_view> (void)
 {
     auto ssz = read<uint32_t>();
     auto scp = ptr<char>();
@@ -242,7 +242,7 @@ template <> inline constexpr decltype(auto) istream::read<string_view> (void) __
 }
 
 // may as well do the same for cmemlink
-template <> inline constexpr decltype(auto) istream::read<cmemlink> (void) __restrict__
+template <> inline constexpr decltype(auto) istream::read<cmemlink> (void)
 {
     auto ssz = read<cmemlink::size_type>();
     auto scp = ptr<cmemlink::value_type>();

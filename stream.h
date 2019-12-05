@@ -46,10 +46,10 @@ public:
     inline constexpr void	seek (const_pointer p) __restrict__	{ assert (p <= end()); _p = p; }
     inline constexpr void	skip (streamsize sz) __restrict__	{ seek (iat(sz)); }
     inline constexpr void	unread (streamsize sz) __restrict__	{ seek (begin() - sz); }
-    inline constexpr void	align (streamsize g) __restrict__	{ seek (alignptr(g)); }
-    inline constexpr streamsize	alignsz (streamsize g) const		{ return alignptr(g) - begin(); }
-    inline constexpr bool	can_align (streamsize g) const		{ return alignptr(g) <= end(); }
-    inline constexpr bool	aligned (streamsize g) const		{ return alignptr(g) == begin(); }
+    inline constexprg void	align (streamsize g) __restrict__	{ seek (alignptr(g)); }
+    inline constexprg streamsize	alignsz (streamsize g) const		{ return alignptr(g) - begin(); }
+    inline constexprg bool	can_align (streamsize g) const		{ return alignptr(g) <= end(); }
+    inline constexprg bool	aligned (streamsize g) const		{ return alignptr(g) == begin(); }
     inline constexpr void	read (void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
 				    copy_n (begin(), sz, p);
@@ -72,14 +72,14 @@ public:
     template <typename T>
     inline constexpr void	readt (T& v) __restrict__ { v = readt<T>(); }
     template <typename T>
-    inline constexpr void	read (T& v) __restrict__ {
+    inline constexpr void	read (T& v) {
 				    if constexpr (is_trivial<T>::value)
 					readt (v);
 				    else
 					v.read (*this);
 				}
     template <typename T>
-    inline constexpr decltype(auto) read (void) __restrict__ {
+    inline constexpr decltype(auto) read (void) {
 				    if constexpr (is_trivial<T>::value)
 					return readt<T>();
 				    else { T v; v.read (*this); return v; }
@@ -91,7 +91,7 @@ public:
     inline constexpr void	readtu (T& v) __restrict__ { read (&v, sizeof(v)); }
     #endif
     template <typename T>
-    constexpr decltype(auto)	readu (void) __restrict__ {
+    constexpr decltype(auto)	readu (void) {
 				    T v;
 				    if constexpr (is_trivial<T>::value)
 					readtu<T>(v);
@@ -166,7 +166,7 @@ public:
 				    _p += sizeof(T);
 				}
     template <typename T>
-    inline constexpr void	write (const T& v) __restrict__ {
+    inline constexpr void	write (const T& v) {
 				    if constexpr (is_trivial<T>::value)
 					writet (v);
 				    else
@@ -179,7 +179,7 @@ public:
     inline constexpr void	writetu (const T& v) __restrict__ { write (&v, sizeof(v)); }
     #endif
     template <typename T>
-    inline constexpr void	writeu (const T& v) __restrict__ {
+    inline constexpr void	writeu (const T& v) {
 				    if constexpr (is_trivial<T>::value)
 					writetu (v);
 				    else
@@ -188,17 +188,17 @@ public:
     template <typename T>
     inline constexpr auto&	operator<< (const T& v) { write(v); return *this; }
     template <typename T>
-    constexpr void		write_array (const T* a, uint32_t n) __restrict__;
+    constexpr void		write_array (const T* a, uint32_t n);
     template <typename T, cmemlink::size_type N>
-    constexpr void		write_array (const T (&a)[N]) __restrict__ { write_array (ARRAY_BLOCK(a)); }
+    constexpr void		write_array (const T (&a)[N])	{ write_array (ARRAY_BLOCK(a)); }
     template <typename T, cmemlink::size_type N>
-    inline constexpr auto&	operator<< (const T (&a)[N]) __restrict__ { write_array(a); return *this; }
+    inline constexpr auto&	operator<< (const T (&a)[N])	{ write_array(a); return *this; }
     constexprg void		write_string (const char* s, uint32_t n)
 				    { write (uint32_t(n+1)); write (s, n); do { zero(1); } while (!aligned(4)); }
     template <cmemlink::size_type N>
     inline constexprg void	write_string (const char (&s)[N]) { write_string (ARRAY_BLOCK(s)); }
     template <cmemlink::size_type N>
-    inline constexprg auto&	operator<< (const char (&s)[N]) { write_string(s); return *this; }
+    inline constexprg auto&	operator<< (const char (&s)[N])	{ write_string(s); return *this; }
 private:
     inline constexprg const_pointer alignptr (streamsize g) const __restrict__
 				    { return assume_aligned (const_pointer (ceilg (uintptr_t(_p), g)), g); }
@@ -306,9 +306,9 @@ namespace ios {
 class align {
 public:
     constexpr explicit	align (streamsize grain)	: _grain(grain) {}
-    constexpr void	read (istream& is) const	{ is.align (_grain); }
-    constexpr void	write (ostream& os) const	{ os.align (_grain); }
-    constexpr void	write (sstream& ss) const	{ ss.align (_grain); }
+    constexprg void	read (istream& is) const	{ is.align (_grain); }
+    constexprg void	write (ostream& os) const	{ os.align (_grain); }
+    constexprg void	write (sstream& ss) const	{ ss.align (_grain); }
 private:
     const streamsize	_grain;
 };
@@ -347,7 +347,7 @@ private:
 //{{{ stream write_array
 
 template <typename T>
-constexpr void ostream::write_array (const T* __restrict__ a, uint32_t n) __restrict__
+constexpr void ostream::write_array (const T* __restrict__ a, uint32_t n)
 {
     write (n);
     if constexpr (stream_align<T>::value > 4)

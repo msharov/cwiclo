@@ -129,7 +129,7 @@ void Window::layout (void)
 	wh.y += (LINES-wh.h)/2u;
 
     // Layout subwidgets in the computed area
-    _widgets->place (Rect {0,0,wh.w,wh.h});
+    _widgets->place (Rect {{0,0,wh.w,wh.h}});
     w().resize (wh);
 
     // Reset focus, if needed
