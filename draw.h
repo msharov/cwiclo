@@ -264,8 +264,8 @@ protected:
 	assert (argstm.remaining() == validate_cmd (h.cmd, argstm) && "validate the drawlist before dispatching");
 	switch (Cmd(h.cmd)) {
 	    case Cmd::DefineColor:	impl->Draw_set_color (h.a1, argstm.read<color_t>()); break;
-	    case Cmd::Palette:		impl->Draw_palette (h.a1, argstm.read<vector<color_t>>()); break;
-	    case Cmd::Palette3:		impl->Draw_palette3 (h.a1, argstm.read<vector<colray_t>>()); break;
+	    case Cmd::Palette:		impl->Draw_palette (h.a1, argstm.read<vector_view<color_t>>()); break;
+	    case Cmd::Palette3:		impl->Draw_palette3 (h.a1, argstm.read<vector_view<colray_t>>()); break;
 	    default:			Drawlist::dispatch_cmd (impl, h, argstm); break;
 	}
     }

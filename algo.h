@@ -390,7 +390,7 @@ bool equal_n (I1 i1, size_t n, I2 i2)
     if constexpr (is_trivial<value1_type>::value && is_same<value1_type,value2_type>::value)
 	return zstr::compare (i1, i2, n *= sizeof(value1_type));
     while (n--)
-	if (!(i1 == i2))
+	if (!(*i1++ == *i2++))
 	    return false;
     return true;
 }

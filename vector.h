@@ -36,7 +36,7 @@ public:
     inline auto&		operator= (const vector& v)	{ assign (v); return *this; }
     inline auto&		operator= (vector&& v)		{ assign (move(v)); return *this; }
     inline auto&		operator= (initlist_t v)	{ assign (v); return *this; }
-    bool			operator== (const vector& v) const;
+    bool			operator== (const vector& v) const	{ return equal_n (begin(), size(), v.begin(), v.size()); }
     inline bool			operator!= (const vector& v) const	{ return !(*this == v); }
     constexpr			operator const memlink& (void) const	{ return _data; }
     inline void			reserve (size_type n)		{ _data.reserve (n * sizeof(T)); }
@@ -47,21 +47,21 @@ public:
     constexpr auto		bsize (void) const		{ return _data.size();			}
     constexpr size_type		max_size (void) const		{ return _data.max_size() / sizeof(T);	}
     [[nodiscard]]constexpr bool	empty (void) const		{ return _data.empty();			}
-    constexpr auto		data (void)			{ return pointer (_data.data());	}
-    constexpr auto		data (void) const		{ return const_pointer (_data.data());	}
-    constexpr auto		begin (void)			{ return iterator (_data.begin());	}
-    constexpr auto		begin (void) const		{ return const_iterator (_data.begin());}
+    constexpr auto		data (void)			{ return pointer_cast<T>(_data.data());	}
+    constexpr auto		data (void) const		{ return pointer_cast<T>(_data.data());	}
+    constexpr auto		begin (void)			{ return pointer_cast<T>(_data.begin());}
+    constexpr auto		begin (void) const		{ return pointer_cast<T>(_data.begin());}
     constexpr auto		cbegin (void) const		{ return begin();			}
-    constexpr auto		end (void)			{ return iterator (_data.end());	}
-    constexpr auto		end (void) const		{ return const_iterator (_data.end());	}
+    constexpr auto		end (void)			{ return pointer_cast<T>(_data.end());	}
+    constexpr auto		end (void) const		{ return pointer_cast<T>(_data.end());	}
     constexpr auto		cend (void) const		{ return end();				}
     constexpr auto		iat (size_type i)		{ assert (i <= size()); return begin() + i; }
     constexpr auto		iat (size_type i) const		{ assert (i <= size()); return begin() + i; }
     constexpr auto		ciat (size_type i) const	{ assert (i <= size()); return cbegin() + i; }
     constexpr auto		p2i (const_pointer p)		{ assert (begin() <= p && end() >= p); return begin() + (p - data()); }
     constexpr auto		p2i (const_pointer p) const	{ assert (begin() <= p && end() >= p); return begin() + (p - data()); }
-    constexpr auto		iback (void)			{ return iterator(_data.end()-sizeof(T)); }
-    constexpr auto		iback (void) const		{ return const_iterator(_data.end()-sizeof(T)); }
+    constexpr auto		iback (void)			{ return pointer_cast<T>(_data.end()-sizeof(T)); }
+    constexpr auto		iback (void) const		{ return pointer_cast<T>(_data.end()-sizeof(T)); }
     constexpr auto&		at (size_type i)		{ assert (i < size()); return begin()[i]; }
     constexpr auto&		at (size_type i) const		{ assert (i < size()); return begin()[i]; }
     constexpr auto&		cat (size_type i) const		{ assert (i < size()); return cbegin()[i]; }
@@ -107,7 +107,7 @@ public:
     inline constexpr bool	is_linked (void) const			{ return !_data.capacity(); }
     inline constexpr void	unlink (void)				{ _data.unlink(); }
     inline void			copy_link (void);
-    inline constexpr void	link (pointer p, size_type n)		{ _data.link (memblock::pointer(p), n*sizeof(T)); }
+    inline constexpr void	link (pointer p, size_type n)		{ _data.link (p, n*sizeof(T)); }
     inline constexpr void	link (const vector& v)			{ _data.link (v); }
     inline constexpr void	link (pointer f, pointer l)		{ link (f, l-f); }
     void			read (istream& is) {
@@ -146,6 +146,78 @@ private:
 
 //----------------------------------------------------------------------
 
+template <typename T>
+class vector_view {
+public:
+    using vector_t		= vector<T>;
+    using value_type		= typename vector_t::value_type;
+    using pointer		= typename vector_t::pointer;
+    using const_pointer		= typename vector_t::const_pointer;
+    using reference		= typename vector_t::pointer;
+    using const_reference	= typename vector_t::const_pointer;
+    using iterator		= typename vector_t::pointer;
+    using const_iterator	= typename vector_t::const_pointer;
+    using size_type		= typename vector_t::size_type;
+    using difference_type	= typename vector_t::difference_type;
+    using initlist_t		= typename vector_t::initlist_t;
+public:
+    inline constexpr		vector_view (void)			: _data() { }
+    inline constexpr		vector_view (const vector_view& v)	: _data (v._data) {}
+    inline constexpr		vector_view (vector_view&& v)		: _data (move(v._data)) {}
+    inline constexpr		vector_view (const vector_t& v)		: _data (begin(v), size(v)) {}
+    inline constexpr		vector_view (const_iterator i1, const_iterator i2)	: _data (i1, distance(i1,i2)) {}
+    template <size_type N>
+    inline constexpr		vector_view (const T (&a)[N])		: _data (begin(a), size(a)) {}
+    inline constexpr		vector_view (initlist_t v)		: _data (begin(v), size(v)) {}
+    inline constexpr auto&	operator= (const vector_view& v)	{ assign (v); return *this; }
+    inline constexpr auto&	operator= (vector_view&& v)		{ assign (move(v)); return *this; }
+    inline constexpr auto&	operator= (initlist_t v)		{ assign (v); return *this; }
+    bool			operator== (const vector_view& v) const	{ return equal_n (begin(), size(), v.begin(), v.size()); }
+    inline bool			operator!= (const vector_view& v) const	{ return !(*this == v); }
+    bool			operator== (const vector_t& v) const	{ return equal_n (begin(), size(), v.begin(), v.size()); }
+    inline bool			operator!= (const vector_t& v) const	{ return !(*this == v); }
+    constexpr			operator const cmemlink& (void) const	{ return _data; }
+    inline			operator const vector_t& (void) const	{ return reinterpret_cast<const vector_t&>(*this); }
+    constexpr size_type		capacity (void) const			{ return 0; }
+    constexpr size_type		size (void) const			{ return _data.size() / sizeof(T);	}
+    constexpr auto		bsize (void) const			{ return _data.size();			}
+    constexpr size_type		max_size (void) const			{ return _data.max_size() / sizeof(T);	}
+    [[nodiscard]]constexpr bool	empty (void) const			{ return _data.empty();			}
+    constexpr auto		data (void) const			{ return pointer_cast<T>(_data.data());	}
+    constexpr auto		begin (void) const			{ return pointer_cast<T>(_data.begin());}
+    constexpr auto		cbegin (void) const			{ return begin();			}
+    constexpr auto		end (void) const			{ return pointer_cast<T>(_data.end());	}
+    constexpr auto		cend (void) const			{ return end();				}
+    constexpr auto		iat (size_type i) const			{ assert (i <= size()); return begin() + i; }
+    constexpr auto		ciat (size_type i) const		{ assert (i <= size()); return cbegin() + i; }
+    constexpr auto		p2i (const_pointer p) const		{ assert (begin() <= p && end() >= p); return begin() + (p - data()); }
+    constexpr auto		iback (void) const			{ return pointer_cast<T>(_data.end()-sizeof(T)); }
+    constexpr auto&		at (size_type i) const			{ assert (i < size()); return begin()[i]; }
+    constexpr auto&		cat (size_type i) const			{ assert (i < size()); return cbegin()[i]; }
+    constexpr auto&		operator[] (size_type i) const		{ return at (i); }
+    constexpr auto&		front (void) const			{ assert (!empty()); return at(0); }
+    constexpr auto&		back (void) const			{ assert (!empty()); return *iback(); }
+    inline constexpr void	swap (vector_view&& v)			{ _data.swap (move(v._data)); }
+    inline void			assign (const vector_t& v)		{ assign (v.begin(), v.end()); }
+    inline void			assign (vector_view&& v)		{ swap (v); }
+    inline void			assign (const_iterator i1, const_iterator i2)	{ _data.link (i1, distance(i1,i2)); }
+    inline void			assign (initlist_t v)			{ assign (ARRAY_BLOCK(v)); }
+    inline constexpr bool	is_linked (void) const			{ return true; }
+    inline constexpr void	unlink (void)				{ _data.unlink(); }
+    inline constexpr void	link (const_pointer p, size_type n)	{ _data.link (p, n*sizeof(T)); }
+    inline constexpr void	link (const vector_view& v)		{ _data.link (v._data); }
+    inline constexpr void	link (const vector_t& v)		{ _data.link (begin(v), size(v)); }
+    inline constexpr void	link (const_pointer f, const_pointer l)	{ link (f, distance(f,l)); }
+    void			read (istream& is)			{ _data.link_read (is, sizeof(T)); }
+    template <typename Stm>
+    inline constexpr void	write (Stm& os) const			{ os.write_array (this->data(), this->size()); }
+private:
+    cmemlink			_data;
+};
+
+//{{{ cmemlink stream functions ----------------------------------------
+// These are here because streams need cmemlink
+
 } // namespace cwiclo
 STREAM_ALIGN (cmemlink, stream_align<cmemlink::size_type>::value)
 namespace cwiclo {
@@ -164,7 +236,12 @@ template <typename T> struct stream_align<vector<T>> {
     static constexpr const streamsize value = stream_align<memblock::size_type>::value;
 };
 
-//----------------------------------------------------------------------
+template <typename T> struct stream_align<vector_view<T>> {
+    static constexpr const streamsize value = stream_align<memblock::size_type>::value;
+};
+
+//}}}-------------------------------------------------------------------
+//{{{ vector out-of-lines
 
 /// Copies range [\p i1, \p i2]
 template <typename T>
@@ -202,20 +279,6 @@ void vector<T>::resize (size_type n, const_reference v)
     destroy (ihlast, ihfirst);
     uninitialized_fill (ihfirst, ihlast, v);
     _data.memlink::resize (n*sizeof(T));
-}
-
-/// Compares two vectors
-template <typename T>
-bool vector<T>::operator== (const vector& v) const
-{
-    if constexpr (is_trivial<T>::value)
-	return _data == v._data;
-    if (size() != v.size())
-	return false;
-    for (size_type i = 0; i < size(); ++i)
-	if (!(at(i) == v.at(i)))
-	    return false;
-    return true;
 }
 
 /// Copies the range [\p i1, \p i2]
@@ -264,5 +327,7 @@ void vector<T>::copy_link (void)
     else
 	assign (begin(), end());
 }
+
+//}}}-------------------------------------------------------------------
 
 } // namespace cwiclo
