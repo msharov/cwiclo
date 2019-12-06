@@ -60,6 +60,8 @@ public:
     inline bool			operator!= (const cmemlink& v) const	{ return !operator==(v); }
     inline constexpr void	link (pointer p, size_type n)		{ _data = p; _size = n; }
     inline constexpr void	link (const_pointer p, size_type n)	{ link (const_cast<pointer>(p), n); }
+    inline constexpr void	link (void* p, size_type n)		{ link (static_cast<pointer>(p), n); }
+    inline constexpr void	link (const void* p, size_type n)	{ link (static_cast<const_pointer>(p), n); }
     inline constexpr void	link (pointer p, size_type n, bool z)	{ link(p,n); _zerot = z; }
     inline constexpr void	link (const_pointer p, size_type n, bool z)	{ link (const_cast<pointer>(p), n, z); }
     inline constexpr void	link (const cmemlink& v)	{ link (v.begin(), v.size(), v.zero_terminated()); }
@@ -123,6 +125,7 @@ public:
     inline constexpr auto&	operator[] (size_type i)	{ return at (i); }
     inline constexpr auto&	operator[] (size_type i) const	{ return at (i); }
     inline constexpr void	link (pointer p, size_type n)	{ cmemlink::link (p, n); }
+    inline constexpr void	link (void* p, size_type n)	{ link (static_cast<pointer>(p), n); }
     inline constexpr void	link (pointer p, size_type n, bool z)	{ cmemlink::link (p, n, z); }
     inline constexpr void	link (const memlink& v)		{ cmemlink::link (v); }
     inline constexpr void	swap (memlink&& v)		{ cmemlink::swap (move (v)); }
