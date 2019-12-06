@@ -72,10 +72,21 @@ template <typename T, typename F> constexpr decltype(auto) bit_cast (const F& v)
     { union FTU { F f; T t; }; return reinterpret_cast<const FTU&>(v).t; }
 template <typename T, typename F> constexpr void bit_cast (F&& v) = delete;
 
+// constexpr cast between pointers without reinterpret_cast
 template <typename T, typename F> constexpr T* pointer_cast (F* p)
     { return static_cast<T*>(static_cast<void*>(p)); }
 template <typename T, typename F> constexpr const T* pointer_cast (const F* p)
     { return static_cast<const T*>(static_cast<const void*>(p)); }
+
+// constexpr conversion from pointer to uintptr_t
+template <typename T> constexpr uintptr_t pointer_value (T p)
+    { return pointer_cast<char>(p)-static_cast<const char*>(nullptr); }
+// constexpr nullptr of given type
+template <typename T> constexpr T* null_pointer (void)
+    { return static_cast<T*>(nullptr); }
+// constexpr conversion from uintptr_t to pointer
+template <typename T> constexpr auto value_to_pointer (uintptr_t p)
+    { return pointer_cast<T>(null_pointer<char>()+p); }
 
 // Create a passthrough non-const member function from a call to a const member function
 #define UNCONST_MEMBER_FN(f,...)	\
@@ -207,6 +218,24 @@ constexpr bool divisible_by (T n, remove_reference_t<T> g)
 template <typename T>
 [[nodiscard]] constexpr auto roundg (T n, remove_reference_t<T> g)
     { return floorg<T>(n + copy_sign<T>(n, g/2), g); }
+
+// Pointer alignment requires additional tricks because % is not allowed
+template <typename T>
+[[nodiscard]] constexpr auto floorg (T* p, uintptr_t g)
+    { return p - pointer_value(p) % g; }
+template <typename T>
+[[nodiscard]] constexpr auto floorg (const T* p, uintptr_t g)
+    { return p - pointer_value(p) % g; }
+template <typename T>
+[[nodiscard]] constexpr auto ceilg (T* p, remove_reference_t<T> g)
+    { return floorg<T>(p + g-1, g); }
+template <typename T>
+[[nodiscard]] constexpr auto ceilg (const T* p, remove_reference_t<T> g)
+    { return floorg<T>(p + g-1, g); }
+template <typename T>
+constexpr bool divisible_by (const T* p, remove_reference_t<T> g)
+    { return !(pointer_value(p) % g); }
+
 template <typename T>
 [[nodiscard]] constexpr auto assume_aligned (T* p, size_t g, size_t o = 0)
     { return static_cast<T*>(__builtin_assume_aligned (p,g,o)); }

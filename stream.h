@@ -46,10 +46,10 @@ public:
     inline constexpr void	seek (const_pointer p) __restrict__	{ assert (p <= end()); _p = p; }
     inline constexpr void	skip (streamsize sz) __restrict__	{ seek (iat(sz)); }
     inline constexpr void	unread (streamsize sz) __restrict__	{ seek (begin() - sz); }
-    inline constexprg void	align (streamsize g) __restrict__	{ seek (alignptr(g)); }
-    inline constexprg streamsize	alignsz (streamsize g) const		{ return alignptr(g) - begin(); }
-    inline constexprg bool	can_align (streamsize g) const		{ return alignptr(g) <= end(); }
-    inline constexprg bool	aligned (streamsize g) const		{ return alignptr(g) == begin(); }
+    inline constexpr void	align (streamsize g) __restrict__	{ seek (alignptr(g)); }
+    inline constexpr streamsize	alignsz (streamsize g) const		{ return alignptr(g) - begin(); }
+    inline constexpr bool	can_align (streamsize g) const		{ return alignptr(g) <= end(); }
+    inline constexpr bool	aligned (streamsize g) const		{ return divisible_by(_p, g); }
     inline constexpr void	read (void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
 				    copy_n (begin(), sz, p);
@@ -104,8 +104,8 @@ public:
     template <typename T>
     inline constexpr auto&	operator>> (T&& v) { read(v); return *this; }
 protected:
-    inline constexprg const_pointer alignptr (streamsize g) const __restrict__
-				    { return assume_aligned (const_pointer (ceilg (uintptr_t(_p), g)), g); }
+    inline constexpr const_pointer alignptr (streamsize g) const __restrict__
+				    { return assume_aligned (ceilg (_p, g), g); }
 private:
     const_pointer		_p;
     const const_pointer		_e;
@@ -144,16 +144,16 @@ public:
     inline constexpr void	seek (pointer p) __restrict__		{ assert (p <= end()); _p = p; }
     inline constexpr void	skip (streamsize sz) __restrict__	{ seek (begin()+sz); }
     inline constexpr void	zero (streamsize sz) __restrict__	{ seek (zero_fill_n (begin(), sz)); }
-    inline constexprg void	align (streamsize g) __restrict__ {
+    inline constexpr void	align (streamsize g) __restrict__ {
 				    assert (can_align(g));
 				    pointer __restrict__ p = begin();
-				    while (uintptr_t(p) % g)
+				    while (!divisible_by(p,g))
 					*p++ = 0;
 				    seek (assume_aligned (p,g));
 				}
-    inline constexprg streamsize	alignsz (streamsize g) const __restrict__	{ return alignptr(g) - begin(); }
-    inline constexprg bool	can_align (streamsize g) const __restrict__	{ return alignptr(g) <= end(); }
-    inline constexprg bool	aligned (streamsize g) const __restrict__	{ return alignptr(g) == begin(); }
+    inline constexpr streamsize	alignsz (streamsize g) const __restrict__	{ return alignptr(g) - begin(); }
+    inline constexpr bool	can_align (streamsize g) const __restrict__	{ return alignptr(g) <= end(); }
+    inline constexpr bool	aligned (streamsize g) const __restrict__	{ return divisible_by (_p, g); }
     inline constexpr void	write (const void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
 				    seek (copy_n (p, sz, begin()));
@@ -193,15 +193,15 @@ public:
     constexpr void		write_array (const T (&a)[N])	{ write_array (ARRAY_BLOCK(a)); }
     template <typename T, cmemlink::size_type N>
     inline constexpr auto&	operator<< (const T (&a)[N])	{ write_array(a); return *this; }
-    constexprg void		write_string (const char* s, uint32_t n)
-				    { write (uint32_t(n+1)); write (s, n); do { zero(1); } while (!aligned(4)); }
+    constexpr void		write_string (const char* s, uint32_t n) __restrict__
+				    { writet (uint32_t(n+1)); write (s, n); do { zero(1); } while (!aligned(4)); }
     template <cmemlink::size_type N>
-    inline constexprg void	write_string (const char (&s)[N]) { write_string (ARRAY_BLOCK(s)); }
+    inline constexpr void	write_string (const char (&s)[N]) __restrict__ { write_string (ARRAY_BLOCK(s)); }
     template <cmemlink::size_type N>
-    inline constexprg auto&	operator<< (const char (&s)[N])	{ write_string(s); return *this; }
+    inline constexpr auto&	operator<< (const char (&s)[N]) __restrict__ { write_string(s); return *this; }
 private:
-    inline constexprg const_pointer alignptr (streamsize g) const __restrict__
-				    { return assume_aligned (const_pointer (ceilg (uintptr_t(_p), g)), g); }
+    inline constexpr const_pointer alignptr (streamsize g) const __restrict__
+				    { return assume_aligned (ceilg (_p, g), g); }
 private:
     pointer			_p;
     const const_pointer		_e;
@@ -305,10 +305,10 @@ namespace ios {
 /// Stream functor to allow inline align() calls.
 class align {
 public:
-    constexpr explicit	align (streamsize grain)	: _grain(grain) {}
-    constexprg void	read (istream& is) const	{ is.align (_grain); }
-    constexprg void	write (ostream& os) const	{ os.align (_grain); }
-    constexprg void	write (sstream& ss) const	{ ss.align (_grain); }
+    constexpr explicit		align (streamsize grain)	: _grain(grain) {}
+    inline constexpr void	read (istream& is) const	{ is.align (_grain); }
+    inline constexpr void	write (ostream& os) const	{ os.align (_grain); }
+    inline constexpr void	write (sstream& ss) const	{ ss.align (_grain); }
 private:
     const streamsize	_grain;
 };
