@@ -48,7 +48,7 @@ Msg PCOM::error_msg (const string& errmsg) // static
 
 DEFINE_INTERFACE (Extern)
 
-auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) -> fd_t
+auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) const -> fd_t
 {
     auto fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, IPPROTO_IP);
     if (fd < 0)
@@ -63,7 +63,7 @@ auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) -> fd_t
 }
 
 /// Create local socket with given path
-auto PExtern::connect_local (const char* path) -> fd_t
+auto PExtern::connect_local (const char* path) const -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -76,7 +76,7 @@ auto PExtern::connect_local (const char* path) -> fd_t
 }
 
 /// Create local socket of the given name in the system standard location for such
-auto PExtern::connect_system_local (const char* sockname) -> fd_t
+auto PExtern::connect_system_local (const char* sockname) const -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -89,7 +89,7 @@ auto PExtern::connect_system_local (const char* sockname) -> fd_t
 }
 
 /// Create local socket of the given name in the user standard location for such
-auto PExtern::connect_user_local (const char* sockname) -> fd_t
+auto PExtern::connect_user_local (const char* sockname) const -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
@@ -104,7 +104,7 @@ auto PExtern::connect_user_local (const char* sockname) -> fd_t
     return connect (pointer_cast<sockaddr>(&addr), sizeof(addr));
 }
 
-auto PExtern::connect_ip4 (in_addr_t ip, in_port_t port) -> fd_t
+auto PExtern::connect_ip4 (in_addr_t ip, in_port_t port) const -> fd_t
 {
     sockaddr_in addr = {};
     addr.sin_family = PF_INET;
@@ -126,11 +126,11 @@ auto PExtern::connect_ip4 (in_addr_t ip, in_port_t port) -> fd_t
 }
 
 /// Create local IPv4 socket at given port on the loopback interface
-auto PExtern::connect_local_ip4 (in_port_t port) -> fd_t
+auto PExtern::connect_local_ip4 (in_port_t port) const -> fd_t
     { return PExtern::connect_ip4 (INADDR_LOOPBACK, port); }
 
 /// Create local IPv6 socket at given ip and port
-auto PExtern::connect_ip6 (in6_addr ip, in_port_t port) -> fd_t
+auto PExtern::connect_ip6 (in6_addr ip, in_port_t port) const -> fd_t
 {
     sockaddr_in6 addr = {};
     addr.sin6_family = PF_INET6;
@@ -144,7 +144,7 @@ auto PExtern::connect_ip6 (in6_addr ip, in_port_t port) -> fd_t
 }
 
 /// Create local IPv6 socket at given ip and port
-auto PExtern::connect_local_ip6 (in_port_t port) -> fd_t
+auto PExtern::connect_local_ip6 (in_port_t port) const -> fd_t
 {
     sockaddr_in6 addr = {};
     addr.sin6_family = PF_INET6;
@@ -154,7 +154,7 @@ auto PExtern::connect_local_ip6 (in_port_t port) -> fd_t
     return connect (pointer_cast<sockaddr>(&addr), sizeof(addr));
 }
 
-auto PExtern::launch_pipe (const char* exe, const char* arg) -> fd_t
+auto PExtern::launch_pipe (const char* exe, const char* arg) const -> fd_t
 {
     // Check if executable exists before the fork to allow proper error handling
     char exepath [PATH_MAX];
@@ -646,7 +646,7 @@ bool Extern::accept_incoming_message (void)
 	    return false;
 	}
 	DEBUG_PRINTF ("[X] Creating new extid link %hu with interface %s\n", _inmsg.extid(), interface_of_method (method));
-	rp = &_relays.emplace_back (msger_id(), mrid_New, _inmsg.extid());
+	rp = &_relays.emplace_back (msger_id(), _inmsg.extid());
 	//
 	// Create a COMRelay as the destination. It will then create the
 	// actual server Msger using the interface in the message.
@@ -673,11 +673,13 @@ COMRelay::COMRelay (const Msg::Link& l)
 // Messages coming from an extern will require creating a local Msger,
 // while messages going to the extern from l.src local caller.
 //
-,_localp (l.dest, _pExtern ? mrid_t (mrid_New) : l.src)
+,_localp (l.dest, _pExtern ? mrid_t (mrid_Broadcast) : l.src)
 //
 // Extid will be determined when the connection interface is known
 ,_extid()
 {
+    if (_pExtern)
+	_localp.allocate_id();
 }
 
 COMRelay::~COMRelay (void)

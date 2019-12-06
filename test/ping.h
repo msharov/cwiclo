@@ -33,19 +33,19 @@ public:
     // Proxies are constructed with the calling object's oid.
     // Reply messages sent through reply interfaces, here PingR,
     // will be delivered to the given object.
-    constexpr		PPing (mrid_t caller) : Proxy (caller) {}
+    PPing (mrid_t caller) : Proxy (caller) {}
 
     // Methods are implemented by simple marshalling of the arguments.
     // m_ping() is defined by DECLARE_INTERFACE above and returns the methodid_t of the Ping call.
-    void		ping (uint32_t v) {
-			    auto& msg = create_msg (m_ping(), stream_size_of(v));
-			    // Here an expanded example is given with direct
-			    // stream access. See PingR for a simpler example
-			    // using the Send template.
-			    auto os = msg.write();
-			    os << v;
-			    commit_msg (msg, os);
-			}
+    void ping (uint32_t v) const {
+	auto& msg = create_msg (m_ping(), stream_size_of(v));
+	// Here an expanded example is given with direct
+	// stream access. See PingR for a simpler example
+	// using the Send template.
+	auto os = msg.write();
+	os << v;
+	commit_msg (msg, os);
+    }
 
     // The dispatch method is called from the destination object's
     // aggregate dispatch method. A templated implementation like
@@ -77,7 +77,7 @@ public:
     constexpr		PPingR (const Msg::Link& l) : ProxyR (l) {}
 			// Using variadic Send is the easiest way to
 			// create a message that only marshals arguments.
-    void		ping (uint32_t v) { send (m_ping(), v); }
+    void		ping (uint32_t v) const { send (m_ping(), v); }
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_ping())

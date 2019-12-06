@@ -16,8 +16,8 @@ class PWidgetR : public ProxyR {
     DECLARE_INTERFACE (WidgetR, (event,SIGNATURE_Event)(modified,"qqs"))
 public:
     constexpr		PWidgetR (const Msg::Link& l)	: ProxyR(l) {}
-    void		event (const Event& ev)		{ send (m_event(), ev); }
-    void		modified (widgetid_t wid, const string& t)
+    void		event (const Event& ev) const	{ send (m_event(), ev); }
+    void		modified (widgetid_t wid, const string& t) const
 			    { send (m_modified(), wid, uint16_t(0), t); }
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
@@ -83,7 +83,7 @@ public:
     void		set_area (const Point& p, const Size& sz)		{ _area.xy = p; _area.wh = sz; }
     void		set_area (const Point& p)		{ _area.xy = p; }
     void		set_area (const Size& sz)		{ _area.wh = sz; }
-    void		draw (drawlist_t& dl);
+    void		draw (drawlist_t& dl) const;
     void		resize (int l, int c, int y, int x);
     void		resize (const Rect& r)			{ resize (r.h, r.w, r.y, r.x); }
     auto		flag (unsigned f) const			{ return get_bit(_flags,f); }
@@ -107,9 +107,9 @@ public:
     void		place (const Rect& area);
 protected:
     auto&		textw (void)				{ return _text; }
-    void		create_event (const Event& ev)		{ _reply.event (ev); }
-    void		report_modified (void);
-    void		report_selection (void)
+    void		create_event (const Event& ev) const	{ _reply.event (ev); }
+    void		report_modified (void) const;
+    void		report_selection (void) const
 			    { create_event (Event (Event::Type::Selection, _selection, 0, widget_id())); }
 private:
     virtual void	on_draw (drawlist_t&) const {}

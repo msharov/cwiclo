@@ -149,46 +149,49 @@ streamsize Msg::validate_signature (istream is, const char* sig) // static
 
 //----------------------------------------------------------------------
 
-Msg& ProxyB::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo)
+Msg& ProxyB::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo) const
 {
-    return App::instance().create_msg (linkw(), mid, sz, fdo);
+    return App::instance().create_msg (link(), mid, sz, fdo);
 }
 
-Msg& ProxyB::create_msg (methodid_t mid, streamsize sz)
+Msg& ProxyB::create_msg (methodid_t mid, streamsize sz) const
 {
     return create_msg (mid, sz, Msg::NoFdIncluded);
 }
 
-void ProxyB::forward_msg (Msg&& msg)
+void ProxyB::forward_msg (Msg&& msg) const
 {
-    App::instance().forward_msg (move(msg), linkw());
+    App::instance().forward_msg (move(msg), link());
 }
 
-#ifndef NDEBUG
-void ProxyB::commit_msg (Msg& msg, ostream& os)
+void ProxyB::allocate_id (void)
 {
-    assert (!os.remaining() && "Message body written size does not match requested size");
-    assert (msg.size() == msg.verify() && "Message body does not match method signature");
+    assert (_link.dest == mrid_Broadcast && "This Proxy has already allocated a destination");
+    _link.dest = App::instance().allocate_mrid (_link.src);
 }
-#endif
+
+void ProxyB::free_id (void)
+{
+    auto id = exchange (_link.dest, mrid_Broadcast);
+    App::instance().free_mrid (id);
+}
 
 //----------------------------------------------------------------------
 
-void Proxy::create_dest_as (iid_t iid)
+Proxy::Proxy (mrid_t from)
+: ProxyB (from, mrid_Broadcast)
 {
-    App::instance().create_link (linkw(), iid);
+    allocate_id();
 }
 
-void Proxy::create_dest_with (iid_t iid, pfn_factory_t fac)
+void Proxy::create_dest_as (iid_t iid) const
 {
-    App::instance().create_link_with (linkw(), iid, fac);
+    App::instance().create_dest (iid, link());
 }
 
-void Proxy::free_id (void)
+void Proxy::create_dest_with (iid_t iid, pfn_factory_t fac) const
 {
-    auto& app = App::instance();
-    if (app.valid_msger_id (dest()))
-	app.free_mrid (dest());
+    App::instance().create_dest_with (iid, fac, link());
 }
 
 //----------------------------------------------------------------------

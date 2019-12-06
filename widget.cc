@@ -197,7 +197,7 @@ void Widget::resize (int l, int c, int y, int x)
 //}}}-------------------------------------------------------------------
 //{{{ Content
 
-void Widget::report_modified (void)
+void Widget::report_modified (void) const
 {
     _reply.modified (widget_id(), text());
 }
@@ -207,7 +207,7 @@ void Widget::on_set_text (void)
     set_size_hints (measure_text (text()));
 }
 
-void Widget::draw (drawlist_t& dl)
+void Widget::draw (drawlist_t& dl) const
 {
     on_draw (dl);
     for (auto& w : _widgets)

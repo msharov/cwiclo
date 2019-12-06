@@ -22,9 +22,8 @@ enum : mrid_t {
     // sides of the connection. Set the exact point to 32000 == 0x7d00, a
     // mostly round number in both bases; helpful in the debugger.
     mrid_Last = 32000-1,
-    // placeholder requesting new msger creation
-    mrid_New = numeric_limits<mrid_t>::max()-1,
-    mrid_Broadcast	// indicates all msgers as destination
+    // indicates all msgers as destination
+    mrid_Broadcast = numeric_limits<mrid_t>::max()
 };
 
 // Interfaces are defined as string blocks with the interface
@@ -190,41 +189,44 @@ protected:
     constexpr		ProxyB (mrid_t from, mrid_t to) : _link {from,to} {}
 			ProxyB (const ProxyB&) = delete;
     void		operator= (const ProxyB&) = delete;
-    constexpr auto&	linkw (void)		{ return _link; }
-    Msg&		create_msg (methodid_t imethod, streamsize sz);
-    Msg&		create_msg (methodid_t imethod, streamsize sz, Msg::fdoffset_t fdo);
-    void		forward_msg (Msg&& msg);
-#ifdef NDEBUG	// CommitMsg only does debug checking
-    void		commit_msg (Msg&, ostream&) {}
-#else
-    void		commit_msg (Msg& msg, ostream& os);
-#endif
-    inline void		send (methodid_t imethod)
+    Msg&		create_msg (methodid_t imethod, streamsize sz) const;
+    Msg&		create_msg (methodid_t imethod, streamsize sz, Msg::fdoffset_t fdo) const;
+    void		forward_msg (Msg&& msg) const;
+    void		commit_msg (Msg& msg [[maybe_unused]], ostream& os [[maybe_unused]]) const
+			    { assert (!os.remaining() && msg.size() == msg.verify() && "Message body does not match method signature"); }
+    inline void		send (methodid_t imethod) const
 			    { create_msg (imethod, 0); }
     template <typename... Args>
-    inline void		send (methodid_t imethod, const Args&... args) {
+    inline void		send (methodid_t imethod, const Args&... args) const {
 			    auto& msg = create_msg (imethod, variadic_stream_size(args...));
 			    commit_msg (msg, (msg.write() << ... << args));
 			}
-    inline void		send_fd (methodid_t imethod, fd_t fd) {
+    inline void		send_fd (methodid_t imethod, fd_t fd) const {
 			    assert (string_view("h") == signature_of_method(imethod));
 			    auto& msg = create_msg (imethod, stream_size_of(fd), 0);
 			    commit_msg (msg, msg.write() << fd);
 			}
+    void		allocate_id (void);
+    void		free_id (void);
 private:
     Msg::Link		_link;
 };
 
 class Proxy : public ProxyB {
 public:
-    constexpr		Proxy (mrid_t from, mrid_t to=mrid_New)	: ProxyB (from,to) {}
-    void		create_dest_as (iid_t iid);
-    void		create_dest_with (iid_t iid, pfn_factory_t fac);
-    void		free_id (void);
+    constexpr		Proxy (mrid_t from, mrid_t to) : ProxyB (from,to) {}
+			Proxy (mrid_t from);
+    void		create_dest_as (iid_t iid) const;
+    void		create_dest_with (iid_t iid, pfn_factory_t fac) const;
+			using ProxyB::allocate_id;
+			using ProxyB::free_id;
 };
+
 class ProxyR : public ProxyB {
 public:
     constexpr		ProxyR (const Msg::Link& l) : ProxyB (l.dest, l.src) {}
+    void		allocate_id (void) = delete;
+    void		free_id (void) = delete;
 };
 
 //}}}-------------------------------------------------------------------

@@ -17,9 +17,9 @@ public:
     enum class Answer : uint16_t { Cancel, Ok, Ignore, Yes = Ok, Retry = Ok, No = Ignore };
     enum class Type : uint16_t { Ok, OkCancel, YesNo, YesNoCancel, RetryCancelIgnore };
 public:
-    constexpr explicit	PMessageBox (mrid_t caller) : Proxy (caller) {}
-    void		ask (const string& prompt, Type type = Type())
-			    { send (m_ask(), type, uint16_t(0), prompt); }
+		PMessageBox (mrid_t caller) : Proxy (caller) {}
+    void	ask (const string& prompt, Type type = Type()) const
+		    { send (m_ask(), type, uint16_t(0), prompt); }
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_ask())
@@ -42,7 +42,7 @@ public:
     using Answer = PMessageBox::Answer;
 public:
     explicit		PMessageBoxR (const Msg::Link& l) : ProxyR (l) {}
-    void		reply (Answer answer) { send (m_answer(), answer); }
+    void		reply (Answer answer) const { send (m_answer(), answer); }
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_answer())

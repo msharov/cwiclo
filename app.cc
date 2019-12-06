@@ -180,7 +180,8 @@ mrid_t App::allocate_mrid (mrid_t creator)
 
 void App::free_mrid (mrid_t id)
 {
-    assert (valid_msger_id (id));
+    if (!valid_msger_id (id))
+	return;
     auto m = _msgers[id];
     if (!m && id == _msgers.size()-1) {
 	DEBUG_PRINTF ("[M] mrid %hu deallocated\n", id);
@@ -233,31 +234,23 @@ auto App::msger_factory_for (iid_t id) // static
 auto App::create_msger (const Msg::Link& l, iid_t iid) // static
     { return create_msger_with (l, iid, msger_factory_for (iid)); }
 
-Msg::Link& App::create_link (Msg::Link& l, iid_t iid)
+void App::create_dest (iid_t iid, const Msg::Link& l)
 {
     assert (valid_msger_id (l.src) && "You may only create links originating from an existing Msger");
-    assert ((l.dest == mrid_New || l.dest == mrid_Broadcast || valid_msger_id(l.dest)) && "Invalid link destination requested");
-    if (l.dest == mrid_Broadcast)
-	return l;
-    if (l.dest == mrid_New)
-	l.dest = allocate_mrid (l.src);
+    assert ((l.dest == mrid_Broadcast || valid_msger_id(l.dest)) && "Invalid link destination requested");
     if (l.dest < _msgers.size() && !_msgers[l.dest]) {
 	if (_creators[l.dest] == l.src)
 	    _msgers[l.dest] = create_msger (l, iid);
 	else // messages for a deleted Msger can arrive if the sender was not yet aware of the deletion, in another process, for example, where the notification had not arrived. Condition logged, but is not usually an error.
 	    DEBUG_PRINTF ("Warning: dead destination Msger %hu can only be resurrected by creator %hu, not %hu.\n", l.dest, _creators[l.dest], l.src);
     }
-    return l;
 }
 
-Msg::Link& App::create_link_with (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac)
+void App::create_dest_with (iid_t iid, Msger::pfn_factory_t fac, const Msg::Link& l)
 {
     assert (valid_msger_id (l.src) && "You may only create links originating from an existing Msger");
-    assert (l.dest == mrid_New && "create_link_with can only be used to create new links");
-    l.dest = allocate_mrid (l.src);
     if (l.dest < _msgers.size() && !_msgers[l.dest])
 	_msgers[l.dest] = create_msger_with (l, iid, fac);
-    return l;
 }
 
 void App::delete_msger (mrid_t mid)

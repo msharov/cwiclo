@@ -38,14 +38,14 @@ public:
     static constexpr mstime_t TimerMax = INT64_MAX;
     static constexpr mstime_t TimerNone = UINT64_MAX;
 public:
-    constexpr	PTimer (mrid_t caller) : Proxy (caller) {}
-    void	watch (WatchCmd cmd, fd_t fd, mstime_t timeoutms = TimerNone)
+		PTimer (mrid_t caller) : Proxy (caller) {}
+    void	watch (WatchCmd cmd, fd_t fd, mstime_t timeoutms = TimerNone) const
 		    { send (m_watch(), cmd, fd, timeoutms); }
-    void	stop (void)					{ watch (WatchCmd::Stop, -1, TimerNone); }
-    void	timer (mstime_t timeoutms)			{ watch (WatchCmd::Timer, -1, timeoutms); }
-    void	wait_read (fd_t fd, mstime_t t = TimerNone)	{ watch (WatchCmd::Read, fd, t); }
-    void	wait_write (fd_t fd, mstime_t t = TimerNone)	{ watch (WatchCmd::Write, fd, t); }
-    void	wait_rdWr (fd_t fd, mstime_t t = TimerNone)	{ watch (WatchCmd::ReadWrite, fd, t); }
+    void	stop (void) const				{ watch (WatchCmd::Stop, -1, TimerNone); }
+    void	timer (mstime_t timeoutms) const		{ watch (WatchCmd::Timer, -1, timeoutms); }
+    void	wait_read (fd_t fd, mstime_t t=TimerNone) const	{ watch (WatchCmd::Read, fd, t); }
+    void	wait_write (fd_t fd, mstime_t t=TimerNone)const	{ watch (WatchCmd::Write, fd, t); }
+    void	wait_rdWr (fd_t fd, mstime_t t=TimerNone) const	{ watch (WatchCmd::ReadWrite, fd, t); }
 
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
@@ -70,7 +70,7 @@ public:
     using fd_t = PTimer::fd_t;
 public:
     constexpr	PTimerR (const Msg::Link& l)	: ProxyR (l) {}
-    void	timer (fd_t fd)			{ send (m_timer(), fd); }
+    void	timer (fd_t fd) const		{ send (m_timer(), fd); }
 
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
@@ -88,7 +88,7 @@ class PSignal : public Proxy {
     DECLARE_INTERFACE (Signal, (signal,"i"));
 public:
     constexpr	PSignal (mrid_t caller)	: Proxy (caller, mrid_Broadcast) {}
-    void	signal (int sig)	{ send (m_signal(), sig); }
+    void	signal (int sig) const	{ send (m_signal(), sig); }
 
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
@@ -114,12 +114,12 @@ public:
     static void		install_signal_handlers (void);
     void		process_args (argc_t, argv_t)	{ }
     int			run (void);
-    Msg::Link&		create_link (Msg::Link& l, iid_t iid);
-    Msg::Link&		create_link_with (Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac);
-    inline Msg&		create_msg (Msg::Link& l, methodid_t mid, streamsize size, Msg::fdoffset_t fdo = Msg::NoFdIncluded)
-			    { return _outq.emplace_back (create_link (l,interface_of_method(mid)),mid,size,fdo); }
-    inline void		forward_msg (Msg&& msg, Msg::Link& l)
-			    { _outq.emplace_back (move(msg), create_link(l,msg.interface())); }
+    void		create_dest (iid_t iid, const Msg::Link& l);
+    void		create_dest_with (iid_t iid, Msger::pfn_factory_t fac, const Msg::Link& l);
+    inline Msg&		create_msg (const Msg::Link& l, methodid_t mid, streamsize size, Msg::fdoffset_t fdo = Msg::NoFdIncluded)
+			    { create_dest (interface_of_method(mid),l); return _outq.emplace_back (l,mid,size,fdo); }
+    inline void		forward_msg (Msg&& msg, const Msg::Link& l)
+			    { create_dest (msg.interface(),l); _outq.emplace_back (move(msg), l); }
     mrid_t		register_singleton_msger (Msger* m);
     static iid_t	interface_by_name (const char* iname, streamsize inamesz);
     msgq_t::size_type	has_messages_for (mrid_t mid) const;
@@ -129,6 +129,7 @@ public:
     constexpr void	quit (int ec)			{ s_exit_code = ec; quit(); }
     auto		exit_code (void) const		{ return s_exit_code; }
     auto&		errors (void) const		{ return _errors; }
+    mrid_t		allocate_mrid (mrid_t creator);
     void		free_mrid (mrid_t id);
     void		message_loop_once (void);
     void		delete_msger (mrid_t mid);
@@ -178,7 +179,6 @@ public:
     };
     //}}}2--------------------------------------------------------------
 private:
-    mrid_t		allocate_mrid (mrid_t creator);
     auto		msgerp_by_id (mrid_t id)	{ return _msgers[id]; }
     inline static auto	msger_factory_for (iid_t id);
     [[nodiscard]] inline static Msger*	create_msger_with (const Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac);

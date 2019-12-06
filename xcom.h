@@ -15,11 +15,12 @@ class PCOM : public Proxy {
     DECLARE_INTERFACE (COM, (error,"s")(export,"s")(delete,""))
 public:
     constexpr		PCOM (mrid_t src, mrid_t dest)	: Proxy (src, dest) {}
+			PCOM (mrid_t src)		: Proxy (src) {}
 			~PCOM (void)			{ }
-    void		error (const string& errmsg)	{ send (m_error(), errmsg); }
-    void		export_ (const string& elist)	{ send (m_export(), elist); }
-    void		delete_ (void)			{ send (m_delete()); }
-    void		forward_msg (Msg&& msg)		{ Proxy::forward_msg (move(msg)); }
+    void		error (const string& errmsg) const	{ send (m_error(), errmsg); }
+    void		export_ (const string& elist) const	{ send (m_export(), elist); }
+    void		delete_ (void) const			{ send (m_delete()); }
+    void		forward_msg (Msg&& msg) const		{ Proxy::forward_msg (move(msg)); }
     static string	string_from_interface_list (const iid_t* elist);
     static Msg		error_msg (const string& errmsg);
     static Msg		export_msg (const string& elstr);
@@ -90,21 +91,21 @@ public:
     };
     //}}}2
 public:
-    constexpr	PExtern (mrid_t caller)	: Proxy(caller) {}
+		PExtern (mrid_t caller)	: Proxy(caller) {}
 		~PExtern (void)		{ free_id(); }
-    void	close (void)		{ send (m_close()); }
-    void	open (fd_t fd, const iid_t* eifaces, SocketSide side = SocketSide::Server)
+    void	close (void) const	{ send (m_close()); }
+    void	open (fd_t fd, const iid_t* eifaces, SocketSide side = SocketSide::Server) const
 		    { send (m_open(), eifaces, fd, side); }
-    void	open (fd_t fd)		{ open (fd, nullptr, SocketSide::Client); }
-    fd_t	connect (const sockaddr* addr, socklen_t addrlen);
-    fd_t	connect_ip4 (in_addr_t ip, in_port_t port);
-    fd_t	connect_ip6 (in6_addr ip, in_port_t port);
-    fd_t	connect_local (const char* path);
-    fd_t	connect_local_ip4 (in_port_t port);
-    fd_t	connect_local_ip6 (in_port_t port);
-    fd_t	connect_system_local (const char* sockname);
-    fd_t	connect_user_local (const char* sockname);
-    fd_t	launch_pipe (const char* exe, const char* arg);
+    void	open (fd_t fd) const	{ open (fd, nullptr, SocketSide::Client); }
+    fd_t	connect (const sockaddr* addr, socklen_t addrlen) const;
+    fd_t	connect_ip4 (in_addr_t ip, in_port_t port) const;
+    fd_t	connect_ip6 (in6_addr ip, in_port_t port) const;
+    fd_t	connect_local (const char* path) const;
+    fd_t	connect_local_ip4 (in_port_t port) const;
+    fd_t	connect_local_ip6 (in_port_t port) const;
+    fd_t	connect_system_local (const char* sockname) const;
+    fd_t	connect_user_local (const char* sockname) const;
+    fd_t	launch_pipe (const char* exe, const char* arg) const;
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_open()) {
@@ -122,13 +123,14 @@ public:
 };
 
 //}}}-------------------------------------------------------------------
-//{{{ PExternR
+//{{{ PExtern const;
 
 class PExternR : public ProxyR {
     DECLARE_INTERFACE (ExternR, (connected,"x"))
 public:
-    constexpr	PExternR (const Msg::Link& l)		: ProxyR(l) {}
-    void	connected (const PExtern::Info* einfo)	{ send (m_connected(), einfo); }
+    constexpr	PExternR (const Msg::Link& l) : ProxyR(l) {}
+    void	connected (const PExtern::Info* einfo) const
+		    { send (m_connected(), einfo); }
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_connected())
@@ -229,6 +231,8 @@ private:
     public:
 	constexpr RelayProxy (mrid_t src, mrid_t dest, mrid_t eid)
 	    : pRelay(), relay(src,dest), extid(eid) {}
+	RelayProxy (mrid_t src, mrid_t eid)
+	    : pRelay(), relay(src), extid(eid) {}
 	~RelayProxy (void)	// Free ids for relays created by this Extern
 	    { if (pRelay && pRelay->creator_id() == relay.src()) relay.free_id(); }
 	RelayProxy (const RelayProxy&) = delete;
@@ -297,9 +301,9 @@ public:
     using fd_t = PExtern::fd_t;
     enum class WhenEmpty : uint8_t { Remain, Close };
 public:
-    constexpr	PExternServer (mrid_t caller)	: Proxy(caller),_sockname() {}
+		PExternServer (mrid_t caller)	: Proxy(caller),_sockname() {}
 		~PExternServer (void);
-    void	close (void)			{ send (m_close()); }
+    void	close (void) const		{ send (m_close()); }
     void	open (fd_t fd, const iid_t* eifaces, WhenEmpty whenempty = WhenEmpty::Close)
 		    { send (m_open(), eifaces, fd, whenempty); }
     fd_t	bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) NONNULL();
@@ -336,7 +340,7 @@ public:
     using fd_t = PExternServer::fd_t;
     enum { f_CloseWhenEmpty = Msger::f_Last, f_Last };
 public:
-    explicit constexpr	ExternServer (const Msg::Link& l)
+    explicit		ExternServer (const Msg::Link& l)
 			    : Msger(l),_conns(),_eifaces(),_timer (l.dest),_reply (l),_sockfd (-1) {}
     bool		on_error (mrid_t eid, const string& errmsg) override;
     void		on_msger_destroyed (mrid_t mid) override;
