@@ -4,20 +4,12 @@
 // This file is free software, distributed under the ISC License.
 
 #pragma once
-#include "widget.h"
+#if __has_include(<curses.h>)
+#include "uidefs.h"
 #include "app.h"
-#include <curses.h>
-#undef addch
-#undef addstr
-#undef addnstr
-#undef attron
-#undef attroff
-#undef hline
-#undef vline
-#undef box
-#undef erase
-#undef getch
-#undef clear
+
+struct _win_st;
+using WINDOW = struct _win_st;
 
 namespace cwiclo {
 namespace ui {
@@ -36,6 +28,7 @@ public:
 protected:
 		TerminalScreen (void);
 		~TerminalScreen (void) override;
+    static Event::key_t event_key_from_curses (int k);
 private:
     vector<TerminalScreenWindow*> _windows;
     ScreenInfo	_scrinfo;
@@ -44,7 +37,6 @@ private:
 
 class TerminalScreenWindow : public Msger {
 public:
-    enum { COLOR_DEFAULT = -1 };	// Curses transparent color
     enum { f_CaretOn = Msger::f_Last, f_Last };
 public:
 		TerminalScreenWindow (const Msg::Link& l);
@@ -59,25 +51,7 @@ public:
     auto&	area (void) const		{ return window_info().area(); }
     auto&	viewport (void) const		{ return _viewport; }
     void	on_event (const Event& ev);
-    void	draw_color (IColor c);
-    void	fill_color (IColor c);
-    void	move_to (coord_t x, coord_t y)	{ wmove (_w, viewport().y+y, viewport().x+x); }
-    void	move_to (const Point& pt)	{ move_to (pt.x, pt.y); }
-    void	move_by (coord_t dx, coord_t dy){ wmove (_w, dy+getcury(_w), dx+getcurx(_w)); }
-    void	move_by (const Offset& o)	{ move_by (o.dx, o.dy); }
-    void	addch (wchar_t c)		{ waddch (_w, c); }
-    void	hline (unsigned n, wchar_t c);
-    void	vline (unsigned n, wchar_t c);
-    void	box (dim_t w, dim_t h);
-    void	bar (dim_t w, dim_t h);
-    void	erase (void);
-    void	clear (void);
-    void	panel (const Size& wh, PanelType t);
-    void	panel (dim_t w, dim_t h, PanelType t)	{ panel (Size{w,h}, t); }
-    void	panel (const Rect& r, PanelType t)	{ move_to (r.xy); panel (r.wh, t); }
-    void	noutrefresh (void)			{ wnoutrefresh (_w); }
-    void	refresh (void)				{ wrefresh (_w); }
-    auto	getch (void)				{ return wgetch (_w); }
+    int		getch (void);
 		operator bool (void) const		{ return _w; }
     void	Draw_clear (void)			{ erase(); }
     void	Draw_move_to (const Point& p)		{ move_to (p); }
@@ -91,6 +65,24 @@ public:
     void	Draw_box (const Size& wh)		{ box (wh.w, wh.h); }
     void	Draw_panel (const Size& wh, PanelType t){ panel (wh, t); }
 private:
+    void	draw_color (IColor c);
+    void	fill_color (IColor c);
+    void	move_to (coord_t x, coord_t y);
+    void	move_to (const Point& pt)	{ move_to (pt.x, pt.y); }
+    void	move_by (coord_t dx, coord_t dy);
+    void	move_by (const Offset& o)	{ move_by (o.dx, o.dy); }
+    void	addch (wchar_t c);
+    void	hline (unsigned n, wchar_t c);
+    void	vline (unsigned n, wchar_t c);
+    void	box (dim_t w, dim_t h);
+    void	bar (dim_t w, dim_t h);
+    void	erase (void);
+    void	clear (void);
+    void	panel (const Size& wh, PanelType t);
+    void	panel (dim_t w, dim_t h, PanelType t)	{ panel (Size{w,h}, t); }
+    void	panel (const Rect& r, PanelType t)	{ move_to (r.xy); panel (r.wh, t); }
+    void	noutrefresh (void);
+    void	refresh (void);
     unsigned	clip_dx (unsigned dx) const;
     unsigned	clip_dy (unsigned dx) const;
 private:
@@ -102,3 +94,4 @@ private:
 
 } // namespace ui
 } // namespace cwiclo
+#endif // __has_include(<curses.h>)

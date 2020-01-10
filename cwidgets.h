@@ -4,7 +4,6 @@
 // This file is free software, distributed under the ISC License.
 
 #pragma once
-#if __has_include(<curses.h>)
 #include "widget.h"
 
 namespace cwiclo {
@@ -116,4 +115,3 @@ Widget* default_widget_factory (mrid_t owner, const Widget::Layout& l);
 
 } // namespace ui
 } // namespace cwiclo
-#endif // __has_include(<curses.h>)

@@ -4,7 +4,6 @@
 // This file is free software, distributed under the ISC License.
 
 #pragma once
-#if __has_include(<curses.h>)
 #include "draw.h"
 
 namespace cwiclo {
@@ -46,10 +45,6 @@ public:
     using widgetvec_t	= vector<unique_ptr<Widget>>;
     using widget_factory_t	= Widget* (*)(mrid_t owner, const Layout& l);
     enum { f_Focused, f_CanFocus, f_HasCaret, f_Disabled, f_Modified, f_Last };
-    enum {			// Keys that curses does not define
-	KEY_ESCAPE = '\e',
-	KEY_BKSPACE = '~'+1
-    };
 private:
     struct FocusNeighbors { widgetid_t first, prev, next, last; };
     void		get_focus_neighbors_for (widgetid_t w, FocusNeighbors& n) const;
@@ -150,4 +145,3 @@ private:
 
 } // namespace ui
 } // namespace cwiclo
-#endif // __has_include(<curses.h>)

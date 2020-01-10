@@ -3,7 +3,6 @@
 // Copyright (c) 2019 by Mike Sharov <msharov@users.sourceforge.net>
 // This file is free software, distributed under the ISC License.
 
-#if __has_include(<curses.h>)
 #include "window.h"
 #include "cwidgets.h"
 
@@ -110,11 +109,9 @@ void Window::on_event (const Event& ev)
 
 void Window::on_key (key_t k)
 {
-    if (k == KEY_RESIZE)
-	layout();
-    else if (k == '\t' || k == KEY_RIGHT || k == KEY_DOWN)
+    if (k == '\t' || k == Key::Right || k == Key::Down)
 	focus_next();
-    else if (k == KEY_LEFT || k == KEY_UP)
+    else if (k == Key::Left || k == Key::Up)
 	focus_prev();
 }
 
@@ -129,4 +126,3 @@ bool Window::dispatch (Msg& msg)
 
 } // namespace ui
 } // namespace cwiclo
-#endif // __has_include(<curses.h>)

@@ -4,9 +4,7 @@
 // This file is free software, distributed under the ISC License.
 
 #pragma once
-#if __has_include(<curses.h>)
 #include "widget.h"
-#include <curses.h>
 
 namespace cwiclo {
 namespace ui {
@@ -19,11 +17,6 @@ public:
     using Layout	= WidgetLayout;
     using Info		= WindowInfo;
     using drawlist_t	= PScreen::drawlist_t;
-    enum { COLOR_DEFAULT = -1 };	// Curses transparent color
-    enum {			// Keys that curses does not define
-	KEY_ESCAPE = '\e',
-	KEY_BKSPACE = '~'+1
-    };
 public:
     explicit		Window (const Msg::Link& l);
     bool		dispatch (Msg& msg) override;
@@ -80,4 +73,3 @@ private:
 
 } // namespace ui
 } // namespace cwiclo
-#endif // __has_include(<curses.h>)

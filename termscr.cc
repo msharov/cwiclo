@@ -3,8 +3,22 @@
 // Copyright (c) 2019 by Mike Sharov <msharov@users.sourceforge.net>
 // This file is free software, distributed under the ISC License.
 
+#if __has_include(<curses.h>)
 #include "termscr.h"
+#include "draw.h"
 #include <signal.h>
+#include <curses.h>
+#undef addch
+#undef addstr
+#undef addnstr
+#undef attron
+#undef attroff
+#undef hline
+#undef vline
+#undef box
+#undef erase
+#undef getch
+#undef clear
 
 namespace cwiclo {
 namespace ui {
@@ -102,6 +116,35 @@ bool TerminalScreen::dispatch (Msg& msg)
 	|| Msger::dispatch (msg);
 }
 
+Event::key_t TerminalScreen::event_key_from_curses (int k) // static
+{
+    // Keys that curses should have defined, but does not
+    enum {
+	KEY_ESCAPE = '\e',
+	KEY_BKSPACE = '~'+1
+    };
+    // Curses key to Event Key
+    static const struct { int ck; Event::key_t ek; } c_keymap[] = {
+	{ '\t',		Key::Tab	},
+	{ '\n',		Key::Enter	},
+	{ KEY_ESCAPE,	Key::Escape	},
+	{ KEY_LEFT,	Key::Left	},
+	{ KEY_RIGHT,	Key::Right	},
+	{ KEY_UP,	Key::Up		},
+	{ KEY_DOWN,	Key::Down	},
+	{ KEY_HOME,	Key::Home	},
+	{ KEY_END,	Key::End	},
+	{ KEY_IC,	Key::Insert	},
+	{ KEY_DC,	Key::Delete	},
+	{ KEY_BACKSPACE,Key::Backspace	},
+	{ KEY_BKSPACE,	Key::Backspace	}
+    };
+    for (auto& km : c_keymap)
+	if (km.ck == k)
+	    return km.ek;
+    return Event::key_t(k);
+}
+
 void TerminalScreen::TimerR_timer (PTimerR::fd_t)
 {
     if (_windows.empty())
@@ -110,8 +153,14 @@ void TerminalScreen::TimerR_timer (PTimerR::fd_t)
     assert (wfocus);
     if (!*wfocus)
 	return;
-    for (int k; 0 < (k = wfocus->getch());)
-	wfocus->on_event (Event (Event::Type::KeyDown, key_t(k)));
+    for (int k; 0 < (k = wfocus->getch());) {
+	if (k == KEY_RESIZE) {
+	    _scrinfo.set_size (COLS, LINES);
+	    for (auto w : _windows)
+		w->Screen_get_info();
+	} else
+	    wfocus->on_event (Event (Event::Type::KeyDown, event_key_from_curses(k)));
+    }
     if (!wfocus->flag (TerminalScreenWindow::f_Unused) && !isendwin())
 	_uiinput.wait_read (STDIN_FILENO);
 }
@@ -202,15 +251,22 @@ unsigned TerminalScreenWindow::clip_dx (unsigned dx) const
 unsigned TerminalScreenWindow::clip_dy (unsigned dx) const
     { return min (dx, viewport().y + viewport().h - getcury(_w)); }
 
+void TerminalScreenWindow::move_to (coord_t x, coord_t y)
+    { wmove (_w, viewport().y+y, viewport().x+x); }
+void TerminalScreenWindow::move_by (coord_t dx, coord_t dy)
+    { wmove (_w, dy+getcury(_w), dx+getcurx(_w)); }
+void TerminalScreenWindow::addch (wchar_t c)
+    { waddch (_w, c); }
+void TerminalScreenWindow::noutrefresh (void)
+    { wnoutrefresh (_w); }
+void TerminalScreenWindow::refresh (void)
+    { wrefresh (_w); }
+int TerminalScreenWindow::getch (void)
+    { return wgetch (_w); }
 void TerminalScreenWindow::hline (unsigned n, wchar_t c)
-{
-    whline (_w, c, clip_dx(n));
-}
-
+    { whline (_w, c, clip_dx(n)); }
 void TerminalScreenWindow::vline (unsigned n, wchar_t c)
-{
-    wvline (_w, c, clip_dy(n));
-}
+    { wvline (_w, c, clip_dy(n)); }
 
 void TerminalScreenWindow::box (dim_t w, dim_t h)
 {
@@ -325,3 +381,4 @@ void TerminalScreenWindow::Draw_text (const string& t, HAlign ha, VAlign)
 
 } // namespace ui
 } // namespace cwiclo
+#endif // __has_include(<curses.h>)

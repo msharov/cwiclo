@@ -3,7 +3,6 @@
 // Copyright (c) 2019 by Mike Sharov <msharov@users.sourceforge.net>
 // This file is free software, distributed under the ISC License.
 
-#if __has_include(<curses.h>)
 #include "cdlgs.h"
 
 namespace cwiclo {
@@ -80,9 +79,9 @@ void MessageBox::on_key (key_t key)
 	done (Answer::Ok);
     else if (key == 'n' || key == 'i')
 	done (Answer::No);
-    else if (key == KEY_ESCAPE || key == 'c')
+    else if (key == Key::Escape || key == 'c')
 	done (Answer::Cancel);
-    else if (key == '\n') {
+    else if (key == Key::Enter) {
 	if (focused_widget_id() == wid_Cancel)
 	    done (Answer::Cancel);
 	else if (focused_widget_id() == wid_Ignore)
@@ -97,4 +96,3 @@ void MessageBox::on_key (key_t key)
 
 } // namespace ui
 } // namespace cwiclo
-#endif // __has_include(<curses.h>)

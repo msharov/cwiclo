@@ -3,13 +3,8 @@
 // Copyright (c) 2019 by Mike Sharov <msharov@users.sourceforge.net>
 // This file is free software, distributed under the ISC License.
 
-#if __has_include(<curses.h>)
 #include "cwidgets.h"
 #include <ctype.h>
-#include <curses.h>
-#undef vline
-#undef hline
-#undef box
 
 namespace cwiclo {
 namespace ui {
@@ -53,9 +48,9 @@ void Listbox::on_set_text (void)
 
 void Listbox::on_key (key_t k)
 {
-    if ((k == 'k' || k == KEY_UP) && selection_start())
+    if ((k == 'k' || k == Key::Up) && selection_start())
 	set_selection (selection_start()-1);
-    else if ((k == 'j' || k == KEY_DOWN) && selection_start()+1 < _n)
+    else if ((k == 'j' || k == Key::Down) && selection_start()+1 < _n)
 	set_selection (selection_start()+1);
     else
 	return Widget::on_key (k);
@@ -130,18 +125,18 @@ void Editbox::on_set_text (void)
 
 void Editbox::on_key (key_t k)
 {
-    if (k == KEY_LEFT && _cpos)
+    if (k == Key::Left && _cpos)
 	--_cpos;
-    else if (k == KEY_RIGHT && _cpos < coord_t (text().size()))
+    else if (k == Key::Right && _cpos < coord_t (text().size()))
 	++_cpos;
-    else if (k == KEY_HOME)
+    else if (k == Key::Home)
 	_cpos = 0;
-    else if (k == KEY_END)
+    else if (k == Key::End)
 	_cpos = text().size();
     else {
-	if ((k == KEY_BKSPACE || k == KEY_BACKSPACE) && _cpos)
+	if (k == Key::Backspace && _cpos)
 	    textw().erase (text().iat(--_cpos));
-	else if (k == KEY_DC && _cpos < coord_t (text().size()))
+	else if (k == Key::Delete && _cpos < coord_t (text().size()))
 	    textw().erase (text().iat(_cpos));
 	else if (isprint(k))
 	    textw().insert (text().iat(_cpos++), char(k));
@@ -235,4 +230,3 @@ Widget::widget_factory_t Widget::s_factory = default_widget_factory;
 
 } // namespace ui
 } // namespace cwiclo
-#endif // __has_include(<curses.h>)

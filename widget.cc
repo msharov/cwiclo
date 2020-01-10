@@ -3,7 +3,6 @@
 // Copyright (c) 2019 by Mike Sharov <msharov@users.sourceforge.net>
 // This file is free software, distributed under the ISC License.
 
-#if __has_include(<curses.h>)
 #include "widget.h"
 
 namespace cwiclo {
@@ -289,4 +288,3 @@ void Widget::on_key (key_t k)
 
 } // namespace ui
 } // namespace cwiclo
-#endif // __has_include(<curses.h>)
