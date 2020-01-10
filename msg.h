@@ -26,6 +26,26 @@ enum : mrid_t {
     mrid_Broadcast = numeric_limits<mrid_t>::max()
 };
 
+// Extern connection id
+using extid_t = mrid_t;
+enum : extid_t {
+    // Each extern connection has two sides and each side must be able
+    // to assign a unique extid to each Msger-Msger link across the socket.
+    // Msger ids for COMRelays are unique for each process, and so can be
+    // used as an extid on one side. The other side, however, needs another
+    // address space. Here it is provided as extid_ServerBase. Extern
+    // connection is bidirectional and has no functional difference between
+    // sides, so selecting a server side is an arbitrary choice. By default,
+    // the side that binds to the connection socket is the server and the
+    // side that connects is the client.
+    //
+    extid_ClientBase,
+    extid_COM = extid_ClientBase,
+    extid_ClientLast = extid_ClientBase + mrid_Last,
+    extid_ServerBase,
+    extid_ServerLast = extid_ServerBase + mrid_Last
+};
+
 // Interfaces are defined as string blocks with the interface
 // name serving as a unique id for the interface.
 //
@@ -156,7 +176,7 @@ public:
     auto		verify (void) const	{ return validate_signature (read(), signature()); }
     inline constexpr	Msg (const Link& l, methodid_t mid)
 			    :_method (mid),_link (l),_extid(0),_fdoffset (NoFdIncluded),_body() {}
-    inline constexpr	Msg (const Link& l, methodid_t mid, Body&& body, fdoffset_t fdo = NoFdIncluded, mrid_t extid = 0)
+    inline constexpr	Msg (const Link& l, methodid_t mid, Body&& body, fdoffset_t fdo = NoFdIncluded, extid_t extid = 0)
 			    :_method (mid),_link (l),_extid (extid),_fdoffset (fdo),_body (move (body)) {}
     inline constexpr	Msg (Msg&& msg, const Link& l)
 			    : Msg (l,msg.method(),msg.move_body(),msg.fd_offset(),msg.extid()) {}
@@ -167,7 +187,7 @@ public:
 private:
     methodid_t		_method;
     Link		_link;
-    mrid_t		_extid;
+    extid_t		_extid;
     fdoffset_t		_fdoffset;
     Body		_body;
 };
@@ -213,9 +233,10 @@ private:
 };
 
 class Proxy : public ProxyB {
-public:
+protected:
     constexpr		Proxy (mrid_t from, mrid_t to) : ProxyB (from,to) {}
-			Proxy (mrid_t from);
+    explicit		Proxy (mrid_t from);
+public:
     void		create_dest_as (iid_t iid) const;
     void		create_dest_with (iid_t iid, pfn_factory_t fac) const;
 			using ProxyB::allocate_id;
@@ -223,7 +244,7 @@ public:
 };
 
 class ProxyR : public ProxyB {
-public:
+protected:
     constexpr		ProxyR (const Msg::Link& l) : ProxyB (l.dest, l.src) {}
     void		allocate_id (void) = delete;
     void		free_id (void) = delete;

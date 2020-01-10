@@ -13,7 +13,7 @@ namespace ui {
 //{{{ PWidgetR ---------------------------------------------------------
 
 class PWidgetR : public ProxyR {
-    DECLARE_INTERFACE (WidgetR, (event,SIGNATURE_Event)(modified,"qqs"))
+    DECLARE_INTERFACE (WidgetR, (event,SIGNATURE_ui_Event)(modified,"qqs"))
 public:
     constexpr		PWidgetR (const Msg::Link& l)	: ProxyR(l) {}
     void		event (const Event& ev) const	{ send (m_event(), ev); }

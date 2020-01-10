@@ -64,6 +64,8 @@ void Listbox::on_key (key_t k)
 
 DEFINE_WIDGET_WRITE_DRAWLIST (Listbox, Drawlist, drw)
 {
+    if (area().w < 1)
+	return;
     drw.panel (area().wh, PanelType::Listbox);
     coord_t y = 0;
     for (zstr::cii li (text().c_str(), text().size()); li; ++y) {

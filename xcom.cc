@@ -234,7 +234,7 @@ bool Extern::dispatch (Msg& msg)
 	|| Msger::dispatch (msg);
 }
 
-void Extern::queue_outgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid)
+void Extern::queue_outgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid)
 {
     _outq.emplace_back (mid, move(body), fdo, extid);
     TimerR_timer (_sockfd);
@@ -246,13 +246,13 @@ Extern::RelayProxy* Extern::relay_proxy_by_id (mrid_t id)
 	    { return r.relay.dest() == id; });
 }
 
-Extern::RelayProxy* Extern::relay_proxy_by_extid (mrid_t extid)
+Extern::RelayProxy* Extern::relay_proxy_by_extid (extid_t extid)
 {
     return linear_search_if (_relays, [&](const auto& r)
 	    { return r.extid == extid; });
 }
 
-mrid_t Extern::register_relay (COMRelay* relay)
+extid_t Extern::register_relay (COMRelay* relay)
 {
     auto rp = relay_proxy_by_id (relay->msger_id());
     if (!rp)
@@ -292,7 +292,7 @@ Extern* Extern::lookup_by_relay_id (mrid_t rid) // static
 //}}}-------------------------------------------------------------------
 //{{{ Extern::ExtMsg
 
-Extern::ExtMsg::ExtMsg (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid)
+Extern::ExtMsg::ExtMsg (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid)
 :_body (move(body))
 ,_h { ceilg (_body.size(), Msg::Alignment::Body), extid, fdo, write_header_strings(mid) }
 {

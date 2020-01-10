@@ -200,8 +200,10 @@ void App::free_mrid (mrid_t id)
 mrid_t App::register_singleton_msger (Msger* m)
 {
     auto id = allocate_mrid (mrid_App);
-    if (id <= mrid_Last)
+    if (id <= mrid_Last) {
 	_msgers[id] = m;
+	DEBUG_PRINTF ("[M] Created Msger %hu singleton\n", id);
+    }
     return id;
 }
 

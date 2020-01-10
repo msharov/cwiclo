@@ -5,6 +5,7 @@
 
 #pragma once
 #include "widget.h"
+#include "app.h"
 #include <curses.h>
 #undef addch
 #undef addstr
@@ -21,16 +22,46 @@
 namespace cwiclo {
 namespace ui {
 
-class TerminalWindowRenderer {
-    enum { COLOR_DEFAULT = -1 };	// Curses transparent color
+class TerminalScreenWindow;
+
+class TerminalScreen : public Msger {
 public:
-		TerminalWindowRenderer (void);
-		~TerminalWindowRenderer (void)	{ destroy(); }
-    void	destroy (void);
-    void	resize (const Rect& r);
+    static auto& instance (void) { static TerminalScreen s_scr; return s_scr; }
+    void	register_window (TerminalScreenWindow* w);
+    void	unregister_window (const TerminalScreenWindow* w);
+    void	create_window (WindowInfo& winfo, WINDOW*& pwin);
+    bool	dispatch (Msg& msg) override;
+    void	TimerR_timer (PTimerR::fd_t);
+    auto&	screen_info (void) const { return _scrinfo; }
+protected:
+		TerminalScreen (void);
+		~TerminalScreen (void) override;
+private:
+    vector<TerminalScreenWindow*> _windows;
+    ScreenInfo	_scrinfo;
+    PTimer	_uiinput;
+};
+
+class TerminalScreenWindow : public Msger {
+public:
+    enum { COLOR_DEFAULT = -1 };	// Curses transparent color
+    enum { f_CaretOn = Msger::f_Last, f_Last };
+public:
+		TerminalScreenWindow (const Msg::Link& l);
+		~TerminalScreenWindow (void) override;
+    bool	dispatch (Msg& msg) override;
+    void	Screen_open (const WindowInfo& wi);
+    void	Screen_close (void);
+    void	Screen_draw (const cmemlink& dl);
+    void	Screen_get_info (void);
+    auto&	screen_info (void) const	{ return TerminalScreen::instance().screen_info(); }
+    auto&	window_info (void) const	{ return _winfo; }
+    auto&	area (void) const		{ return window_info().area(); }
+    auto&	viewport (void) const		{ return _viewport; }
+    void	on_event (const Event& ev);
     void	draw_color (IColor c);
     void	fill_color (IColor c);
-    void	move_to (coord_t x, coord_t y)	{ wmove (_w, _viewport.y+y, _viewport.x+x); }
+    void	move_to (coord_t x, coord_t y)	{ wmove (_w, viewport().y+y, viewport().x+x); }
     void	move_to (const Point& pt)	{ move_to (pt.x, pt.y); }
     void	move_by (coord_t dx, coord_t dy){ wmove (_w, dy+getcury(_w), dx+getcurx(_w)); }
     void	move_by (const Offset& o)	{ move_by (o.dx, o.dy); }
@@ -63,9 +94,10 @@ private:
     unsigned	clip_dx (unsigned dx) const;
     unsigned	clip_dy (unsigned dx) const;
 private:
+    PScreenR	_reply;
     WINDOW*	_w;
-    Rect	_area;
     Rect	_viewport;
+    WindowInfo	_winfo;
 };
 
 } // namespace ui

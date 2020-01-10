@@ -24,13 +24,16 @@ union Rect	{
     struct { coord_t x,y; dim_t w,h; };
     struct { Point xy; Size wh; };
 };
-#define SIGNATURE_ui_Point	"nn"
-#define SIGNATURE_ui_Offset	"nn"
-#define SIGNATURE_ui_Size	"qq"
-#define SIGNATURE_ui_Rect	SIGNATURE_ui_Point SIGNATURE_ui_Size
+#define SIGNATURE_ui_Point	"(nn)"
+#define SIGNATURE_ui_Offset	"(nn)"
+#define SIGNATURE_ui_Size	"(qq)"
+#define SIGNATURE_ui_Rect	"(nnqq)"
 
 enum class HAlign : uint8_t { Left, Center, Right };
 enum class VAlign : uint8_t { Top, Center, Bottom };
+
+enum class ScreenType : uint8_t { Text, Graphics, OpenGL, HTML, Printer };
+enum class MSAA : uint8_t { OFF, X2, X4, X8, X16, MAX = X16 };
 
 //----------------------------------------------------------------------
 
@@ -195,9 +198,235 @@ private:
 	key_t	_key;
     };
 };
-#define SIGNATURE_Event	"(qyyu)"
+#define SIGNATURE_ui_Event "(qyyu)"
 
 //}}}-------------------------------------------------------------------
+//{{{ Cursor
+
+enum class Cursor : uint8_t {
+    X, arrow, based_arrow_down, based_arrow_up, boat,
+    bogosity, bottom_left_corner, bottom_right_corner, bottom_side, bottom_tee,
+    box_spiral, center_ptr, circle, clock, coffee_mug,
+    cross, cross_reverse, crosshair, diamond_cross, dot,
+    dotbox, double_arrow, draft_large, draft_small, draped_box,
+    exchange, fleur, gobbler, gumby, hand1,
+    hand2, heart, icon, iron_cross, left_ptr,
+    left_side, left_tee, leftbutton, ll_angle, lr_angle,
+    man, middlebutton, mouse, pencil, pirate,
+    plus, question_arrow, right_ptr, right_side, right_tee,
+    rightbutton, rtl_logo, sailboat, sb_down_arrow, sb_h_double_arrow,
+    sb_left_arrow, sb_right_arrow, sb_up_arrow, sb_v_double_arrow, shuttle,
+    sizing, spider, spraycan, star, target,
+    tcross, top_left_arrow, top_left_corner, top_right_corner, top_side,
+    top_tee, trek, ul_angle, umbrella, ur_angle,
+    watch, xterm, hidden
+};
+
+//}}}-------------------------------------------------------------------
+//{{{ ScreenInfo
+
+class ScreenInfo {
+public:
+    inline constexpr		ScreenInfo (void)
+				    :_scrsz{},_physz{},_type(ScreenType::Text)
+				    ,_depth(4),_gapi(0),_msaa(MSAA::OFF) {}
+    inline constexpr		ScreenInfo (const Size& ssz, ScreenType st, uint8_t d, uint8_t gav = 0, MSAA aa = MSAA::OFF, const Size& phy = {})
+				    :_scrsz{ssz},_physz{phy},_type(st),_depth(d),_gapi(gav),_msaa(aa) {}
+    inline constexpr auto&	size (void) const		{ return _scrsz; }
+    inline constexpr void	set_size (dim_t w, dim_t h)	{ _scrsz.w = w; _scrsz.h = h; }
+    inline constexpr auto&	physical_size (void) const	{ return _physz; }
+    inline constexpr auto	type (void) const		{ return _type; }
+    inline constexpr auto	depth (void) const		{ return _depth; }
+    inline constexpr auto	gapi_version (void) const	{ return _gapi; }
+    inline constexpr auto	msaa (void) const		{ return _msaa; }
+    inline constexpr void	read (istream& is)		{ is.readt (*this); }
+    inline constexpr void	write (ostream& os) const	{ os.writet (*this); }
+    inline constexpr void	write (sstream& ss) const	{ ss.writet (*this); }
+private:
+    Size	_scrsz;
+    Size	_physz;
+    ScreenType	_type;
+    uint8_t	_depth;
+    uint8_t	_gapi;
+    MSAA	_msaa;
+};
+#define SIGNATURE_ui_ScreenInfo	"(" SIGNATURE_ui_Size SIGNATURE_ui_Size "yyyy)"
+
+//}}}-------------------------------------------------------------------
+//{{{ WindowInfo
+
+class WindowInfo {
+public:
+    //{{{2 Type
+    enum class Type : uint8_t {
+	Normal,
+	Desktop,
+	Dock,
+	Dialog,
+	Toolbar,
+	Utility,
+	Menu,
+	PopupMenu,
+	DropdownMenu,
+	ComboMenu,
+	Notification,
+	Tooltip,
+	Splash,
+	Dragged,
+	Embedded
+    };
+    //}}}2
+    //{{{2 State
+    enum class State : uint8_t {
+	Normal,
+	MaximizedX,
+	MaximizedY,
+	Maximized,
+	Hidden,
+	Fullscreen,
+	Gamescreen	// Like fullscreen, but possibly change resolution to fit
+    };
+    //}}}2
+    //{{{2 Flag
+    enum class Flag : uint8_t {
+	Focused,
+	Modal,
+	Attention,
+	Sticky,
+	NotOnTaskbar,
+	NotOnPager,
+	Above,
+	Below
+    };
+    //}}}2
+private:
+    //{{{2 Type ranges
+    enum class TypeRangeFirst : uint8_t {
+	Parented	= uint8_t(Type::Dialog),
+	Decoless	= uint8_t(Type::PopupMenu),
+	PopupMenu	= uint8_t(Type::PopupMenu)
+    };
+    enum class TypeRangeLast : uint8_t {
+	Parented	= uint8_t(Type::Splash),
+	Decoless	= uint8_t(Type::Dragged),
+	PopupMenu	= uint8_t(Type::ComboMenu)
+    };
+    static constexpr bool	in_type_range (Type t, TypeRangeFirst f, TypeRangeLast l)
+				    { return uint8_t(t) >= uint8_t(f) && uint8_t(t) <= uint8_t(l); }
+    //}}}2
+public:
+    inline constexpr		WindowInfo (void)
+				    :_area{},_parent(),_type (Type::Normal)
+				    ,_state (State::Normal),_cursor (Cursor::left_ptr)
+				    ,_flags(),_gapi(),_msaa (MSAA::OFF) {}
+    inline constexpr		WindowInfo (Type t, const Rect& area, extid_t parent = 0,
+					State st = State::Normal, Cursor cursor = Cursor::left_ptr,
+					uint8_t gapi = 0, MSAA aa = MSAA::OFF)
+				    :_area(area),_parent(parent),_type (t)
+				    ,_state (st),_cursor (cursor),_flags()
+				    ,_gapi(gapi),_msaa (aa) {}
+    inline constexpr void	read (istream& is)		{ is.readt (*this); }
+    inline constexpr void	write (ostream& os) const	{ os.writet (*this); }
+    inline constexpr void	write (sstream& ss) const	{ ss.writet (*this); }
+    inline constexpr auto&	area (void) const		{ return _area; }
+    inline constexpr void	set_area (const Rect& a)	{ _area = a; }
+    inline constexpr auto	parent (void) const		{ return _parent; }
+    inline constexpr auto	type (void) const		{ return _type; }
+    inline constexpr bool	is_parented (void) const	{ return in_type_range (type(), TypeRangeFirst::Parented, TypeRangeLast::Parented); }
+    inline constexpr bool	is_decoless (void) const	{ return in_type_range (type(), TypeRangeFirst::Decoless, TypeRangeLast::Decoless); }
+    inline constexpr bool	is_popup (void) const		{ return in_type_range (type(), TypeRangeFirst::PopupMenu, TypeRangeLast::PopupMenu); }
+    inline constexpr auto	state (void) const		{ return _state; }
+    inline constexpr void	set_state (State s)		{ _state = s; }
+    inline constexpr auto	cursor (void) const		{ return _cursor; }
+    inline constexpr void	set_cursor (Cursor c)		{ _cursor = c; }
+    inline constexpr auto	gapi_version (void) const	{ return _gapi; }
+    inline constexpr auto	msaa (void) const		{ return _msaa; }
+    inline constexpr bool	flag (Flag f) const		{ return get_bit (_flags, uint8_t(f)); }
+    inline constexpr void	set_flag (Flag f, bool v =true)	{ return set_bit (_flags, uint8_t(f), v); }
+private:
+    Rect	_area;
+    extid_t	_parent;
+    Type	_type;
+    State	_state;
+    Cursor	_cursor;
+    uint8_t	_flags;
+    uint8_t	_gapi;
+    MSAA	_msaa;
+};
+#define SIGNATURE_ui_WindowInfo	"(" SIGNATURE_ui_Rect "qyyyyyy)"
+
+//}}}-------------------------------------------------------------------
+//{{{ PScreen
+
+// A screen manages windows and renders their contents
+class PScreen : public Proxy {
+    DECLARE_INTERFACE (Screen,
+	(draw, "ay")
+	(get_info, "")
+	(open, SIGNATURE_ui_WindowInfo)
+	(close, "")
+    )
+public:
+    using drawlist_t	= memblock;
+public:
+    explicit	PScreen (mrid_t caller)		: Proxy (caller) {}
+    void	get_info (void) const		{ send (m_get_info()); }
+    void	close (void) const		{ send (m_close()); }
+    void	open (const WindowInfo& wi) const
+		    { send (m_open(), wi); }
+    void	draw (const drawlist_t& d) const
+		    { send (m_draw(), d); }
+    template <typename O>
+    inline static constexpr bool dispatch (O* o, const Msg& msg) {
+	if (msg.method() == m_draw())
+	    o->Screen_draw (msg.read().read<cmemlink>());
+	else if (msg.method() == m_get_info())
+	    o->Screen_get_info();
+	else if (msg.method() == m_open())
+	    o->Screen_open (msg.read().read<WindowInfo>());
+	else if (msg.method() == m_close())
+	    o->Screen_close();
+	else
+	    return false;
+	return true;
+    }
+};
+
+//}}}----------------------------------------------------------------------
+//{{{ PScreenR
+
+class PScreenR : public ProxyR {
+    DECLARE_INTERFACE (ScreenR,
+	(event, SIGNATURE_ui_Event)
+	(expose, "")
+	(restate, SIGNATURE_ui_WindowInfo)
+	(screen_info, SIGNATURE_ui_ScreenInfo)
+    )
+public:
+    constexpr	PScreenR (const Msg::Link& l)	: ProxyR (l) {}
+    void	event (const Event& e) const	{ send (m_event(), e); }
+    void	expose (void) const		{ send (m_expose()); }
+    void	restate (const WindowInfo& wi) const
+		    { send (m_restate(), wi); }
+    void	screen_info (const ScreenInfo& si) const
+		    { send (m_screen_info(), si); }
+    template <typename O>
+    inline static constexpr bool dispatch (O* o, const Msg& msg) {
+	if (msg.method() == m_event())
+	    o->ScreenR_event (msg.read().read<Event>());
+	else if (msg.method() == m_expose())
+	    o->ScreenR_expose();
+	else if (msg.method() == m_restate())
+	    o->ScreenR_restate (msg.read().read<WindowInfo>());
+	else if (msg.method() == m_screen_info())
+	    o->ScreenR_screen_info (msg.read().read<ScreenInfo>());
+	else
+	    return false;
+	return true;
+    }
+};
+
+//}}}----------------------------------------------------------------------
 
 } // namespace ui
 } // namespace cwiclo

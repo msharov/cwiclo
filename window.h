@@ -6,18 +6,19 @@
 #pragma once
 #if __has_include(<curses.h>)
 #include "widget.h"
-#include "termrend.h"
-#include "app.h"
+#include <curses.h>
 
 namespace cwiclo {
 namespace ui {
 
+class Widget;
+
 class Window : public Msger {
 public:
     using key_t		= Event::key_t;
-    using Layout	= Widget::Layout;
-    using drawlist_t	= Widget::drawlist_t;
-    enum { f_CaretOn = Msger::f_Last, f_Last };
+    using Layout	= WidgetLayout;
+    using Info		= WindowInfo;
+    using drawlist_t	= PScreen::drawlist_t;
     enum { COLOR_DEFAULT = -1 };	// Curses transparent color
     enum {			// Keys that curses does not define
 	KEY_ESCAPE = '\e',
@@ -25,24 +26,28 @@ public:
     };
 public:
     explicit		Window (const Msg::Link& l);
-			~Window (void) override;
     bool		dispatch (Msg& msg) override;
-    void		on_msger_destroyed (mrid_t mid) override;
     virtual void	draw (void);
     virtual void	on_event (const Event& ev);
     virtual void	on_modified (widgetid_t, const string_view&) {}
     virtual void	on_key (key_t key);
     void		close (void);
-    void		TimerR_timer (PTimerR::fd_t);
-    void		PWidget_event (const Event& ev)		{ on_event (ev); }
-    void		PWidgetR_event (const Event& ev)	{ on_event (ev); }
+    void		PWidget_event (const Event& ev)	{ on_event (ev); }
+    void		PWidgetR_event (const Event& ev){ on_event (ev); }
     void		PWidgetR_modified (widgetid_t wid, const string_view& t)
 			    { on_modified (wid, t); }
+    void		ScreenR_event (const Event& ev)	{ on_event (ev); }
+    void		ScreenR_expose (void)		{ draw(); }
+    void		ScreenR_restate (const Info& wi)	{ _info = wi; layout(); }
+    void		ScreenR_screen_info (const ScreenInfo& scrinfo);
+    auto&		window_info (void) const	{ return _info; }
+    auto&		screen_info (void) const	{ return _scrinfo; }
+    auto&		area (void) const		{ return window_info().area(); }
 protected:
     virtual void	layout (void);
-    void		create_widgets (const Widget::Layout* f, const Widget::Layout* l);
+    void		create_widgets (const Layout* f, const Layout* l);
     template <unsigned N>
-    void		create_widgets (const Widget::Layout (&l)[N])
+    void		create_widgets (const Layout (&l)[N])
 			    { create_widgets (begin(l), end(l)); }
     void		destroy_widgets (void)			{ _widgets.reset(); }
     auto		widget_by_id (widgetid_t id) const	{ return _widgets->widget_by_id(id); }
@@ -66,15 +71,11 @@ protected:
     void		focus_next (void);
     void		focus_prev (void);
 private:
-    auto&		w (void)	{ return _w; }
-    auto&		w (void) const	{ return _w; }
-private:
-    TerminalWindowRenderer	_w;
-    PTimer		_uiinput;
+    PScreen		_scr;
+    Info		_info;
+    ScreenInfo		_scrinfo;
     widgetid_t		_focused;
     unique_ptr<Widget>	_widgets;
-    static mrid_t	s_focused;
-    static uint8_t	s_nwins;
 };
 
 } // namespace ui

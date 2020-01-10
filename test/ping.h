@@ -33,7 +33,7 @@ public:
     // Proxies are constructed with the calling object's oid.
     // Reply messages sent through reply interfaces, here PingR,
     // will be delivered to the given object.
-    PPing (mrid_t caller) : Proxy (caller) {}
+    explicit PPing (mrid_t caller) : Proxy (caller) {}
 
     // Methods are implemented by simple marshalling of the arguments.
     // m_ping() is defined by DECLARE_INTERFACE above and returns the methodid_t of the Ping call.

@@ -17,7 +17,7 @@ public:
     enum class Answer : uint16_t { Cancel, Ok, Ignore, Yes = Ok, Retry = Ok, No = Ignore };
     enum class Type : uint16_t { Ok, OkCancel, YesNo, YesNoCancel, RetryCancelIgnore };
 public:
-		PMessageBox (mrid_t caller) : Proxy (caller) {}
+    explicit	PMessageBox (mrid_t caller) : Proxy (caller) {}
     void	ask (const string& prompt, Type type = Type()) const
 		    { send (m_ask(), type, uint16_t(0), prompt); }
     template <typename O>

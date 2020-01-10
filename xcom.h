@@ -15,7 +15,7 @@ class PCOM : public Proxy {
     DECLARE_INTERFACE (COM, (error,"s")(export,"s")(delete,""))
 public:
     constexpr		PCOM (mrid_t src, mrid_t dest)	: Proxy (src, dest) {}
-			PCOM (mrid_t src)		: Proxy (src) {}
+    explicit		PCOM (mrid_t src)		: Proxy (src) {}
 			~PCOM (void)			{ }
     void		error (const string& errmsg) const	{ send (m_error(), errmsg); }
     void		export_ (const string& elist) const	{ send (m_export(), elist); }
@@ -60,7 +60,7 @@ public:
 private:
     Extern*	_pExtern;	// Outgoing connection object
     PCOM	_localp;	// Proxy to the local object
-    mrid_t	_extid;		// Extern link id
+    extid_t	_extid;		// Extern link id
 };
 
 //}}}-------------------------------------------------------------------
@@ -91,7 +91,7 @@ public:
     };
     //}}}2
 public:
-		PExtern (mrid_t caller)	: Proxy(caller) {}
+    explicit	PExtern (mrid_t caller)	: Proxy(caller) {}
 		~PExtern (void)		{ free_id(); }
     void	close (void) const	{ send (m_close()); }
     void	open (fd_t fd, const iid_t* eifaces, SocketSide side = SocketSide::Server) const
@@ -123,7 +123,7 @@ public:
 };
 
 //}}}-------------------------------------------------------------------
-//{{{ PExtern const;
+//{{{ PExternR
 
 class PExternR : public ProxyR {
     DECLARE_INTERFACE (ExternR, (connected,"x"))
@@ -153,12 +153,12 @@ public:
 			~Extern (void) override;
     auto&		info (void) const	{ return _einfo; }
     bool		dispatch (Msg& msg) override;
-    void		queue_outgoing (Msg&& msg, mrid_t extid)
+    void		queue_outgoing (Msg&& msg, extid_t extid)
 			    { queue_outgoing (msg.method(), msg.move_body(), msg.fd_offset(), extid); }
     static Extern*	lookup_by_id (mrid_t id);
     static Extern*	lookup_by_imported (iid_t id);
     static Extern*	lookup_by_relay_id (mrid_t rid);
-    mrid_t		register_relay (COMRelay* relay);
+    extid_t		register_relay (COMRelay* relay);
     void		unregister_relay (const COMRelay* relay);
     inline void		Extern_open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide side);
     void		Extern_close (void);
@@ -184,7 +184,7 @@ private:
 	};
     public:
 	constexpr		ExtMsg (void)		: _body(),_h{},_hbuf{} {}
-				ExtMsg (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid);
+				ExtMsg (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid);
 				ExtMsg (const ExtMsg&) = delete;
 	void			operator= (const ExtMsg&) = delete;
 	constexpr auto&		header (void) const		{ return _h; }
@@ -227,7 +227,7 @@ private:
     struct RelayProxy {
 	COMRelay*	pRelay;
 	PCOM		relay;
-	mrid_t		extid;
+	extid_t		extid;
     public:
 	constexpr RelayProxy (mrid_t src, mrid_t dest, mrid_t eid)
 	    : pRelay(), relay(src,dest), extid(eid) {}
@@ -239,32 +239,13 @@ private:
 	void operator= (const RelayProxy&) = delete;
     };
     //}}}2--------------------------------------------------------------
-    //{{{2 extid_ constants
-    enum {
-	// Each extern connection has two sides and each side must be able
-	// to assign a unique extid to each Msger-Msger link across the socket.
-	// Msger ids for COMRelays are unique for each process, and so can be
-	// used as an extid on one side. The other side, however, needs another
-	// address space. Here it is provided as extid_ServerBase. Extern
-	// connection is bidirectional and has no functional difference between
-	// sides, so selecting a server side is an arbitrary choice. By default,
-	// the side that binds to the connection socket is the server and the
-	// side that connects is the client.
-	//
-	extid_ClientBase,
-	extid_COM = extid_ClientBase,
-	extid_ClientLast = extid_ClientBase + mrid_Last,
-	extid_ServerBase = extid_ClientLast + 1,
-	extid_ServerLast = extid_ServerBase + mrid_Last
-    };
-    //}}}2--------------------------------------------------------------
 private:
-    void		queue_outgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, mrid_t extid);
-    constexpr mrid_t	create_extid_from_relay_id (mrid_t id) const
+    void		queue_outgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid);
+    constexpr extid_t	create_extid_from_relay_id (mrid_t id) const
 			    { return id + ((_einfo.side == PExtern::SocketSide::Client) ? extid_ClientBase : extid_ServerBase); }
     static auto&	extern_list (void)
 			    { static vector<Extern*> s_externs; return s_externs; }
-    RelayProxy*		relay_proxy_by_extid (mrid_t extid);
+    RelayProxy*		relay_proxy_by_extid (extid_t extid);
     RelayProxy*		relay_proxy_by_id (mrid_t id);
     bool		write_outgoing (void);
     void		read_incoming (void);
@@ -301,7 +282,7 @@ public:
     using fd_t = PExtern::fd_t;
     enum class WhenEmpty : uint8_t { Remain, Close };
 public:
-		PExternServer (mrid_t caller)	: Proxy(caller),_sockname() {}
+    explicit	PExternServer (mrid_t caller)	: Proxy(caller),_sockname() {}
 		~PExternServer (void);
     void	close (void) const		{ send (m_close()); }
     void	open (fd_t fd, const iid_t* eifaces, WhenEmpty whenempty = WhenEmpty::Close)
