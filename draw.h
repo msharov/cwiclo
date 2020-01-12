@@ -123,7 +123,7 @@ protected:
 	    dls.skip (argbytes);
 	}
 	return r;
-    };
+    }
     inline static auto validate_cmd (uint8_t cmd, istream args) {
 	static constexpr const char c_sigs[] =
 	    ""				// Clear

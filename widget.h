@@ -15,6 +15,7 @@ class PWidgetR : public ProxyR {
     DECLARE_INTERFACE (WidgetR, (event,SIGNATURE_ui_Event)(modified,"qqs"))
 public:
     constexpr		PWidgetR (const Msg::Link& l)	: ProxyR(l) {}
+    constexpr		PWidgetR (mrid_t f, mrid_t t)	: ProxyR(Msg::Link{f,t}) {}
     void		event (const Event& ev) const	{ send (m_event(), ev); }
     void		modified (widgetid_t wid, const string& t) const
 			    { send (m_modified(), wid, uint16_t(0), t); }
@@ -36,6 +37,8 @@ public:
 //}}}
 //--- Widget ---------------------------------------------------------
 
+class Window;
+
 class Widget {
 public:
     using key_t		= Event::key_t;
@@ -50,11 +53,11 @@ private:
     void		get_focus_neighbors_for (widgetid_t w, FocusNeighbors& n) const;
     FocusNeighbors	get_focus_neighbors_for (widgetid_t w) const;
 public:
-    explicit		Widget (const Msg::Link& l, const Layout& lay);
+    explicit		Widget (Window* w, const Layout& lay);
 			Widget (const Widget&) = delete;
     void		operator= (const Widget&) = delete;
     virtual		~Widget (void) {}
-    [[nodiscard]] static Widget* create (mrid_t owner, const Layout& l)	{ return s_factory (owner, l); }
+    [[nodiscard]] static Widget* create (Window* w, const Layout& l);
     auto&		layinfo (void) const			{ return _layinfo; }
     auto		widget_id (void) const			{ return layinfo().id(); }
     auto&		size_hints (void) const			{ return _size_hints; }
@@ -101,28 +104,28 @@ public:
     Rect		compute_size_hints (void);
     void		place (const Rect& area);
 protected:
+    auto		parent_window (void) const		{ return _win; }
     auto&		textw (void)				{ return _text; }
-    void		create_event (const Event& ev) const	{ _reply.event (ev); }
+    void		create_event (const Event& ev) const;
     void		report_modified (void) const;
-    void		report_selection (void) const
-			    { create_event (Event (Event::Type::Selection, _selection, 0, widget_id())); }
+    void		report_selection (void) const;
 private:
+    inline PWidgetR	widget_reply (void) const;
     virtual void	on_draw (drawlist_t&) const {}
 private:
     string		_text;
     widgetvec_t		_widgets;
+    Window*		_win;
     Rect		_area;
     Size		_size_hints;
     Size		_selection;
     uint16_t		_flags;
     Layout		_layinfo;
-    PWidgetR		_reply;
-    // Declared here, set by default to one in cwidgets.cc, creating all core widgets
-    static widget_factory_t	s_factory;
 };
 
 //----------------------------------------------------------------------
 
+// Drawlist writer templates
 #define DEFINE_WIDGET_WRITE_DRAWLIST(widget, dltype, dlw)\
 	void widget::on_draw (drawlist_t& dl) const {	\
 	    dltype::Writer<sstream> dlss;		\

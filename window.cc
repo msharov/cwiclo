@@ -29,7 +29,7 @@ void Window::create_widgets (const Widget::Layout* f, const Widget::Layout* l)
 {
     if (f >= l)
 	return;
-    _widgets = Widget::create (msger_id(), *f);
+    _widgets = Widget::create (this, *f);
     f = _widgets->add_widgets (next(f), l);
     assert (f == l && "Your layout array must have a single root widget containing all the others");
 }

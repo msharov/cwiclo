@@ -25,8 +25,8 @@ namespace ui {
 
 //{{{ Statics ----------------------------------------------------------
 
-DEFINE_INTERFACE (Screen);
-DEFINE_INTERFACE (ScreenR);
+DEFINE_INTERFACE (Screen)
+DEFINE_INTERFACE (ScreenR)
 
 //}}}-------------------------------------------------------------------
 //{{{ TerminalScreen

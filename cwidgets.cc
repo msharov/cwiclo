@@ -83,8 +83,8 @@ DEFINE_WIDGET_WRITE_DRAWLIST (Listbox, Drawlist, drw)
 //}}}-------------------------------------------------------------------
 //{{{ Editbox
 
-Editbox::Editbox (const Msg::Link& l, const Layout& lay)
-: Widget(l,lay)
+Editbox::Editbox (Window* w, const Layout& lay)
+: Widget(w,lay)
 ,_cpos()
 ,_fc()
 {
@@ -205,26 +205,27 @@ DEFINE_WIDGET_WRITE_DRAWLIST (StatusLine, Drawlist, drw)
 }
 
 //}}}-------------------------------------------------------------------
-//{{{ default_widget_factory
+//{{{ Default widget factory
 
-Widget* default_widget_factory (mrid_t owner, const Widget::Layout& lay)
-{
-    const Msg::Link ol { owner, owner };
-    switch (lay.type()) {
-	case Widget::Type::Label:	return new Label (ol,lay);
-	case Widget::Type::Button:	return new Button (ol,lay);
-	case Widget::Type::Listbox:	return new Listbox (ol,lay);
-	case Widget::Type::Editbox:	return new Editbox (ol,lay);
-	case Widget::Type::HSplitter:	return new HSplitter (ol,lay);
-	case Widget::Type::VSplitter:	return new VSplitter (ol,lay);
-	case Widget::Type::GroupFrame:	return new GroupFrame (ol,lay);
-	case Widget::Type::StatusLine:	return new StatusLine (ol,lay);
-	default:			return new Widget (ol,lay);
-    }
-}
+// Widget factory
+#define BEGIN_WIDGETS \
+    Widget* Widget::create (Window* w, const Widget::Layout& lay) {\
+	switch (lay.type()) {\
+	    default:			return new Widget (w,lay);
+#define REGISTER_WIDGET(type,impl) \
+	case Widget::Type::type:	return new impl (w,lay);
+#define END_WIDGETS }}
 
-// default_widget_factory set to default
-Widget::widget_factory_t Widget::s_factory = default_widget_factory;
+BEGIN_WIDGETS
+    REGISTER_WIDGET (Label, Label)
+    REGISTER_WIDGET (Button, Button)
+    REGISTER_WIDGET (Listbox, Listbox)
+    REGISTER_WIDGET (Editbox, Editbox)
+    REGISTER_WIDGET (HSplitter, HSplitter)
+    REGISTER_WIDGET (VSplitter, VSplitter)
+    REGISTER_WIDGET (GroupFrame, GroupFrame)
+    REGISTER_WIDGET (StatusLine, StatusLine)
+END_WIDGETS
 
 //}}}-------------------------------------------------------------------
 

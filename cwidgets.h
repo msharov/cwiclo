@@ -13,7 +13,7 @@ namespace ui {
 
 class Label : public Widget {
 public:
-		Label (const Msg::Link& l, const Layout& lay) : Widget(l,lay) {}
+		Label (Window* w, const Layout& lay) : Widget(w,lay) {}
 private:
     DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 };
@@ -22,8 +22,8 @@ private:
 
 class Button : public Widget {
 public:
-		Button (const Msg::Link& l, const Layout& lay)
-			: Widget(l,lay) { set_flag (f_CanFocus); }
+		Button (Window* w, const Layout& lay)
+			: Widget(w,lay) { set_flag (f_CanFocus); }
 protected:
     void	on_set_text (void) override;
 private:
@@ -34,8 +34,8 @@ private:
 
 class Listbox : public Widget {
 public:
-		Listbox (const Msg::Link& l, const Layout& lay)
-			: Widget(l,lay),_n(),_top() { set_flag (f_CanFocus); }
+		Listbox (Window* w, const Layout& lay)
+			: Widget(w,lay),_n(),_top() { set_flag (f_CanFocus); }
     void	on_key (key_t k) override;
 protected:
     void	on_set_text (void) override;
@@ -52,7 +52,7 @@ private:
 
 class Editbox : public Widget {
 public:
-		Editbox (const Msg::Link& l, const Layout& lay);
+		Editbox (Window* w, const Layout& lay);
     void	on_key (key_t k) override;
     void	on_resize (void) override;
 protected:
@@ -69,8 +69,8 @@ private:
 
 class HSplitter : public Widget {
 public:
-		HSplitter (const Msg::Link& l, const Layout& lay)
-		    : Widget(l,lay) { set_size_hints (0, 1); }
+		HSplitter (Window* w, const Layout& lay)
+		    : Widget(w,lay) { set_size_hints (0, 1); }
 private:
     DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 };
@@ -79,8 +79,8 @@ private:
 
 class VSplitter : public Widget {
 public:
-		VSplitter (const Msg::Link& l, const Layout& lay)
-		    : Widget(l,lay) { set_size_hints (1, 0); }
+		VSplitter (Window* w, const Layout& lay)
+		    : Widget(w,lay) { set_size_hints (1, 0); }
 private:
     DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 };
@@ -89,8 +89,8 @@ private:
 
 class GroupFrame : public Widget {
 public:
-		GroupFrame (const Msg::Link& l, const Layout& lay)
-		    : Widget(l,lay) {}
+		GroupFrame (Window* w, const Layout& lay)
+		    : Widget(w,lay) {}
 private:
     DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 };
@@ -101,8 +101,8 @@ class StatusLine : public Widget {
 public:
     enum { f_Modified = Widget::f_Last, f_Last };
 public:
-		StatusLine (const Msg::Link& l, const Layout& lay)
-		    : Widget(l,lay) { set_size_hints (0, 1); }
+		StatusLine (Window* w, const Layout& lay)
+		    : Widget(w,lay) { set_size_hints (0, 1); }
 private:
     DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 };

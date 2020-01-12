@@ -4,21 +4,22 @@
 // This file is free software, distributed under the ISC License.
 
 #include "widget.h"
+#include "window.h"
 
 namespace cwiclo {
 namespace ui {
 
 //{{{ Widget creation --------------------------------------------------
 
-Widget::Widget (const Msg::Link& l, const Layout& lay)
+Widget::Widget (Window* w, const Layout& lay)
 :_text()
 ,_widgets()
+,_win (w)
 ,_area()
 ,_size_hints()
 ,_selection()
 ,_flags()
 ,_layinfo(lay)
-,_reply (l)
 {
 }
 
@@ -37,7 +38,7 @@ const Widget* Widget::widget_by_id (widgetid_t id) const
 const Widget::Layout* Widget::add_widgets (const Layout* f, const Layout* l)
 {
     while (f < l && f->level() > layinfo().level()) {
-	auto& w = _widgets.emplace_back (create (_reply.src(), *f));
+	auto& w = _widgets.emplace_back (create (_win, *f));
 	auto nf = next(f);
 	if (nf < l && nf->level() > f->level())
 	    nf = w->add_widgets (nf, l);
@@ -196,9 +197,16 @@ void Widget::resize (int l, int c, int y, int x)
 //}}}-------------------------------------------------------------------
 //{{{ Content
 
+PWidgetR Widget::widget_reply (void) const
+    { return PWidgetR (parent_window()->msger_id(), parent_window()->msger_id()); }
+void Widget::create_event (const Event& ev) const
+    { widget_reply().event (ev); }
+void Widget::report_selection (void) const
+    { create_event (Event (Event::Type::Selection, _selection, 0, widget_id())); }
+
 void Widget::report_modified (void) const
 {
-    _reply.modified (widget_id(), text());
+    widget_reply().modified (widget_id(), text());
 }
 
 void Widget::on_set_text (void)
@@ -279,9 +287,11 @@ void Widget::on_event (const Event& ev)
 
 void Widget::on_key (key_t k)
 {
-    // At the end of the focus path, return unused key events to parent window
+    // At the end of the focus path, return unused key events to parent window.
+    // Retuning directly to on_event to avoid sequencing problems with returned
+    // and directly handled key events.
     if (widget_id() && _widgets.empty() && flag (f_CanFocus))
-	create_event (Event (Event::Type::KeyDown, k, widget_id()));
+	_win->on_event (Event (Event::Type::KeyDown, k, widget_id()));
 }
 
 //}}}-------------------------------------------------------------------
