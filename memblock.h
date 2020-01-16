@@ -232,11 +232,13 @@ public:
     inline void			assign (const cmemlink& v)	{ assign (v.data(), v.size()); }
     inline void			assign (const memblaz& v)	{ assign (v.data(), v.size()); }
     inline constexpr void	assign (memblaz&& v)		{ swap (move(v)); }
+    inline constexpr void	wipe (void)			{ zero_fill_n (data(), capacity()); }
     constexpr auto&		operator[] (size_type i)	{ return at (i); }
     constexpr auto&		operator[] (size_type i) const	{ return at (i); }
     inline auto&		operator= (const cmemlink& v)	{ assign (v); return *this; }
     inline auto&		operator= (const memblaz& v)	{ assign (v); return *this; }
     inline constexpr auto&	operator= (memblaz&& v)		{ assign (move(v)); return *this; }
+    inline constexpr auto&	operator= (memblock&& v)	{ wipe(); memblock::assign (move(v)); return *this; }
     inline bool			operator== (const cmemlink& v) const	{ return v == *this; }
     inline bool			operator== (const memblaz& v) const	{ return memblock::operator== (v); }
     inline bool			operator!= (const cmemlink& v) const	{ return v != *this; }
@@ -244,7 +246,6 @@ public:
     inline constexpr const memblock&	mb (void) const			{ return *this; }
     inline void			copy_link (void)		{ resize (size()); }
     void			allocate (size_type sz)		{ assert (!capacity()); memblock::resize(sz); }
-    inline constexpr void	wipe (void)			{ zero_fill_n (data(), capacity()); }
     void			reserve (size_type sz);
     void			resize (size_type sz);
     iterator			insert (const_iterator start, size_type n);
