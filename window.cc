@@ -78,7 +78,7 @@ void Window::ScreenR_screen_info (const ScreenInfo& scrinfo)
 void Window::layout (void)
 {
     // Layout subwidgets in the computed area
-    _widgets->place (Rect {{0,0,area().w,area().h}});
+    _widgets->place (Rect (0,0,area().w,area().h));
     // Reset focus, if needed
     if (!focused_widget_id())
 	focus_next();	// initialize focus if needed

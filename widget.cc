@@ -71,7 +71,7 @@ Rect Widget::compute_size_hints (void)
 
     // For leaf widgets, size_hints is all that is needed
     if (_widgets.empty())
-	rsh.wh = size_hints();
+	rsh.resize (size_hints());
     else {
 	// Iterate over all widgets on the same level
 	for (auto& w : _widgets) {
@@ -107,16 +107,16 @@ Rect Widget::compute_size_hints (void)
 void Widget::place (const Rect& inarea)
 {
     // inarea contains the final laid out size of this widget.
-    // Number of expandables is in current area().xy, set in collect_size_hints.
+    // Number of expandables is in current area().pos(), set in collect_size_hints.
     //
-    auto fixed = area().wh;
+    auto fixed = area().size();
     unsigned nexpsx = area().x, nexpsy = area().y;
     // With expandable size extracted, can place the widget where indicated.
     resize (inarea);
 
     // Now for the subwidgets, if there are any.
-    auto subpos = inarea.xy;
-    auto subsz = inarea.wh;
+    auto subpos = inarea.pos();
+    auto subsz = inarea.size();
     // Group frame starts by offsetting the frame
     if (layinfo().type() == Type::GroupFrame) {
 	++subpos.x;
@@ -155,7 +155,7 @@ void Widget::place (const Rect& inarea)
 	bool xexp = warea.x || !warea.w;
 	bool yexp = warea.y || !warea.h;
 	// Widget position already computed
-	warea.xy = subpos;
+	warea.move_to (subpos);
 
 	// Packer-type dependent area computation and subpos adjustment
 	if (layinfo().type() == Type::HBox) {

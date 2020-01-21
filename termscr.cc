@@ -320,7 +320,7 @@ void TerminalScreenWindow::erase (void)
 {
     draw_color (IColor::DefaultForeground);
     fill_color (IColor::DefaultBackground);
-    move_to (viewport().xy);
+    move_to (viewport().pos());
     bar (viewport().w, viewport().h);
 }
 

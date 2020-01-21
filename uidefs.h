@@ -17,17 +17,100 @@ using colray_t	= uint8_t;
 using icolor_t	= uint8_t;
 using color_t	= uint32_t;
 
-struct Point	{ coord_t x,y; };
-struct Offset	{ coord_t dx,dy; };
-struct Size	{ dim_t	w,h; };
-union Rect	{
-    struct { coord_t x,y; dim_t w,h; };
-    struct { Point xy; Size wh; };
+//{{{2 Offset
+
+struct Offset {
+    coord_t	dx;
+    coord_t	dy;
+public:
+    constexpr		Offset (void)			: dx(0),dy(0) {}
+    constexpr		Offset (coord_t nx, coord_t ny)	: dx(nx),dy(ny) {}
+    constexpr bool	operator== (const Offset& o) const { return dx == o.dx && dy == o.dy; }
+    constexpr auto	operator+ (const Offset& o) const { return Offset (dx+o.dx, dy+o.dy); }
+    constexpr auto	operator- (const Offset& o) const { return Offset (dx-o.dx, dy-o.dy); }
+    constexpr auto&	operator+= (const Offset& o)	{ dx += o.dx; dy += o.dy; return *this; }
+    constexpr auto&	operator-= (const Offset& o)	{ dx -= o.dx; dy -= o.dy; return *this; }
+    constexpr void	read (istream& is)		{ is.readt (*this); }
+    constexpr void	write (ostream& os) const	{ os.writet (*this); }
+    constexpr void	write (sstream& ss) const	{ ss.writet (*this); }
+};
+#define SIGNATURE_ui_Offset	"(nn)"
+//}}}2
+//{{{2 Size
+
+struct Size {
+    dim_t	w;
+    dim_t	h;
+public:
+    constexpr		Size (void)			: w(0),h(0) {}
+    constexpr		Size (coord_t nw, coord_t nh)	: w(nw),h(nh) {}
+    constexpr bool	operator== (const Size& o) const{ return w == o.w && h == o.h; }
+    constexpr auto	operator+ (const Size& o) const	{ return Size (w+o.w, h+o.h); }
+    constexpr auto	operator- (const Size& o) const	{ return Size (w-o.w, h-o.h); }
+    constexpr auto&	operator+= (const Size& o)	{ w += o.w; h += o.h; return *this; }
+    constexpr auto&	operator-= (const Size& o)	{ w -= o.w; h -= o.h; return *this; }
+    constexpr void	read (istream& is)		{ is.readt (*this); }
+    constexpr void	write (ostream& os) const	{ os.writet (*this); }
+    constexpr void	write (sstream& ss) const	{ ss.writet (*this); }
+};
+#define SIGNATURE_ui_Size	"(qq)"
+
+//}}}2
+//{{{2 Point
+
+struct Point {
+    coord_t	x;
+    coord_t	y;
+public:
+    constexpr		Point (void)			: x(0),y(0) {}
+    constexpr		Point (coord_t nx, coord_t ny)	: x(nx),y(ny) {}
+    constexpr bool	operator== (const Point& p) const { return x == p.x && y == p.y; }
+    constexpr auto	operator+ (const Offset& o) const { return Point (x+o.dx, y+o.dy); }
+    constexpr auto	operator+ (const Size& o) const   { return Point (x+o.w, y+o.h); }
+    constexpr auto	operator- (const Offset& o) const { return Point (x-o.dx, y-o.dy); }
+    constexpr auto	operator- (const Size& o) const   { return Point (x-o.w, y-o.h); }
+    constexpr auto	operator- (const Point& p) const  { return Offset (x-p.x, y-p.y); }
+    constexpr auto&	operator+= (const Offset& o)	{ x += o.dx; y += o.dy; return *this; }
+    constexpr auto&	operator+= (const Size& o)	{ x += o.w; y += o.h; return *this; }
+    constexpr auto&	operator-= (const Offset& o)	{ x -= o.dx; y -= o.dy; return *this; }
+    constexpr auto&	operator-= (const Size& o)	{ x -= o.w; y -= o.h; return *this; }
+    constexpr void	read (istream& is)		{ is.readt (*this); }
+    constexpr void	write (ostream& os) const	{ os.writet (*this); }
+    constexpr void	write (sstream& ss) const	{ ss.writet (*this); }
 };
 #define SIGNATURE_ui_Point	"(nn)"
-#define SIGNATURE_ui_Offset	"(nn)"
-#define SIGNATURE_ui_Size	"(qq)"
+
+//}}}2
+//{{{2 Rect
+
+struct Rect {
+    coord_t	x;
+    coord_t	y;
+    dim_t	w;
+    dim_t	h;
+public:
+    constexpr		Rect (void)			: x(0),y(0),w(0),h(0) {}
+    constexpr		Rect (coord_t nx, coord_t ny, dim_t nw, dim_t nh) :x(nx),y(ny),w(nw),h(nh) {}
+    constexpr		Rect (const Point& p, const Size& s) : Rect(p.x,p.y,s.w,s.h) {}
+    explicit constexpr	Rect (const Size& s)		: Rect(0,0,s.w,s.h) {}
+			struct Composite { Point xy; Size wh; };
+    constexpr auto&	pos (void) const		{ return pointer_cast<Composite>(this)->xy; }
+    constexpr auto&	size (void) const		{ return pointer_cast<Composite>(this)->wh; }
+    constexpr bool	operator== (const Rect& r) const{ return pos() == r.pos() && size() == r.size(); }
+    constexpr bool	contains (coord_t px, coord_t py) const	{ return dim_t(px-x) < w && dim_t(py-y) < h; }
+    constexpr bool	contains (const Point& p) const	{ return contains (p.x, p.y); }
+    constexpr bool	contains (const Rect& r) const	{ return contains (r.pos()) && contains (r.pos()+r.size()); }
+    constexpr void	move_to (const Point& p)	{ x = p.x; y = p.y; }
+    constexpr void	move_by (const Offset& o)	{ x += o.dx; y += o.dy; }
+    constexpr void	resize (const Size& s)		{ w = s.w; h = s.h; }
+    constexpr void	assign (const Point& p, const Size& s)	{ move_to(p); resize(s); }
+    constexpr void	read (istream& is)		{ is.readt (*this); }
+    constexpr void	write (ostream& os) const	{ os.writet (*this); }
+    constexpr void	write (sstream& ss) const	{ ss.writet (*this); }
+};
 #define SIGNATURE_ui_Rect	"(nnqq)"
+
+//}}}2
 
 enum class HAlign : uint8_t { Left, Center, Right };
 enum class VAlign : uint8_t { Top, Center, Bottom };

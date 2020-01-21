@@ -109,14 +109,14 @@ public:
 	inline constexpr void	hline (coord_t dx)		{ line (dx, 0); }
 	inline constexpr void	vline (coord_t dy)		{ line (0, dy); }
 	inline constexpr void	box (const Size& wh)		{ write (Cmd::Box, 0, wh); }
-	inline constexpr void	box (dim_t w, dim_t h)		{ box (Size {w,h}); }
-	inline constexpr void	box (const Rect& r)		{ move_to (r.xy); box (r.wh); }
+	inline constexpr void	box (dim_t w, dim_t h)		{ box (Size(w,h)); }
+	inline constexpr void	box (const Rect& r)		{ move_to (r.pos()); box (r.size()); }
 	inline constexpr void	bar (const Size& wh)		{ write (Cmd::Bar, 0, wh); }
-	inline constexpr void	bar (dim_t w, dim_t h)		{ bar (Size {w,h}); }
-	inline constexpr void	bar (const Rect& r)		{ move_to (r.xy); bar (r.wh); }
+	inline constexpr void	bar (dim_t w, dim_t h)		{ bar (Size(w,h)); }
+	inline constexpr void	bar (const Rect& r)		{ move_to (r.pos()); bar (r.size()); }
 	inline constexpr void	panel (const Size& wh, PanelType t = PanelType::Raised)	{ write (Cmd::Panel, uint8_t(t), wh); }
-	inline constexpr void	panel (dim_t w, dim_t h, PanelType t=PanelType::Raised)	{ panel (Size {w,h}, t); }
-	inline constexpr void	panel (const Rect& r, PanelType t = PanelType::Raised)	{ move_to (r.xy); panel (r.wh, t); }
+	inline constexpr void	panel (dim_t w, dim_t h, PanelType t=PanelType::Raised)	{ panel (Size(w,h), t); }
+	inline constexpr void	panel (const Rect& r, PanelType t = PanelType::Raised)	{ move_to (r.pos()); panel (r.size(), t); }
     private:
 	stream_type	_stm;
     };

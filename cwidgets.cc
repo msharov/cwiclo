@@ -27,7 +27,7 @@ DEFINE_WIDGET_WRITE_DRAWLIST (Button, Drawlist, drw)
 {
     if (focused())
 	drw.fill_color (IColor::DefaultForeground);
-    drw.panel (area().wh, PanelType::Button);
+    drw.panel (area().size(), PanelType::Button);
     drw.move_by (2, 0);
     drw.draw_color (IColor::DefaultBold);
     if (!text().empty()) {
@@ -61,7 +61,7 @@ DEFINE_WIDGET_WRITE_DRAWLIST (Listbox, Drawlist, drw)
 {
     if (area().w < 1)
 	return;
-    drw.panel (area().wh, PanelType::Listbox);
+    drw.panel (area().size(), PanelType::Listbox);
     coord_t y = 0;
     for (zstr::cii li (text().c_str(), text().size()); li; ++y) {
 	auto lt = *li;
@@ -148,7 +148,7 @@ void Editbox::on_key (key_t k)
 
 DEFINE_WIDGET_WRITE_DRAWLIST (Editbox, Drawlist, drw)
 {
-    drw.panel (area().wh, PanelType::Editbox);
+    drw.panel (area().size(), PanelType::Editbox);
     if (!text().empty())
 	drw.edit_text (text().iat(_fc), _cpos-_fc);
     if (_fc) {
@@ -179,7 +179,7 @@ DEFINE_WIDGET_WRITE_DRAWLIST (VSplitter, Drawlist, drw)
 
 DEFINE_WIDGET_WRITE_DRAWLIST (GroupFrame, Drawlist, drw)
 {
-    drw.box (area().wh);
+    drw.box (area().size());
     auto tsz = min (text().size(), area().w-2);
     if (tsz > 0) {
 	drw.move_to ((area().w-tsz)/2u-1, 0);

@@ -78,9 +78,9 @@ public:
     auto&		area (void) const			{ return _area; }
     void		set_area (const Rect& r)		{ _area = r; }
     void		set_area (coord_t x, coord_t y, dim_t w, dim_t h)	{ _area.x = x; _area.y = y; _area.w = w; _area.h = h; }
-    void		set_area (const Point& p, const Size& sz)		{ _area.xy = p; _area.wh = sz; }
-    void		set_area (const Point& p)		{ _area.xy = p; }
-    void		set_area (const Size& sz)		{ _area.wh = sz; }
+    void		set_area (const Point& p, const Size& sz)		{ _area.assign (p,sz); }
+    void		set_area (const Point& p)		{ _area.move_to (p); }
+    void		set_area (const Size& sz)		{ _area.resize (sz); }
     void		draw (drawlist_t& dl) const;
     void		resize (int l, int c, int y, int x);
     void		resize (const Rect& r)			{ resize (r.h, r.w, r.y, r.x); }

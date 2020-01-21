@@ -81,8 +81,8 @@ private:
     void	erase (void);
     void	clear (void);
     void	panel (const Size& wh, PanelType t);
-    void	panel (dim_t w, dim_t h, PanelType t)	{ panel (Size{w,h}, t); }
-    void	panel (const Rect& r, PanelType t)	{ move_to (r.xy); panel (r.wh, t); }
+    void	panel (dim_t w, dim_t h, PanelType t)	{ panel (Size(w,h), t); }
+    void	panel (const Rect& r, PanelType t)	{ move_to (r.pos()); panel (r.size(), t); }
     void	noutrefresh (void);
     void	refresh (void);
     unsigned	clip_dx (unsigned dx) const;
