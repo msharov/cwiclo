@@ -387,7 +387,7 @@ bool equal_n (I1 i1, size_t n, I2 i2)
 {
     using value1_type = make_unsigned_t<remove_const_t<typename iterator_traits<I1>::value_type>>;
     using value2_type = make_unsigned_t<remove_const_t<typename iterator_traits<I2>::value_type>>;
-    if constexpr (is_trivial<value1_type>::value && is_same<value1_type,value2_type>::value)
+    if constexpr (is_trivially_assignable<value1_type>::value && is_same<value1_type,value2_type>::value)
 	return zstr::compare (i1, i2, n *= sizeof(value1_type));
     while (n--)
 	if (!(*i1++ == *i2++))

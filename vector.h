@@ -322,7 +322,7 @@ auto vector<T>::erase (const_iterator cep, size_type n)
 template <typename T>
 void vector<T>::copy_link (void)
 {
-    if constexpr (is_trivial<T>::value)
+    if constexpr (is_trivially_copyable<T>::value)
 	_data.copy_link();
     else
 	assign (begin(), end());

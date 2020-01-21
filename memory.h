@@ -335,7 +335,7 @@ auto fill_n (I f, size_t n, const T& v)
 {
     using ivalue_type = make_unsigned_t<remove_const_t<T>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
-    constexpr bool canstos = is_trivial<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value;
+    constexpr bool canstos = is_trivially_assignable<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value;
     if constexpr (canstos && sizeof(ovalue_type) == 1)
 	{ __builtin_memset (to_address(f), bit_cast<uint8_t>(v), n); advance(f,n); }
 #if __x86__
@@ -358,7 +358,7 @@ auto fill (I f, I l, const T& v)
 {
     using ivalue_type = make_unsigned_t<remove_const_t<T>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
-    if constexpr (is_trivial<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
+    if constexpr (is_trivially_assignable<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return fill_n (f, distance(f,l), v);
     for (; f < l; advance(f))
 	*f = v;
@@ -373,7 +373,7 @@ template <typename I>
 inline constexpr auto zero_fill_n (I f, size_t n)
 {
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
-    if constexpr (is_trivial<ovalue_type>::value)
+    if constexpr (is_trivially_assignable<ovalue_type>::value)
 	{ __builtin_memset (to_address(f), 0, n*sizeof(ovalue_type)); advance(f,n); }
     else for (auto l = next(f,n); f < l; advance(f))
 	*f = 0;
@@ -384,7 +384,7 @@ template <typename I>
 inline constexpr auto zero_fill (I f, I l)
 {
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
-    if constexpr (is_trivial<ovalue_type>::value)
+    if constexpr (is_trivially_assignable<ovalue_type>::value)
 	return zero_fill_n (f, distance(f,l));
     for (; f < l; advance(f))
 	*f = 0;
