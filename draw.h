@@ -24,6 +24,7 @@ protected:
 	Box,
 	Bar,
 	Panel,
+	EditText,
 	Last
     };
     struct CmdHeader {
@@ -68,7 +69,10 @@ public:
 				    (_stm << ... << args);
 				    assert (_stm.aligned(4) && "Drawlist command size must be a multiple of 4");
 				}
+	inline static constexpr auto pack_alignment_byte (HAlign ha, VAlign va)
+				    { return uint8_t(uint8_t(ha)|uint8_t(va)<<2); }
 	//}}}2----------------------------------------------------------
+    protected:
 	inline constexpr void	line (const Offset& d)		{ write (Cmd::Line, 0, d); }
 	inline constexpr void	line (coord_t dx, coord_t dy)	{ line (Offset {dx,dy}); }
     public:
@@ -83,7 +87,7 @@ public:
 	inline constexpr void	fill_color (icolor_t c)		{ write (Cmd::FillColor, c); }
 	inline constexpr void	fill_color (IColor c)		{ fill_color (icolor_t(c)); }
 	inline constexpr void	text (const string& s, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
-				    { write (Cmd::Text, uint8_t(uint8_t(ha)|uint8_t(va)<<2), s); }
+				    { write (Cmd::Text, pack_alignment_byte (ha,va), s); }
 	inline constexpr void	text (const string_view& s, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
 				    { text (s.str(), ha, va); }
 	inline constexpr void	text (const char* s, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
@@ -92,6 +96,16 @@ public:
 				    { text (string_view(s,n), ha, va); }
 	inline constexpr void	text (char c, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
 				    { text (string_view(&c,1), ha, va); }
+	inline constexpr void	edit_text (const string& s, uint32_t cp, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
+				    { write (Cmd::EditText, pack_alignment_byte (ha,va), cp, s); }
+	inline constexpr void	edit_text (const string_view& s, uint32_t cp, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
+				    { edit_text (s.str(), cp, ha, va); }
+	inline constexpr void	edit_text (const char* s, uint32_t cp, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
+				    { edit_text (string_view(s), cp, ha, va); }
+	inline constexpr void	edit_text (const char* s, unsigned n, uint32_t cp, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
+				    { edit_text (string_view(s,n), cp, ha, va); }
+	inline constexpr void	edit_text (char c, uint32_t cp, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
+				    { edit_text (string_view(&c,1), cp, ha, va); }
 	inline constexpr void	hline (coord_t dx)		{ line (dx, 0); }
 	inline constexpr void	vline (coord_t dy)		{ line (0, dy); }
 	inline constexpr void	box (const Size& wh)		{ write (Cmd::Box, 0, wh); }
@@ -137,6 +151,7 @@ protected:
 	    "\0" SIGNATURE_ui_Size	// Box
 	    "\0" SIGNATURE_ui_Size	// Bar
 	    "\0" SIGNATURE_ui_Size	// Panel
+	    "\0" "us"			// EditText
 	;
 	static_assert (size_t(Cmd::Last) == zstr::nstrs(c_sigs), "c_sigs must contain signatures for each Cmd");
 	if (cmd >= uint8_t(Cmd::Last))
@@ -181,7 +196,10 @@ protected:
 	    case Cmd::Box:	impl->Draw_box (argstm.read<Size>()); break;
 	    case Cmd::Bar:	impl->Draw_bar (argstm.read<Size>()); break;
 	    case Cmd::Panel:	impl->Draw_panel (argstm.read<Size>(), PanelType(h.a1)); break;
-	    case Cmd::Last:	break;
+	    case Cmd::EditText: { auto cp = argstm.read<uint32_t>();
+				impl->Draw_edit_text (argstm.read<string_view>(), cp, HAlign(h.a1&3), VAlign(h.a1>>2));
+				break; }
+	    default:		break;
 	};
     }
 public:

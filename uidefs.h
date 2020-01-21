@@ -462,10 +462,10 @@ public:
     explicit	PScreen (mrid_t caller)		: Proxy (caller) {}
     void	get_info (void) const		{ send (m_get_info()); }
     void	close (void) const		{ send (m_close()); }
-    void	open (const WindowInfo& wi) const
-		    { send (m_open(), wi); }
-    void	draw (const drawlist_t& d) const
-		    { send (m_draw(), d); }
+    void	open (const WindowInfo& wi) const { send (m_open(), wi); }
+    drawlist_t	begin_draw (void) const		{ return drawlist_t(4); }
+    void	end_draw (drawlist_t&& d) const
+		    { ostream(d) << uint32_t(d.size()-4); forward_msg (m_draw(), move(d)); }
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_draw())

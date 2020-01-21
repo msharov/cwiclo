@@ -44,10 +44,10 @@ public:
     using key_t		= Event::key_t;
     using Layout	= WidgetLayout;
     using Type		= Layout::Type;
-    using drawlist_t	= memblock;
+    using drawlist_t	= PScreen::drawlist_t;
     using widgetvec_t	= vector<unique_ptr<Widget>>;
     using widget_factory_t	= Widget* (*)(mrid_t owner, const Layout& l);
-    enum { f_Focused, f_CanFocus, f_HasCaret, f_Disabled, f_Modified, f_Last };
+    enum { f_Focused, f_CanFocus, f_Disabled, f_Modified, f_Last };
 private:
     struct FocusNeighbors { widgetid_t first, prev, next, last; };
     void		get_focus_neighbors_for (widgetid_t w, FocusNeighbors& n) const;

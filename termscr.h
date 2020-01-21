@@ -52,6 +52,7 @@ public:
     auto&	viewport (void) const		{ return _viewport; }
     void	on_event (const Event& ev);
     int		getch (void);
+    void	draw (void)				{ _reply.expose(); }
 		operator bool (void) const		{ return _w; }
     void	Draw_clear (void)			{ erase(); }
     void	Draw_move_to (const Point& p)		{ move_to (p); }
@@ -64,6 +65,7 @@ public:
     void	Draw_bar (const Size& wh)		{ bar (wh.w, wh.h); }
     void	Draw_box (const Size& wh)		{ box (wh.w, wh.h); }
     void	Draw_panel (const Size& wh, PanelType t){ panel (wh, t); }
+    void	Draw_edit_text (const string& t, uint32_t cp, HAlign ha, VAlign va);
 private:
     void	draw_color (IColor c);
     void	fill_color (IColor c);
@@ -89,6 +91,7 @@ private:
     PScreenR	_reply;
     WINDOW*	_w;
     Rect	_viewport;
+    Point	_caret;
     WindowInfo	_winfo;
 };
 

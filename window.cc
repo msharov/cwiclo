@@ -90,9 +90,9 @@ void Window::layout (void)
 
 void Window::draw (void)
 {
-    drawlist_t dl;
+    auto dl = _scr.begin_draw();
     _widgets->draw (dl);
-    _scr.draw (dl);
+    _scr.end_draw (move(dl));
 }
 
 //}}}-------------------------------------------------------------------
@@ -105,13 +105,14 @@ void Window::on_event (const Event& ev)
 	on_key (ev.key());	// key events unused by widgets are processed in the window handler
     else
 	_widgets->on_event (ev);
+    draw();
 }
 
 void Window::on_key (key_t k)
 {
-    if (k == '\t' || k == Key::Right || k == Key::Down)
+    if (k == Key::Tab || k == Key::Right || k == Key::Down)
 	focus_next();
-    else if (k == Key::Left || k == Key::Up)
+    else if (k == KMod::Shift+Key::Tab || k == Key::Left || k == Key::Up)
 	focus_prev();
 }
 

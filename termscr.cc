@@ -74,7 +74,14 @@ void TerminalScreen::unregister_window (const TerminalScreenWindow* w)
     } else {
 	// This implementation has only one window stack,
 	// with _windows.back() always the focused window.
-	curs_set (_windows.back()->flag (TerminalScreenWindow::f_CaretOn));
+
+	// Redraw all windows to erase the one that was destroyed
+	werase (stdscr);
+	wnoutrefresh (stdscr);
+	for (auto& bw : _windows)
+	    bw->draw();
+
+	// Restart listening for keys
 	TimerR_timer (STDIN_FILENO);
     }
 }
@@ -173,6 +180,7 @@ TerminalScreenWindow::TerminalScreenWindow (const Msg::Link& l)
 ,_reply (l)
 ,_w()
 ,_viewport{}
+,_caret{-1,-1}
 ,_winfo()
 {
     TerminalScreen::instance().register_window (this);
@@ -222,7 +230,20 @@ void TerminalScreenWindow::Screen_open (const WindowInfo& wi)
 void TerminalScreenWindow::Screen_draw (const cmemlink& dl)
 {
     clear();
+    _caret.x = -1;
     Drawlist::dispatch (this, dl);
+    if (_caret.x >= 0) {
+	if (!flag (f_CaretOn)) {
+	    leaveok (_w, false);
+	    curs_set (1);
+	    set_flag (f_CaretOn);
+	}
+	move_to (_caret);
+    } else if (flag (f_CaretOn)) {
+	leaveok (_w, true);
+	curs_set (0);
+	set_flag (f_CaretOn, false);
+    }
     refresh();
 }
 
@@ -332,6 +353,13 @@ void TerminalScreenWindow::panel (const Size& wh, PanelType t)
 	bar (wh.w, wh.h);
 	wattroff (_w, A_REVERSE);
     }
+}
+
+void TerminalScreenWindow::Draw_edit_text (const string& t, uint32_t cp, HAlign ha, VAlign va)
+{
+    _caret.x = getcurx(_w)+cp;
+    _caret.y = getcury(_w);
+    Draw_text (t, ha, va);
 }
 
 //}}}-------------------------------------------------------------------

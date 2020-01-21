@@ -88,7 +88,6 @@ Editbox::Editbox (Window* w, const Layout& lay)
 ,_cpos()
 ,_fc()
 {
-    set_flag (f_HasCaret);
     set_flag (f_CanFocus);
     set_size_hints (0, 1);
 }
@@ -151,7 +150,7 @@ DEFINE_WIDGET_WRITE_DRAWLIST (Editbox, Drawlist, drw)
 {
     drw.panel (area().wh, PanelType::Editbox);
     if (!text().empty())
-	drw.text (text().iat(_fc));
+	drw.edit_text (text().iat(_fc), _cpos-_fc);
     if (_fc) {
 	drw.move_to (0, 0);
 	drw.text ('<');
