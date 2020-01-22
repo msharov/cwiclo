@@ -98,7 +98,7 @@ Installation directories:
   --docdir=DIR		documentation directory [PREFIX/share/doc]
   --customincdir=DIR	Additional include directory
   --customlibdir=DIR	Additional library directory
-  --builddir=DIR	location for compiled objects [/tmp/$USER/make]
+  --builddir=DIR	location for compiled objects [$TMPDIR/make]
 "
     PrintComponents
     echo "Report bugs to $PKG_BUGREPORT."
@@ -145,7 +145,7 @@ s/@docdir@/${ac_var_docdir:=$ac_var_prefix\/share\/doc}/g
 s/@includedir@/${ac_var_includedir:=$ac_var_prefix\/include}/g
 s/@oldincludedir@/${ac_var_oldincludedir:=\/usr\/include}/g
 s/@libdir@/${ac_var_libdir:=$ac_var_prefix\/lib}/g
-s/@builddir@/\/tmp\/$USER\/make/g
+s/@builddir@/$(escpath ${TMPDIR:-/tmp})\/make/g
 s/@pkgconfigdir@/${ac_var_pkgconfigdir:=$ac_var_libdir\/pkgconfig}/g
 s/@customincdir@/${ac_var_customincdir:=$ac_var_prefix\/include}/g
 s/@customlibdir@/${ac_var_customlibdir:=$ac_var_prefix\/lib}/g"
