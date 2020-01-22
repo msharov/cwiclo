@@ -19,6 +19,7 @@ public:
     inline		string (const_pointer s)			: memblock (s, __builtin_strlen(s), true) {}
     inline constexpr	string (string&& s)				: memblock (move(s)) {}
     inline		string (const string& s)			: string (s.data(), s.size()) {}
+    inline		string (const cmemlink& s)			: string (s.data(), s.size()) {}
     constexpr auto	c_str (void) const				{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
     constexpr auto&	back (void) const				{ return at(size()-1); }
     constexpr auto&	back (void)					{ return at(size()-1); }
@@ -58,14 +59,17 @@ public:
     auto		compare (char c) const				{ return compare (begin(), end(), &c, &c+1); }
     inline constexpr void	swap (string&& s)			{ memblock::swap (move(s)); }
     inline auto&	operator= (const string& s)			{ assign (s); return *this; }
+    inline auto&	operator= (const cmemlink& s)			{ assign (s); return *this; }
     inline auto&	operator= (const_pointer s)			{ assign (s); return *this; }
     inline auto&	operator= (char c)				{ assign (c); return *this; }
     inline auto&	operator= (wchar_t c)				{ assign (c); return *this; }
     inline auto&	operator+= (const string& s)			{ append (s); return *this; }
+    inline auto&	operator+= (const cmemlink& s)			{ append (s); return *this; }
     inline auto&	operator+= (const_pointer s)			{ append (s); return *this; }
     inline auto&	operator+= (char c)				{ push_back (c); return *this; }
     inline auto&	operator+= (wchar_t c)				{ append (c); return *this; }
     inline auto		operator+ (const string& s) const		{ auto r (*this); return r += s; }
+    inline auto		operator+ (const cmemlink& s) const		{ auto r (*this); return r += s; }
     inline auto		operator+ (const_pointer s) const		{ auto r (*this); return r += s; }
     inline auto		operator+ (char c) const			{ auto r (*this); return r += c; }
     inline auto		operator+ (wchar_t c) const			{ auto r (*this); return r += c; }
@@ -224,30 +228,20 @@ public:
 
     template <typename Stm> // Override cmemlink's write to support lack of terminating 0
     inline constexpr void write (Stm& os) const { os.write_string (begin(), size()); }
+
+    // istream read can be done more efficiently by constructing the string_view directly
+    inline static constexpr string_view create_from_stream (istream& is) {
+	auto ssz = is.read<uint32_t>();
+	auto scp = is.ptr<char>();
+	is.skip (ceilg (ssz,sizeof(ssz)));
+	if (ssz)
+	    --ssz;
+	else
+	    --scp;
+	return string_view (scp, ssz);
+    }
 };
 
 //----------------------------------------------------------------------
-
-// istream read can be done more efficiently by constructing the string_view directly
-template <> inline constexpr decltype(auto) istream::read<string_view> (void)
-{
-    auto ssz = read<uint32_t>();
-    auto scp = ptr<char>();
-    skip (ceilg (ssz,sizeof(ssz)));
-    if (ssz)
-	--ssz;
-    else
-	--scp;
-    return string_view (scp, ssz);
-}
-
-// may as well do the same for cmemlink
-template <> inline constexpr decltype(auto) istream::read<cmemlink> (void)
-{
-    auto ssz = read<cmemlink::size_type>();
-    auto scp = ptr<cmemlink::value_type>();
-    skip (ceilg (ssz,sizeof(ssz)));
-    return cmemlink (scp, ssz);
-}
 
 } // namespace cwiclo

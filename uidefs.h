@@ -30,9 +30,6 @@ public:
     constexpr auto	operator- (const Offset& o) const { return Offset (dx-o.dx, dy-o.dy); }
     constexpr auto&	operator+= (const Offset& o)	{ dx += o.dx; dy += o.dy; return *this; }
     constexpr auto&	operator-= (const Offset& o)	{ dx -= o.dx; dy -= o.dy; return *this; }
-    constexpr void	read (istream& is)		{ is.readt (*this); }
-    constexpr void	write (ostream& os) const	{ os.writet (*this); }
-    constexpr void	write (sstream& ss) const	{ ss.writet (*this); }
 };
 #define SIGNATURE_ui_Offset	"(nn)"
 //}}}2
@@ -49,9 +46,6 @@ public:
     constexpr auto	operator- (const Size& o) const	{ return Size (w-o.w, h-o.h); }
     constexpr auto&	operator+= (const Size& o)	{ w += o.w; h += o.h; return *this; }
     constexpr auto&	operator-= (const Size& o)	{ w -= o.w; h -= o.h; return *this; }
-    constexpr void	read (istream& is)		{ is.readt (*this); }
-    constexpr void	write (ostream& os) const	{ os.writet (*this); }
-    constexpr void	write (sstream& ss) const	{ ss.writet (*this); }
 };
 #define SIGNATURE_ui_Size	"(qq)"
 
@@ -74,9 +68,6 @@ public:
     constexpr auto&	operator+= (const Size& o)	{ x += o.w; y += o.h; return *this; }
     constexpr auto&	operator-= (const Offset& o)	{ x -= o.dx; y -= o.dy; return *this; }
     constexpr auto&	operator-= (const Size& o)	{ x -= o.w; y -= o.h; return *this; }
-    constexpr void	read (istream& is)		{ is.readt (*this); }
-    constexpr void	write (ostream& os) const	{ os.writet (*this); }
-    constexpr void	write (sstream& ss) const	{ ss.writet (*this); }
 };
 #define SIGNATURE_ui_Point	"(nn)"
 
@@ -104,9 +95,6 @@ public:
     constexpr void	move_by (const Offset& o)	{ x += o.dx; y += o.dy; }
     constexpr void	resize (const Size& s)		{ w = s.w; h = s.h; }
     constexpr void	assign (const Point& p, const Size& s)	{ move_to(p); resize(s); }
-    constexpr void	read (istream& is)		{ is.readt (*this); }
-    constexpr void	write (ostream& os) const	{ os.writet (*this); }
-    constexpr void	write (sstream& ss) const	{ ss.writet (*this); }
 };
 #define SIGNATURE_ui_Rect	"(nnqq)"
 
@@ -210,9 +198,6 @@ public:
     constexpr auto	id (void) const		{ return _id; }
     constexpr auto	halign (void) const	{ return HAlign(_halign); }
     constexpr auto	valign (void) const	{ return VAlign(_valign); }
-    constexpr void	read (istream& is)	{ is.readt (*this); }
-    constexpr void	write (ostream& os)	{ os.writet (*this); }
-    constexpr void	write (sstream& ss)	{ ss.writet (*this); }
 private:
     uint8_t		_level:4;
     uint8_t		_halign:2;
@@ -282,9 +267,6 @@ public:
     constexpr auto	selection_start (void) const	{ return _sz.w; }
     constexpr auto	selection_end (void) const	{ return _sz.h; }
     constexpr auto	key (void) const	{ return _key; }
-    constexpr void	read (istream& is)	{ is.readt (*this); }
-    template <typename Stm>
-    constexpr void	write (Stm& os) const	{ os.writet (*this); }
 private:
     widgetid_t	_src;
     Type	_type;
@@ -412,9 +394,6 @@ public:
     inline constexpr auto	depth (void) const		{ return _depth; }
     inline constexpr auto	gapi_version (void) const	{ return _gapi; }
     inline constexpr auto	msaa (void) const		{ return _msaa; }
-    inline constexpr void	read (istream& is)		{ is.readt (*this); }
-    inline constexpr void	write (ostream& os) const	{ os.writet (*this); }
-    inline constexpr void	write (sstream& ss) const	{ ss.writet (*this); }
 private:
     Size	_scrsz;
     Size	_physz;
@@ -498,9 +477,6 @@ public:
 				    :_area(area),_parent(parent),_type (t)
 				    ,_state (st),_cursor (cursor),_flags()
 				    ,_gapi(gapi),_msaa (aa) {}
-    inline constexpr void	read (istream& is)		{ is.readt (*this); }
-    inline constexpr void	write (ostream& os) const	{ os.writet (*this); }
-    inline constexpr void	write (sstream& ss) const	{ ss.writet (*this); }
     inline constexpr auto&	area (void) const		{ return _area; }
     inline constexpr void	set_area (const Rect& a)	{ _area = a; }
     inline constexpr auto	parent (void) const		{ return _parent; }

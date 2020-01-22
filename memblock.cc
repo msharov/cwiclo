@@ -29,16 +29,6 @@ void cmemlink::link_read (istream& is, size_type elsize)
     link (p, n);
 }
 
-void cmemlink::write (ostream& os, size_type elsize) const
-{
-    auto sz = size();
-    if (sz)
-	sz += zero_terminated();
-    os << size_type(sz/elsize);
-    os.write (data(), sz);
-    os.align (stream_align<size_type>::value);
-}
-
 int cmemlink::write_file (const char* filename) const
 {
     int fd = open (filename, O_WRONLY| O_TRUNC| O_CREAT| O_CLOEXEC, S_IRWXU);
@@ -187,9 +177,9 @@ memblock::iterator memblock::replace (const_iterator ip, size_type ipn, const_po
 }
 
 /// Reads the object from stream \p s
-void memblock::read (istream& is, size_type elsize)
+void memblock::read (istream& is)
 {
-    size_type n; is >> n; n *= elsize;
+    size_type n; is >> n;
     auto nskip = ceilg (n, stream_align<size_type>::value);
     if (is.remaining() < nskip)
 	return;	// errors should have been reported by the message validator
@@ -277,13 +267,6 @@ memblaz::iterator memblaz::replace (const_iterator ip, size_type ipn, const_poin
     auto ipw = (dsz > 0 ? insert (ip, dsz) : erase (ip, -dsz));
     copy_n (s, sn, ipw);
     return ipw;
-}
-
-/// Reads the object from stream \p s
-void memblaz::read (istream& is, size_type elsize)
-{
-    wipe();
-    memblock::read (is, elsize);
 }
 
 int memblaz::read_file (const char* filename)

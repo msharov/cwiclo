@@ -81,16 +81,24 @@ template <typename T, typename F> constexpr const T* pointer_cast (const F* p)
 // constexpr conversion from pointer to uintptr_t
 template <typename T> constexpr uintptr_t pointer_value (T p)
     { return pointer_cast<char>(p)-static_cast<const char*>(nullptr); }
-// constexpr nullptr of given type
-template <typename T> constexpr T* null_pointer (void)
-    { return static_cast<T*>(nullptr); }
-// constexpr conversion from uintptr_t to pointer
-template <typename T> constexpr auto value_to_pointer (uintptr_t p)
-    { return pointer_cast<T>(null_pointer<char>()+p); }
 
 // Create a passthrough non-const member function from a call to a const member function
 #define UNCONST_MEMBER_FN(f,...)	\
     const_cast<remove_const_t<decltype((const_cast<add_const_t<decltype(this)>>(this)->f(__VA_ARGS__)))>>(const_cast<add_const_t<decltype(this)>>(this)->f(__VA_ARGS__));
+
+// Defines a has_member_function_name template where has_member_function_name<O>::value is true when O::name exists
+// Example: HAS_MEMBER_FUNCTION(stream_read, read, void (O::*)(istream&)); has_member_function_read<vector<int>>::value == true
+#define HAS_MEMBER_FUNCTION(tname, fname, signature)\
+    template <typename T>			\
+    class __has_member_function_##tname {	\
+	template <typename O> static true_type found (signature);\
+	template <typename O> static auto found (decltype(&O::fname), void*) -> decltype(found(&O::fname));\
+	template <typename O> static false_type found (...);\
+    public:					\
+	using type = decltype(found<T>(nullptr,nullptr));\
+    };						\
+    template <typename T>			\
+    struct has_member_function_##tname : public __has_member_function_##tname<T>::type {}
 
 //}}}-------------------------------------------------------------------
 //{{{ numeric limits

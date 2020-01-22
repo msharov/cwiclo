@@ -12,6 +12,12 @@ namespace cwiclo {
 using streamsize = cmemlink::size_type;
 using streampos = streamsize;
 
+// Define has_member_function templates to check for classes
+// implementing stream read and write functions.
+HAS_MEMBER_FUNCTION (stream_read, read, void (O::*)(istream&));
+HAS_MEMBER_FUNCTION (stream_readu, readu, void (O::*)(istream&));
+HAS_MEMBER_FUNCTION (create_from_stream, create_from_stream, O (*)(istream&));
+
 //}}}-------------------------------------------------------------------
 //{{{ istream
 
@@ -73,14 +79,16 @@ public:
     inline constexpr void	readt (T& v) __restrict__ { v = readt<T>(); }
     template <typename T>
     inline constexpr void	read (T& v) {
-				    if constexpr (is_trivial<T>::value)
+				    if constexpr (is_trivially_assignable<T>::value && !has_member_function_stream_read<T>::value)
 					readt (v);
 				    else
 					v.read (*this);
 				}
     template <typename T>
     inline constexpr decltype(auto) read (void) {
-				    if constexpr (is_trivial<T>::value)
+				    if constexpr (has_member_function_create_from_stream<T>::value)
+					return T::create_from_stream (*this);
+				    else if constexpr (is_trivially_assignable<T>::value && !has_member_function_stream_read<T>::value)
 					return readt<T>();
 				    else { T v; v.read (*this); return v; }
 				}
@@ -93,8 +101,10 @@ public:
     template <typename T>
     constexpr decltype(auto)	readu (void) {
 				    T v;
-				    if constexpr (is_trivial<T>::value)
+				    if constexpr (is_trivially_assignable<T>::value && !has_member_function_stream_read<T>::value && !has_member_function_stream_readu<T>::value)
 					readtu<T>(v);
+				    else if constexpr (has_member_function_stream_read<T>::value && !has_member_function_stream_readu<T>::value)
+					v.read (*this);
 				    else
 					v.readu (*this);
 				    return v;
@@ -167,7 +177,7 @@ public:
 				}
     template <typename T>
     inline constexpr void	write (const T& v) {
-				    if constexpr (is_trivial<T>::value)
+				    if constexpr (is_trivially_copyable<T>::value && !has_member_function_stream_read<T>::value)
 					writet (v);
 				    else
 					v.write (*this);
@@ -180,8 +190,10 @@ public:
     #endif
     template <typename T>
     inline constexpr void	writeu (const T& v) {
-				    if constexpr (is_trivial<T>::value)
+				    if constexpr (is_trivially_copyable<T>::value && !has_member_function_stream_readu<T>::value && !has_member_function_stream_read<T>::value)
 					writetu (v);
+				    if constexpr (has_member_function_stream_read<T>::value && !has_member_function_stream_readu<T>::value)
+					v.write (*this);
 				    else
 					v.writeu (*this);
 				}
@@ -245,15 +257,17 @@ public:
     inline constexpr void	writetu (const T& v)	{ write (&v, sizeof(v)); }
     template <typename T>
     inline constexpr void	write (const T& v) {
-				    if constexpr (is_trivial<T>::value)
+				    if constexpr (is_trivially_copyable<T>::value && !has_member_function_stream_read<T>::value)
 					writet (v);
 				    else
 					v.write (*this);
 				}
     template <typename T>
     inline constexpr void	writeu (const T& v) {
-				    if constexpr (is_trivial<T>::value)
+				    if constexpr (is_trivially_copyable<T>::value && !has_member_function_stream_readu<T>::value && !has_member_function_stream_read<T>::value)
 					writetu (v);
+				    if constexpr (has_member_function_stream_read<T>::value && !has_member_function_stream_readu<T>::value)
+					v.write (*this);
 				    else
 					v.writeu (*this);
 				}
@@ -306,7 +320,7 @@ namespace ios {
 class align {
 public:
     constexpr explicit		align (streamsize grain)	: _grain(grain) {}
-    inline constexpr void	read (istream& is) const	{ is.align (_grain); }
+    inline constexpr void	read (istream& is)		{ is.align (_grain); }
     inline constexpr void	write (ostream& os) const	{ os.align (_grain); }
     inline constexpr void	write (sstream& ss) const	{ ss.align (_grain); }
 private:

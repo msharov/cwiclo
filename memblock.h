@@ -69,9 +69,10 @@ public:
     inline constexpr void	shrink (size_type sz)		{ assert (sz <= max(capacity(),size())); resize (sz); }
     inline constexpr void	clear (void)			{ shrink (0); }
     void		link_read (istream& is, size_type elsize = sizeof(value_type));
-    inline void		read (istream& is, size_type elsize = sizeof(value_type))	{ link_read (is, elsize); }
-    void		write (ostream& os, size_type elsize = sizeof(value_type)) const;
-    constexpr void	write (sstream& os, size_type elsize = sizeof(value_type)) const;
+    inline void		read (istream& is)			{ link_read (is, sizeof(value_type)); }
+    template <typename Stm>
+    constexpr void	write (Stm& os) const;
+    inline static constexpr cmemlink create_from_stream (istream& is);
     int			write_file (const char* filename) const;
     int			write_file_atomic (const char* filename) const;
 protected:
@@ -153,9 +154,11 @@ public:
     inline constexpr void	manage (void* p, size_type n)	{ manage (static_cast<pointer>(p), n); }
     void			assign (const_pointer p, size_type n);
     inline void			assign (const cmemlink& v)	{ assign (v.data(), v.size()); }
+    inline void			assign (memlink&& v)		{ deallocate(); swap (move(v)); }
     inline constexpr void	assign (memblock&& v)		{ swap (move(v)); }
     inline auto&		operator= (const cmemlink& v)	{ assign (v); return *this; }
     inline auto&		operator= (const memblock& v)	{ assign (v); return *this; }
+    inline auto&		operator= (memlink&& v)		{ assign (move(v)); return *this; }
     inline auto&		operator= (memblock&& v)	{ assign (move(v)); return *this; }
     void			reserve (size_type sz);
     void			resize (size_type sz);
@@ -174,7 +177,7 @@ public:
 				    { return replace (ip, ipn, b.data(), b.size()); }
     void			shrink_to_fit (void);
     void			deallocate (void);
-    void			read (istream& is, size_type elsize = sizeof(value_type));
+    void			read (istream& is);
     int				read_file (const char* filename);
     inline static auto		create_from_file (const char* filename)
 				    { memblock r; r.read_file (filename); return r; }
@@ -232,13 +235,16 @@ public:
     inline void			assign (const cmemlink& v)	{ assign (v.data(), v.size()); }
     inline void			assign (const memblaz& v)	{ assign (v.data(), v.size()); }
     inline constexpr void	assign (memblaz&& v)		{ swap (move(v)); }
+    inline constexpr void	assign (memblock&& v)		{ wipe(); swap (move(v)); }
+    inline void			assign (memlink&& v)		{ deallocate(); swap (move(v)); }
     inline constexpr void	wipe (void)			{ zero_fill_n (data(), capacity()); }
     constexpr auto&		operator[] (size_type i)	{ return at (i); }
     constexpr auto&		operator[] (size_type i) const	{ return at (i); }
     inline auto&		operator= (const cmemlink& v)	{ assign (v); return *this; }
     inline auto&		operator= (const memblaz& v)	{ assign (v); return *this; }
     inline constexpr auto&	operator= (memblaz&& v)		{ assign (move(v)); return *this; }
-    inline constexpr auto&	operator= (memblock&& v)	{ wipe(); memblock::assign (move(v)); return *this; }
+    inline constexpr auto&	operator= (memblock&& v)	{ assign (move(v)); return *this; }
+    inline auto&		operator= (memlink&& v)		{ assign (move(v)); return *this; }
     inline bool			operator== (const cmemlink& v) const	{ return v == *this; }
     inline bool			operator== (const memblaz& v) const	{ return memblock::operator== (v); }
     inline bool			operator!= (const cmemlink& v) const	{ return v != *this; }
@@ -269,7 +275,7 @@ public:
 				    { return replace (ip, ipn, b.data(), b.size()); }
     void			shrink_to_fit (void);
     void			deallocate (void);
-    void			read (istream& is, size_type elsize = sizeof(value_type));
+    inline void			read (istream& is) { wipe(); memblock::read (is); }
     int				read_file (const char* filename);
     inline static auto		create_from_file (const char* filename)
 				    { memblaz r; r.read_file (filename); return r; }

@@ -111,8 +111,6 @@ public:
     inline constexpr void	link (const vector& v)			{ _data.link (v); }
     inline constexpr void	link (pointer f, pointer l)		{ link (f, l-f); }
     void			read (istream& is) {
-				    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
-					return _data.read (is, sizeof(T));
 				    size_type n; is >> n;
 				    if constexpr (stream_align<T>::value > stream_align<size_type>::value)
 					is >> ios::talign<T>();
@@ -129,12 +127,8 @@ public:
 				    if constexpr (stream_align<T>::value < stream_align<size_type>::value)
 					is >> ios::talign<size_type>();
 				}
-    template <typename Stm>
-    inline constexpr void	write (Stm& os) const {
-				    if constexpr (stream_align<T>::value <= stream_align<size_type>::value && is_trivially_copyable<T>::value)
-					return _data.write (os, sizeof(T));
-				    os.write_array (data(), size());
-				}
+    template <typename Stm = sstream>
+    inline constexpr void	write (Stm& os) const { os.write_array (data(), size()); }
 protected:
     inline auto			insert_hole (const_iterator ip, size_type n)
 				    { return iterator (_data.insert (memblock::const_iterator(ip), n*sizeof(T))); }
@@ -222,23 +216,24 @@ private:
 STREAM_ALIGN (cmemlink, stream_align<cmemlink::size_type>::value)
 namespace cwiclo {
 
-constexpr void cmemlink::write (sstream& os, size_type elsize) const
+template <typename Stm>
+constexpr void cmemlink::write (Stm& os) const
 {
-    auto sz = size();
+    uint32_t sz = size();
     if (sz)
 	sz += zero_terminated();
-    os << size_type(sz/elsize);
+    os << sz;
     os.write (data(), sz);
-    os.align (stream_align<size_type>::value);
+    os.align (4);
 }
 
-template <typename T> struct stream_align<vector<T>> {
-    static constexpr const streamsize value = stream_align<memblock::size_type>::value;
-};
-
-template <typename T> struct stream_align<vector_view<T>> {
-    static constexpr const streamsize value = stream_align<memblock::size_type>::value;
-};
+constexpr cmemlink cmemlink::create_from_stream (istream& is) // static
+{
+    auto ssz = is.read<size_type>();
+    auto scp = is.ptr<value_type>();
+    is.skip (ceilg (ssz,sizeof(ssz)));
+    return cmemlink (scp, ssz);
+}
 
 //}}}-------------------------------------------------------------------
 //{{{ vector out-of-lines
@@ -327,6 +322,14 @@ void vector<T>::copy_link (void)
     else
 	assign (begin(), end());
 }
+
+template <typename T> struct stream_align<vector<T>> {
+    static constexpr const streamsize value = stream_align<memblock::size_type>::value;
+};
+
+template <typename T> struct stream_align<vector_view<T>> {
+    static constexpr const streamsize value = stream_align<memblock::size_type>::value;
+};
 
 //}}}-------------------------------------------------------------------
 
