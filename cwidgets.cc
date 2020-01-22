@@ -149,8 +149,12 @@ void Editbox::on_key (key_t k)
 DEFINE_WIDGET_WRITE_DRAWLIST (Editbox, Drawlist, drw)
 {
     drw.panel (area().size(), PanelType::Editbox);
-    if (!text().empty())
-	drw.edit_text (text().iat(_fc), _cpos-_fc);
+    if (!text().empty()) {
+	if (focused())
+	    drw.edit_text (text().iat(_fc), _cpos-_fc);
+	else
+	    drw.text (text().iat(_fc));
+    }
     if (_fc) {
 	drw.move_to (0, 0);
 	drw.text ('<');

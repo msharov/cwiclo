@@ -238,7 +238,7 @@ void TerminalScreenWindow::Screen_draw (const cmemlink& dl)
 	    curs_set (1);
 	    set_flag (f_CaretOn);
 	}
-	move_to (_caret);
+	wmove (_w, _caret.y, _caret.x);
     } else if (flag (f_CaretOn)) {
 	leaveok (_w, true);
 	curs_set (0);
