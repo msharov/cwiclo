@@ -205,6 +205,18 @@ public:
     void			read (istream& is)			{ _data.link_read (is, sizeof(T)); }
     template <typename Stm>
     inline constexpr void	write (Stm& os) const			{ os.write_array (this->data(), this->size()); }
+    inline static constexpr vector_view	create_from_stream (istream& is) {
+				    auto sz = is.read<uint32_t>();
+				    if constexpr (stream_align<value_type>::value > 4)
+					is.align (stream_align<value_type>::value);
+				    auto dp = is.ptr<value_type>();
+				    auto dpe = dp + sz;
+				    auto sde = pointer_cast<istream::value_type>(dpe);
+				    if constexpr (stream_align<value_type>::value < 4)
+					sde = ceilg (sde,4);
+				    is.seek (sde);
+				    return vector_view (dp, dpe);
+				}
 private:
     cmemlink			_data;
 };
