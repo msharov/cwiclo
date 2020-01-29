@@ -92,8 +92,8 @@ uninstall-docs:
 	    ${RMPATH} ${PKGDOCDIR};\
 	fi
 endif
-ifdef PKGCONFIGDIR
-PCI	:= ${PKGCONFIGDIR}/${NAME}.pc
+ifdef PKCDIR
+PCI	:= ${PKCDIR}/${NAME}.pc
 install:	${PCI}
 ${PCI}:	${NAME}.pc
 	@echo "Installing $@ ..."

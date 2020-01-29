@@ -5,9 +5,7 @@
 
 PKG_NAME="cwiclo"
 PKG_VERSTR="v1.0"
-
-MNT_NAME="Mike Sharov"
-MNT_MAIL="zfunebi@hfref.fbheprsbetr.arg"
+PKG_BUGREPORT="Mike Sharov <msharov@users.sourceforge.net>"
 
 # Files that get created by this script
 FILES="Config.mk config.h $PKG_NAME.pc"
@@ -32,8 +30,6 @@ PROGS="CC=gcc CC=clang CXX=g++ CXX=clang++ AR=ar RANLIB=ranlib RANLIB=touch INST
 PKG_MAJOR=`expr "$PKG_VERSTR" : 'v\([0-9]*\)\.[0-9]*'`
 PKG_MINOR=`expr "$PKG_VERSTR" : 'v[0-9]*\.\([0-9]*\)'`
 PKG_STRING="$PKG_NAME $PKG_VERSTR"
-MNT_MAIL=`echo $MNT_MAIL|tr a-z n-za-m`
-PKG_BUGREPORT="$MNT_NAME <$MNT_MAIL>"
 
 # Miscellaneous substitutions
 CUSTSUBS="s/@PKG_NAME@/$PKG_NAME/g
@@ -143,21 +139,11 @@ sub "s/@prefix@/${ac_var_prefix:=\/usr\/local}/g
 s/@bindir@/${ac_var_bindir:=$ac_var_prefix\/bin}/g
 s/@docdir@/${ac_var_docdir:=$ac_var_prefix\/share\/doc}/g
 s/@includedir@/${ac_var_includedir:=$ac_var_prefix\/include}/g
-s/@oldincludedir@/${ac_var_oldincludedir:=\/usr\/include}/g
 s/@libdir@/${ac_var_libdir:=$ac_var_prefix\/lib}/g
 s/@builddir@/$(escpath ${TMPDIR:-/tmp})\/make/g
 s/@pkgconfigdir@/${ac_var_pkgconfigdir:=$ac_var_libdir\/pkgconfig}/g
 s/@customincdir@/${ac_var_customincdir:=$ac_var_prefix\/include}/g
 s/@customlibdir@/${ac_var_customlibdir:=$ac_var_prefix\/lib}/g"
-
-# See if pkg-config is installed
-PKGCONFIGDIR=`echo $ac_var_pkgconfigdir | sed 's/\\\\//g'`
-if [ ! -d $PKGCONFIGDIR -a -d /usr/lib/pkgconfig ]; then
-    sub "s/$ac_var_pkgconfigdir/\/usr\/lib\/pkgconfig/"
-    ac_var_pkgconfigdir=/usr/lib/pkgconfig;
-    sub "s/#\(PKGCONFIGDIR\)/\1/";
-fi
-[ ! -d $PKGCONFIGDIR ] || sub "s/#\(PKGCONFIGDIR\)/\1/"
 
 # Replace prefix variables, where available
 if [ "$ac_var_includedir" = "$ac_var_prefix\/include" ]; then
@@ -184,9 +170,7 @@ fi
 
 #### Find headers, libs, programs, and subs ##########################
 
-SubHeadLibsProgs() {
-local pname pcall esciv
-
+# Programs found using which
 for i in $PROGS; do
     pname=`expr "$i" : '\([^=]*\)=[^=]*'`
     pcall=`expr "$i" : '[^=]*=\([^=]*\)'`
@@ -212,8 +196,6 @@ for i in $ENVIRONS; do
     sub "s/ @$i@/$ppath/g"
 done
 sub "$CUSTSUBS"
-}
-SubHeadLibsProgs
 
 #### Apply substitutions to all files ################################
 
