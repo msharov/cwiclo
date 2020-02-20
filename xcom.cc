@@ -650,7 +650,7 @@ bool Extern::accept_incoming_message (void)
 	//
 	// Create a COMRelay as the destination. It will then create the
 	// actual server Msger using the interface in the message.
-	rp->relay.create_dest_as (PCOM::interface());
+	rp->relay.create_dest_for (PCOM::interface());
     }
 
     // Create local message from ExtMsg and forward it to the COMRelay

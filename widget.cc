@@ -47,12 +47,26 @@ const Widget::Layout* Widget::add_widgets (const Layout* f, const Layout* l)
     return f;
 }
 
+Widget* Widget::replace_widget (unique_ptr<Widget>&& nw)
+{
+    assert (nw->widget_id() && "can only replace a widget with an assigned id");
+    if (!nw->widget_id())
+	return nullptr;
+    for (auto& w : _widgets) {
+	if (w->widget_id() == nw->widget_id())
+	    return (w = move (nw)).get();
+	else if (auto nwp = w->replace_widget (move (nw)); nwp)
+	    return nwp;
+    }
+    return nullptr;
+}
+
 //}}}-------------------------------------------------------------------
 //{{{ Sizing and layout
 
 auto Widget::measure_text (const string_view& text) -> Size
 {
-    Size sz = {};
+    Size sz;
     for (auto l = text.begin(), textend = text.end(); l < textend;) {
 	auto lend = text.find ('\n', l);
 	if (!lend)
@@ -67,7 +81,7 @@ auto Widget::measure_text (const string_view& text) -> Size
 Rect Widget::compute_size_hints (void)
 {
     // The returned size hints contain w/h size and x/y zero sub size counts
-    Rect rsh = {};
+    Rect rsh;
 
     // For leaf widgets, size_hints is all that is needed
     if (_widgets.empty())
@@ -125,7 +139,7 @@ void Widget::place (const Rect& inarea)
 	subsz.h -= min (subsz.h, 2);
     }
     // Compute extra size for expandables
-    Size extra = {};
+    Size extra;
     if (fixed.w < inarea.w)
 	extra.w = inarea.w - fixed.w;
     // If no expandables, pad to align
@@ -207,11 +221,6 @@ void Widget::report_selection (void) const
 void Widget::report_modified (void) const
 {
     widget_reply().modified (widget_id(), text());
-}
-
-void Widget::on_set_text (void)
-{
-    set_size_hints (measure_text (text()));
 }
 
 void Widget::draw (drawlist_t& dl) const

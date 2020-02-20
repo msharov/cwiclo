@@ -74,6 +74,7 @@ public:
     const Layout*	add_widgets (const Layout* f, const Layout* l);
     template <size_t N>
     auto		add_widgets (const Layout (&l)[N])	{ return add (begin(l), end(l)); }
+    Widget*		replace_widget (unique_ptr<Widget>&& nw);
     void		delete_widgets (void)			{ _widgets.clear(); }
     auto&		area (void) const			{ return _area; }
     void		set_area (const Rect& r)		{ _area = r; }
@@ -94,7 +95,7 @@ public:
     void		focus (widgetid_t id);
     auto		next_focus (widgetid_t wid) const	{ return get_focus_neighbors_for (wid).next; }
     auto		prev_focus (widgetid_t wid) const	{ return get_focus_neighbors_for (wid).prev; }
-    virtual void	on_set_text (void);
+    virtual void	on_set_text (void)			{ }
     virtual void	on_resize (void)			{ }
     virtual void	on_event (const Event& ev);
     virtual void	on_key (key_t);

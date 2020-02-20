@@ -68,7 +68,7 @@ private:
     string		_prompt;
     Type		_type;
     PMessageBoxR	_reply;
-    enum {
+    enum : widgetid_t {
 	wid_Frame = wid_First,
 	wid_Message,
 	wid_Cancel,

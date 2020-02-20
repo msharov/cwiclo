@@ -63,8 +63,6 @@ void MessageBox::MessageBox_ask (const string_view& prompt, Type type, uint16_t)
 	set_widget_text (wid_Ignore, "No");
     else
 	set_widget_text (wid_Ignore, "Ignore");
-
-    layout();
 }
 
 void MessageBox::done (Answer answer)

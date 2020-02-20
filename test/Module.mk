@@ -21,7 +21,7 @@ test/check:	${test/TESTS}
 	@for i in ${test/TESTS}; do \
 	    TEST="test/$$(basename $$i)";\
 	    echo "Running $$TEST";\
-	    PATH="$Otest" $$i < $$TEST.cc > $$i.out 2>&1;\
+	    PATH="$Otest" TERM="xterm" LINES="47" COLUMNS="160" $$i < $$TEST.cc > $$i.out 2>&1;\
 	    diff $$TEST.std $$i.out && rm -f $$i.out;\
 	done
 
@@ -30,7 +30,7 @@ $Otest/ipcom:	$Otest/ping.o | $Otest/ipcomsrv
 
 ${test/TESTS}: $Otest/%: $Otest/%.o ${LIBA}
 	@echo "Linking $@ ..."
-	@${CC} ${LDFLAGS} -o $@ $^
+	@${CC} ${LDFLAGS} -o $@ $^ -lncurses
 
 $Otest/ipcomsrv:	$Otest/ipcomsrv.o $Otest/ping.o ${LIBA}
 	@echo "Linking $@ ..."

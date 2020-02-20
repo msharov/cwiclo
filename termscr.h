@@ -16,6 +16,8 @@ namespace ui {
 
 class TerminalScreenWindow;
 
+//----------------------------------------------------------------------
+
 class TerminalScreen : public Msger {
 public:
     static auto& instance (void) { static TerminalScreen s_scr; return s_scr; }
@@ -35,6 +37,8 @@ private:
     PTimer	_uiinput;
 };
 
+//----------------------------------------------------------------------
+
 class TerminalScreenWindow : public Msger {
 public:
     enum { f_CaretOn = Msger::f_Last, f_Last };
@@ -53,7 +57,10 @@ public:
     void	on_event (const Event& ev);
     int		getch (void);
     void	draw (void)				{ _reply.expose(); }
+    void	set_caret (bool on);
 		operator bool (void) const		{ return _w; }
+private:
+		friend class Drawlist;
     void	Draw_clear (void)			{ erase(); }
     void	Draw_move_to (const Point& p)		{ move_to (p); }
     void	Draw_move_by (const Offset& o)		{ move_by (o); }

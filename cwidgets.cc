@@ -11,6 +11,12 @@ namespace ui {
 
 //{{{ Label ------------------------------------------------------------
 
+void Label::on_set_text (void)
+{
+    Widget::on_set_text();
+    set_size_hints (measure_text (text()));
+}
+
 DEFINE_WIDGET_WRITE_DRAWLIST (Label, Drawlist, drw)
     { drw.text (text()); }
 
@@ -20,7 +26,8 @@ DEFINE_WIDGET_WRITE_DRAWLIST (Label, Drawlist, drw)
 void Button::on_set_text (void)
 {
     Widget::on_set_text();
-    set_size_hints (strlen("[ ") + size_hints().w + strlen (" ]"), size_hints().h);
+    auto th = measure_text (text());
+    set_size_hints (strlen("[ ") + th.w + strlen (" ]"), th.h);
 }
 
 DEFINE_WIDGET_WRITE_DRAWLIST (Button, Drawlist, drw)
@@ -42,8 +49,15 @@ DEFINE_WIDGET_WRITE_DRAWLIST (Button, Drawlist, drw)
 
 void Listbox::on_set_text (void)
 {
-    set_n (zstr::nstrs (text().c_str(), text().size()));
-    clip_sel();
+    Widget::on_set_text();
+    Size szh;
+    for (zstr::cii li (text().c_str(), text().size()); li; ++szh.h) {
+	auto lt = *li;
+	auto tlen = *++li - lt - 1;
+	szh.w = max (szh.w, tlen);
+    }
+    set_n (szh.h);
+    set_size_hints (szh);
 }
 
 void Listbox::on_key (key_t k)
@@ -89,6 +103,7 @@ Editbox::Editbox (Window* w, const Layout& lay)
 ,_fc()
 {
     set_flag (f_CanFocus);
+    // An edit box must be one line only
     set_size_hints (0, 1);
 }
 
@@ -115,11 +130,10 @@ void Editbox::posclip (void)
 
 void Editbox::on_set_text (void)
 {
+    Widget::on_set_text();
     _cpos = text().size();
     _fc = 0;
     posclip();
-    // An edit box must be one line only
-    set_size_hints (size_hints().w, 1);
 }
 
 void Editbox::on_key (key_t k)
@@ -149,12 +163,10 @@ void Editbox::on_key (key_t k)
 DEFINE_WIDGET_WRITE_DRAWLIST (Editbox, Drawlist, drw)
 {
     drw.panel (area().size(), PanelType::Editbox);
-    if (!text().empty()) {
-	if (focused())
-	    drw.edit_text (text().iat(_fc), _cpos-_fc);
-	else
-	    drw.text (text().iat(_fc));
-    }
+    if (focused())
+	drw.edit_text (text().iat(_fc), text().size()-_fc, _cpos-_fc);
+    else
+	drw.text (text().iat(_fc), text().size()-_fc);
     if (_fc) {
 	drw.move_to (0, 0);
 	drw.text ('<');

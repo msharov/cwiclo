@@ -192,7 +192,7 @@ public:
     inline constexpr void	writeu (const T& v) {
 				    if constexpr (is_trivially_copyable<T>::value && !has_member_function_stream_readu<T>::value && !has_member_function_stream_read<T>::value)
 					writetu (v);
-				    if constexpr (has_member_function_stream_read<T>::value && !has_member_function_stream_readu<T>::value)
+				    else if constexpr (has_member_function_stream_read<T>::value && !has_member_function_stream_readu<T>::value)
 					v.write (*this);
 				    else
 					v.writeu (*this);
@@ -266,7 +266,7 @@ public:
     inline constexpr void	writeu (const T& v) {
 				    if constexpr (is_trivially_copyable<T>::value && !has_member_function_stream_readu<T>::value && !has_member_function_stream_read<T>::value)
 					writetu (v);
-				    if constexpr (has_member_function_stream_read<T>::value && !has_member_function_stream_readu<T>::value)
+				    else if constexpr (has_member_function_stream_read<T>::value && !has_member_function_stream_readu<T>::value)
 					v.write (*this);
 				    else
 					v.writeu (*this);

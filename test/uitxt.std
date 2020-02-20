@@ -1,0 +1,15 @@
+[?1049h[22;0;0t[1;47r(B[m[4l[?7h[39;49m[?25l[?1h=[?1034h[39;49m(B[m[H[2JLStatus line textedit box
+Line two(0[0mq[58bk(B
+(0[0m(BThree[3;68H(0[0mx(B
+ (0[0m(BLong line four and ffff gggg dddd aaaa[4;68H(0[0mx(B
+(0[0m(BSeventy five[5;68H(0[0mx(B
+ (0[0mx(B[6;68H(0[0mx(B
+ (0[0mx(B[7;68H(0[0mx(B
+ (0[0mmq[64bj(B[?12l[?25h[HLStatus line textedit box  [?25l(B[0;7mLStatus line text(B[m(B[0;7m [21b(B[m[?12l[?25hLStatus line textedit box[K             [?25l(B[0;7mLStatus line text(B[m(B[0;7m [21b(B[m[?12l[?25hLStatus line textedit box[K[1;39H                            [?25l(B[0;7mLStatus line text(B[m(B[0;7m [21b(B[m[?12l[?25hLStatus line textedit box[K[1;67H                [?25l(B[0;7mLStatus line text(B[m(B[0;7m [21b(B[m[?12l[?25hLStatus line textedit box[K[1;83H                              [?25l(B[0;7mLStatus line text(B[m(B[0;7m [21b(B[m[?12l[?25hLStatus line textedit box[K[1;113H                                               [1;18H[?25l(B[0;7mLStatus line text(B[m(B[0;7m [21b(B[m[K
+[K
+[K
+[K
+[K
+[K
+[K
+[K[24;75HHello world![37d(0[0mq[158bq(B[38;1H(0[0mlq[157bk(B[39;1H(0[0mx(BTest label above edit box[39;120H(0[0mx(B[0;7mLine one [30b(0[0mx(B[40;1H(0[0mx(B[0;4m<lign::Center);}void UITWindow::on_key (key_t k){    if (k == 'q' || k == '/' || k == Key::Enter || k == Key::Escape) (0[0mx(BLine two[160G(0[0mx(B[41;1H(0[0mx(B[41;53H(0[0m(B[ (B[0;1mO(B[mK ][ (B[0;1mC(B[mancel ][41;120H(0[0mx(BThree[160G(0[0mx(B[42;1H(0[0mx(B[42;120H(0[0mx(B Long line four and ffff gggg dddd aaaa(0[0mx(B[43;1H(0[0mx(B[43;120H(0[0mx(BSeventy five[160G(0[0mx(B[44;1H(0[0mx(B[44;120H(0[0mx(B[160G(0[0mx(B[45;1H(0[0mx(B[45;120H(0[0mx(B[160G(0[0mx(B[46;1H(0[0mmq[157bj(B[47;1H(0[0m(B[0;7m Status line text [141b[?7l [?7h(B[m[47;1H[?12l[?25h[?1049l[23;0;0t[?1l>

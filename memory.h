@@ -209,14 +209,14 @@ public:
     inline constexpr		unique_ptr (void)		: _p (nullptr) {}
     inline constexpr explicit	unique_ptr (pointer p)		: _p (p) {}
     inline constexpr		unique_ptr (unique_ptr&& p)	: _p (p.release()) {}
-    inline			~unique_ptr (void)		{ delete _p; }
+    inline			~unique_ptr (void)		{ reset(); }
     inline constexpr auto	get (void) const		{ return _p; }
     inline constexpr auto	release (void)			{ return exchange (_p, nullptr); }
     inline constexpr void	reset (pointer p = nullptr)	{ assert (p != _p || !p); delete exchange (_p, p); }
     inline constexpr void	swap (unique_ptr&& v)		{ ::cwiclo::swap (_p, v._p); }
     inline constexpr explicit	operator bool (void) const	{ return _p != nullptr; }
     inline constexpr auto&	operator= (pointer p)		{ reset (p); return *this; }
-    inline constexpr auto&	operator= (unique_ptr&& p)	{ reset (p.release()); return *this; }
+    inline constexpr auto&	operator= (unique_ptr&& p)	{ swap (move(p)); return *this; }
     inline constexpr auto&	operator* (void) const		{ return *get(); }
     inline constexpr auto	operator-> (void) const		{ return get(); }
     inline constexpr bool	operator== (const pointer p) const	{ return _p == p; }

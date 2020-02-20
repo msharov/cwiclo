@@ -14,6 +14,8 @@ namespace ui {
 class Label : public Widget {
 public:
 		Label (Window* w, const Layout& lay) : Widget(w,lay) {}
+protected:
+    void	on_set_text (void) override;
 private:
     DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 };

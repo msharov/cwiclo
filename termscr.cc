@@ -37,18 +37,6 @@ TerminalScreen::TerminalScreen (void)
 ,_scrinfo()
 ,_uiinput (msger_id())
 {
-    if (!initscr()) {
-	error ("unable to initialize terminal output");
-	return;
-    }
-    _scrinfo.set_size (COLS, LINES);
-    start_color();
-    use_default_colors();
-    noecho();
-    cbreak();
-    curs_set (false);
-    ESCDELAY = 10;		// reduce esc key compose wait to 10ms
-    signal (SIGTSTP, SIG_IGN);	// disable Ctrl-Z
 }
 
 TerminalScreen::~TerminalScreen (void)
@@ -62,6 +50,22 @@ void TerminalScreen::register_window (TerminalScreenWindow* w)
     assert (w);
     assert (!linear_search (_windows, w));
     _windows.push_back (w);
+
+    if (_scrinfo.size().w)
+	return;
+    static WINDOW* s_rootwin = nullptr;
+    if (!s_rootwin && !(s_rootwin = initscr())) {
+	error ("unable to initialize terminal output");
+	return;
+    }
+    start_color();
+    use_default_colors();
+    noecho();
+    cbreak();
+    curs_set (false);
+    ESCDELAY = 10;		// reduce esc key compose wait to 10ms
+    signal (SIGTSTP, SIG_IGN);	// disable Ctrl-Z
+    _scrinfo.set_size (COLS, LINES);
 }
 
 void TerminalScreen::unregister_window (const TerminalScreenWindow* w)
@@ -69,11 +73,18 @@ void TerminalScreen::unregister_window (const TerminalScreenWindow* w)
     remove (_windows, w);
     if (_windows.empty()) {
 	_uiinput.stop();
-	flushinp();
-	endwin();
+	if (_scrinfo.size().w) {
+	    flushinp();
+	    endwin();
+	    _scrinfo.set_size (0, 0);
+	    signal (SIGTSTP, SIG_DFL);	// reenable Ctrl-Z
+	}
     } else {
 	// This implementation has only one window stack,
 	// with _windows.back() always the focused window.
+
+	// Turn caret on or off as the new top window needs
+	_windows.back()->set_caret (_windows.back()->flag (TerminalScreenWindow::f_CaretOn));
 
 	// Redraw all windows to erase the one that was destroyed
 	werase (stdscr);
@@ -233,17 +244,11 @@ void TerminalScreenWindow::Screen_draw (const cmemlink& dl)
     _caret.x = -1;
     Drawlist::dispatch (this, dl);
     if (_caret.x >= 0) {
-	if (!flag (f_CaretOn)) {
-	    leaveok (_w, false);
-	    curs_set (1);
-	    set_flag (f_CaretOn);
-	}
+	if (!flag (f_CaretOn))
+	    set_caret (true);
 	wmove (_w, _caret.y, _caret.x);
-    } else if (flag (f_CaretOn)) {
-	leaveok (_w, true);
-	curs_set (0);
-	set_flag (f_CaretOn, false);
-    }
+    } else if (flag (f_CaretOn))
+	set_caret (false);
     refresh();
 }
 
@@ -284,6 +289,8 @@ void TerminalScreenWindow::refresh (void)
     { wrefresh (_w); }
 int TerminalScreenWindow::getch (void)
     { return wgetch (_w); }
+void TerminalScreenWindow::set_caret (bool on)
+    { leaveok (_w, !on); curs_set (on); set_flag (f_CaretOn, on); }
 void TerminalScreenWindow::hline (unsigned n, wchar_t c)
     { whline (_w, c, clip_dx(n)); }
 void TerminalScreenWindow::vline (unsigned n, wchar_t c)
@@ -296,24 +303,25 @@ void TerminalScreenWindow::box (dim_t w, dim_t h)
     hline (w, 0);
     vline (h, 0);
     addch (ACS_ULCORNER);
-    move_to (tlx+w-1, tly);
+    wmove (_w, tly, tlx+w-1);
     vline (h, 0);
     addch (ACS_URCORNER);
-    move_to (tlx, tly+h-1);
+    wmove (_w, tly+h-1, tlx);
     hline (w, 0);
     addch (ACS_LLCORNER);
-    move_to (tlx+w-1, tly+h-1);
+    wmove (_w, tly+h-1, tlx+w-1);
     addch (ACS_LRCORNER);
-    move_to (tlx, tly);
+    wmove (_w, tly, tlx);
 }
 
 void TerminalScreenWindow::bar (dim_t w, dim_t h)
 {
+    auto tlx = getcurx(_w), tly = getcury(_w);
     for (dim_t y = 0; y < h; ++y) {
+	wmove (_w, tly+y, tlx);
 	hline (w, ' ');
-	move_by (0, 1);
     }
-    move_by (0, -h);
+    wmove (_w, tly, tlx);
 }
 
 void TerminalScreenWindow::erase (void)

@@ -48,21 +48,24 @@ void Window::focus_widget (widgetid_t id)
 
 void Window::focus_next (void)
 {
-    focus_widget (_widgets->next_focus (focused_widget_id()));
+    if (_widgets)
+	focus_widget (_widgets->next_focus (focused_widget_id()));
 }
 
 void Window::focus_prev (void)
 {
-    focus_widget (_widgets->prev_focus (focused_widget_id()));
+    if (_widgets)
+	focus_widget (_widgets->prev_focus (focused_widget_id()));
 }
 
 //}}}-------------------------------------------------------------------
 //{{{ Layout
 
-void Window::ScreenR_screen_info (const ScreenInfo& scrinfo)
+Rect Window::compute_size_hints (void) const
 {
-    _scrinfo = scrinfo;
-    auto wh = _widgets->compute_size_hints();
+    Rect wh (_scrinfo.size());
+    if (_widgets)
+	wh = _widgets->compute_size_hints();
     // Stretch, if requested
     if (wh.x) {
 	wh.w = _scrinfo.size().w;
@@ -72,17 +75,32 @@ void Window::ScreenR_screen_info (const ScreenInfo& scrinfo)
 	wh.h = _scrinfo.size().h;
 	wh.y = 0;
     }
-    _scr.open (Info (Info::Type::Normal, wh));
+    return wh;
 }
 
 void Window::layout (void)
 {
-    // Layout subwidgets in the computed area
-    _widgets->place (Rect (0,0,area().w,area().h));
-    // Reset focus, if needed
-    if (!focused_widget_id())
-	focus_next();	// initialize focus if needed
+    _scr.open (Info (Info::Type::Normal, compute_size_hints()));
+}
+
+void Window::on_restate (void)
+{
+    if (_widgets) {
+	// Size hints must now be recomputed as they may depend on
+	// screen info, which is usually set just before this call.
+	_widgets->compute_size_hints();
+	// Layout subwidgets in the computed area
+	_widgets->place (Rect (0,0,area().w,area().h));
+	if (!focused_widget_id())
+	    focus_next();	// initialize focus if needed
+    }
     draw();
+}
+
+void Window::ScreenR_restate (const Info& wi)
+{
+    _info = wi;
+    on_restate();
 }
 
 //}}}-------------------------------------------------------------------
@@ -91,7 +109,9 @@ void Window::layout (void)
 void Window::draw (void)
 {
     auto dl = _scr.begin_draw();
-    _widgets->draw (dl);
+    on_draw (dl);
+    if (_widgets)
+	_widgets->draw (dl);
     _scr.end_draw (move(dl));
 }
 
@@ -103,7 +123,7 @@ void Window::on_event (const Event& ev)
     // KeyDown events go only to the focused widget
     if (ev.type() == Event::Type::KeyDown && (focused_widget_id() == wid_None || ev.src() != wid_None))
 	on_key (ev.key());	// key events unused by widgets are processed in the window handler
-    else
+    else if (_widgets)
 	_widgets->on_event (ev);
     draw();
 }

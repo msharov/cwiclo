@@ -184,12 +184,12 @@ Proxy::Proxy (mrid_t from)
     allocate_id();
 }
 
-void Proxy::create_dest_as (iid_t iid) const
+void Proxy::create_dest_for (iid_t iid) const
 {
     App::instance().create_dest (iid, link());
 }
 
-void Proxy::create_dest_with (iid_t iid, pfn_factory_t fac) const
+void Proxy::create_dest_with (pfn_factory_t fac, iid_t iid) const
 {
     App::instance().create_dest_with (iid, fac, link());
 }

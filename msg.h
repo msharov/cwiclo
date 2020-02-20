@@ -195,7 +195,7 @@ private:
 };
 
 //}}}-------------------------------------------------------------------
-//{{{ Proxy
+//{{{ ProxyB
 
 class Msger;
 
@@ -227,7 +227,7 @@ protected:
 			    auto& msg = create_msg (imethod, variadic_stream_size(args...));
 			    commit_msg (msg, (msg.write() << ... << args));
 			}
-    inline void		send_fd (methodid_t imethod, fd_t fd) const {
+    void		send_fd (methodid_t imethod, fd_t fd) const {
 			    assert (string_view("h") == signature_of_method(imethod));
 			    auto& msg = create_msg (imethod, stream_size_of(fd), 0);
 			    commit_msg (msg, msg.write() << fd);
@@ -236,24 +236,6 @@ protected:
     void		free_id (void);
 private:
     Msg::Link		_link;
-};
-
-class Proxy : public ProxyB {
-protected:
-    constexpr		Proxy (mrid_t from, mrid_t to) : ProxyB (from,to) {}
-    explicit		Proxy (mrid_t from);
-public:
-    void		create_dest_as (iid_t iid) const;
-    void		create_dest_with (iid_t iid, pfn_factory_t fac) const;
-			using ProxyB::allocate_id;
-			using ProxyB::free_id;
-};
-
-class ProxyR : public ProxyB {
-protected:
-    constexpr		ProxyR (const Msg::Link& l) : ProxyB (l.dest, l.src) {}
-    void		allocate_id (void) = delete;
-    void		free_id (void) = delete;
 };
 
 //}}}-------------------------------------------------------------------
@@ -292,6 +274,33 @@ protected:
 private:
     Msg::Link		_link;
     uint32_t		_flags;
+};
+
+//}}}-------------------------------------------------------------------
+//{{{ Proxy
+
+class Proxy : public ProxyB {
+public:
+    explicit		Proxy (mrid_t from);
+    void		create_dest_for (iid_t iid) const;
+    void		create_dest_with (pfn_factory_t fac, iid_t iid = nullptr) const;
+    template <typename T>
+    void		create_dest_as (iid_t iid = nullptr) const
+			    { create_dest_with (&Msger::factory<T>, iid); }
+			using ProxyB::allocate_id;
+			using ProxyB::free_id;
+protected:
+    constexpr		Proxy (mrid_t from, mrid_t to) : ProxyB (from,to) {}
+};
+
+//}}}-------------------------------------------------------------------
+//{{{ ProxyR
+
+class ProxyR : public ProxyB {
+protected:
+    constexpr		ProxyR (const Msg::Link& l) : ProxyB (l.dest, l.src) {}
+    void		allocate_id (void) = delete;
+    void		free_id (void) = delete;
 };
 
 } // namespace cwiclo

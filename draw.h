@@ -182,7 +182,7 @@ protected:
     }
     // dispatch_cmd unmarshals and dispatches each command
     template <typename Impl>
-    static constexpr void dispatch_cmd (Impl* impl, const CmdHeader& h, istream argstm) {
+    inline static constexpr void dispatch_cmd (Impl* impl, const CmdHeader& h, istream argstm) {
 	assert (argstm.remaining() == validate_cmd (h.cmd, argstm) && "validate the drawlist before dispatching");
 	switch (Cmd(h.cmd)) {
 	    case Cmd::Clear:	impl->Draw_clear(); break;
@@ -205,7 +205,7 @@ protected:
 public:
     // Use dispatch_with_func to generate a combined dispatcher
     template <typename Impl>
-    static constexpr void dispatch (Impl* impl, istream dls)
+    inline static constexpr void dispatch (Impl* impl, istream dls)
 	{ dispatch_with_func (impl, dls, dispatch_cmd<Impl>); }
     //}}}---------------------------------------------------------------
 };
@@ -278,7 +278,7 @@ public:
     //{{{ dispatch
 protected:
     template <typename Impl>
-    static constexpr void dispatch_cmd (Impl* impl, const CmdHeader& h, istream argstm) {
+    inline static constexpr void dispatch_cmd (Impl* impl, const CmdHeader& h, istream argstm) {
 	assert (argstm.remaining() == validate_cmd (h.cmd, argstm) && "validate the drawlist before dispatching");
 	switch (Cmd(h.cmd)) {
 	    case Cmd::DefineColor:	impl->Draw_set_color (h.a1, argstm.read<color_t>()); break;
@@ -289,7 +289,7 @@ protected:
     }
 public:
     template <typename Impl>
-    static constexpr void dispatch (Impl* impl, istream dls)
+    inline static constexpr void dispatch (Impl* impl, istream dls)
 	{ dispatch_with_func (impl, dls, dispatch_cmd<Impl>); }
     //}}}---------------------------------------------------------------
 };
