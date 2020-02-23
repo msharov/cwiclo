@@ -62,9 +62,7 @@ public:
     inline constexpr void	link (const_pointer p, size_type n)	{ link (const_cast<pointer>(p), n); }
     inline constexpr void	link (void* p, size_type n)		{ link (static_cast<pointer>(p), n); }
     inline constexpr void	link (const void* p, size_type n)	{ link (static_cast<const_pointer>(p), n); }
-    inline constexpr void	link (pointer p, size_type n, bool z)	{ link(p,n); set_zero_terminated(z); }
-    inline constexpr void	link (const_pointer p, size_type n, bool z)	{ link (const_cast<pointer>(p), n, z); }
-    inline constexpr void	link (const cmemlink& v)	{ link (v.begin(), v.size(), v.zero_terminated()); }
+    inline constexpr void	link (const cmemlink& v)	{ link (v.begin(), v.size()); }
     inline constexpr void	resize (size_type sz)		{ _size = sz; }
     inline constexpr void	shrink (size_type sz)		{ assert (sz <= max(capacity(),size())); resize (sz); }
     inline constexpr void	clear (void)			{ shrink (0); }
@@ -121,7 +119,6 @@ public:
     inline constexpr auto&	operator[] (size_type i) const	{ return at (i); }
     inline constexpr void	link (pointer p, size_type n)	{ cmemlink::link (p, n); }
     inline constexpr void	link (void* p, size_type n)	{ link (static_cast<pointer>(p), n); }
-    inline constexpr void	link (pointer p, size_type n, bool z)	{ cmemlink::link (p, n, z); }
     inline constexpr void	link (const memlink& v)		{ cmemlink::link (v); }
     inline constexpr void	swap (memlink&& v)		{ cmemlink::swap (move (v)); }
     iterator			insert (const_iterator start, size_type n);
