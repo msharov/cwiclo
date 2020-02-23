@@ -24,25 +24,25 @@ public:
     using const_iterator	= const_pointer;
     using iterator		= pointer;
 public:
-    inline constexpr		cmemlink (const_pointer p, size_type n, bool z = false)	: _data(const_cast<pointer>(p)), _size(n), _capz(z) {}
-    inline constexpr		cmemlink (const void* p, size_type n)	: cmemlink (static_cast<const_pointer>(p), n) {}
+    inline constexpr		cmemlink (const_pointer p, size_type n, bool z = false)	: _data(const_cast<pointer>(p)),_size(n),_capz(z) {}
+    inline constexpr		cmemlink (const void* p, size_type n)			: cmemlink (static_cast<const_pointer>(p),n) {}
 #if __SSE2__ && NDEBUG		// turn off _sblk union member for debugging
     inline constexpr		cmemlink (void)			: _sblk (simd16_t::zero()) {}
     inline constexpr		cmemlink (const cmemlink& v)	: _sblk (v._sblk) {}
     inline constexpr		cmemlink (cmemlink&& v)		: _sblk (exchange (v._sblk, simd16_t::zero())) {}
     inline constexpr void	swap (cmemlink&& v)		{ ::cwiclo::swap (_sblk, v._sblk); }
-    inline constexpr void	unlink (void)			{ auto zt = _zerot; _sblk = simd16_t::zero(); _capz = zt; }
+    inline constexpr void	unlink (void)			{ auto zt = zero_terminated(); _sblk = simd16_t::zero(); _capz = zt; }
 #else
     inline constexpr		cmemlink (void)			: cmemlink (nullptr, 0, false) {}
-    inline constexpr		cmemlink (const cmemlink& v)	: cmemlink (v._data, v._size, v._zerot) {}
+    inline constexpr		cmemlink (const cmemlink& v)	: cmemlink (v._data, v._size, v.zero_terminated()) {}
     inline constexpr		cmemlink (cmemlink&& v)		: _data (exchange (v._data, nullptr)), _size (exchange (v._size, 0u)), _capz (exchange (v._capz, 0u)) {}
     inline constexpr void	swap (cmemlink&& v)		{ ::cwiclo::swap (_data, v._data); ::cwiclo::swap (_size, v._size); ::cwiclo::swap (_capz, v._capz); }
-    inline constexpr void	unlink (void)			{ _data = nullptr; _size = 0; _capacity = 0; }
+    inline constexpr void	unlink (void)			{ _data = nullptr; _size = 0; _capz &= 1; }
 #endif
     inline constexpr auto&	operator= (const cmemlink& v)	{ link (v); return *this; }
     inline constexpr auto&	operator= (cmemlink&& v)	{ swap (move(v)); return *this; }
     inline constexpr auto	max_size (void) const		{ return numeric_limits<size_type>::max()/2-1; }
-    inline constexpr auto	capacity (void) const		{ return _capacity; }
+    inline constexpr auto	capacity (void) const		{ return _capz>>1; }
     inline constexpr auto	size (void) const		{ return _size; }
     [[nodiscard]] inline constexpr auto	empty (void) const	{ return !size(); }
     inline constexpr const_pointer	data (void) const	{ return _data; }
@@ -62,7 +62,7 @@ public:
     inline constexpr void	link (const_pointer p, size_type n)	{ link (const_cast<pointer>(p), n); }
     inline constexpr void	link (void* p, size_type n)		{ link (static_cast<pointer>(p), n); }
     inline constexpr void	link (const void* p, size_type n)	{ link (static_cast<const_pointer>(p), n); }
-    inline constexpr void	link (pointer p, size_type n, bool z)	{ link(p,n); _zerot = z; }
+    inline constexpr void	link (pointer p, size_type n, bool z)	{ link(p,n); set_zero_terminated(z); }
     inline constexpr void	link (const_pointer p, size_type n, bool z)	{ link (const_cast<pointer>(p), n, z); }
     inline constexpr void	link (const cmemlink& v)	{ link (v.begin(), v.size(), v.zero_terminated()); }
     inline constexpr void	resize (size_type sz)		{ _size = sz; }
@@ -77,26 +77,20 @@ public:
     int			write_file_atomic (const char* filename) const;
 protected:
     constexpr auto&	dataw (void)				{ return _data; }
-    constexpr bool	zero_terminated (void) const		{ return _zerot; }
-    constexpr void	set_zero_terminated (bool b = true)	{ _zerot = b; }
-    constexpr void	set_capacity (size_type c)		{ _capacity = c; }
+    constexpr bool	zero_terminated (void) const		{ return get_bit (_capz, 0); }
+    constexpr void	set_zero_terminated (bool b = true)	{ set_bit (_capz, 0, b); }
+    constexpr void	set_capacity (size_type c)		{ _capz = (c<<1)|zero_terminated(); }
 private:
 #if __SSE2__ && NDEBUG
     union {
 	struct {
 #endif
-	    pointer		_data;			///< Pointer to the data block
-	    size_type		_size alignas(8);	///< Size of the data block. Aligning _size makes ccmemlink 16 bytes on 32 and 64 bit platforms.
-	    union {
-		size_type	_capz;
-		struct {
-		    bool	_zerot:1;		///< Block is zero-terminated
-		    size_type	_capacity:31;		///< Total allocated capacity. Zero when linked.
-		};
-	    };
+	    pointer	_data;	///< Pointer to the data block
+	    size_type	_size alignas(8);	///< Used size
+	    size_type	_capz;	///< Allocated size|zero-terminated bit
 #if __SSE2__ && NDEBUG
 	};
-	simd16_t		_sblk;			// For efficient initialization and swapping
+	simd16_t	_sblk;	// Because gcc still can't do store merging here
     };
 #endif
 };
