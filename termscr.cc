@@ -233,11 +233,14 @@ Rect TerminalScreen::position_window (Rect warea) const
 void TerminalScreen::draw_window (const TerminalScreenWindow* w)
 {
     assert (position_window(w->area()) == w->area() && "you must use position_window to set window area");
+    if (w->area().empty())
+	return;
     auto wpos (w->area().pos());
     auto oci = _surface.iat (wpos);
     size_t oskip = screen_info().size().w - w->area().w;
 
     foreach (ici, w->surface()) {
+	assert (oci < _surface.end() && "position_window must clip each window to screen area");
 	// Skip writing if nothing changed
 	if (*oci != *ici) {
 	    // Collect numbers for the term sgr command
@@ -256,7 +259,6 @@ void TerminalScreen::draw_window (const TerminalScreenWindow* w)
 		for (auto a = 0u; a < size(c_attr_tseq); ++a)
 		    if (get_bit (chattr, a))
 			sgr[nsgr++] = c_attr_tseq[a][get_bit(ici->attr,a)];
-		_lastcell.attr = ici->attr;
 	    }
 
 	    // Set colors
@@ -273,7 +275,6 @@ void TerminalScreen::draw_window (const TerminalScreenWindow* w)
 		    sgr[nsgr] = ici->bg;
 		}
 		++nsgr;
-		_lastcell.bg = ici->bg;
 	    }
 	    if (ici->fg != _lastcell.fg) {
 		if (ici->fg < 8)
@@ -288,7 +289,6 @@ void TerminalScreen::draw_window (const TerminalScreenWindow* w)
 		    sgr[nsgr] = ici->fg;
 		}
 		++nsgr;
-		_lastcell.fg = ici->fg;
 	    }
 
 	    // Skip over unchanged content on the screen
@@ -328,25 +328,26 @@ void TerminalScreen::draw_window (const TerminalScreenWindow* w)
 	    // Write the character
 	    _tout += char(ici->c);
 
-	    // Adjust screen position after the char
+	    // Adjust tracking variables
 	    if (++_curwpos.x >= _scrinfo.size().w) {
 		_curwpos.x = 0;
 		if (_curwpos.y < _scrinfo.size().h)
 		    ++_curwpos.y;
 	    }
+	    _lastcell = *ici;
+	    *oci = *ici;
 	}
 
 	// Advance output and position
-	*oci++ = *ici;
-	if (++wpos.x >= w->area().w) {
+	++oci;
+	if (++wpos.x >= w->area().x + w->area().w) {
 	    wpos.x = w->area().x;
 	    ++wpos.y;
 	    oci += oskip;
 	}
     }
     // Turn on the caret, if set in window
-    if (auto caretpos = w->caret(); w->area().contains (caretpos)) {
-	caretpos += w->area().pos();
+    if (auto caretpos = w->caret() + w->area().pos(); w->area().contains (caretpos)) {
 	if (_curwpos != caretpos) {
 	    _curwpos = caretpos;
 	    _tout.appendf (T_MOVE_TO, caretpos.y+1, caretpos.x+1);
