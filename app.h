@@ -59,6 +59,7 @@ public:
 	return true;
     }
     static int	make_nonblocking (fd_t fd);
+    static int	make_blocking (fd_t fd);
     static mstime_t now (void);
 };
 

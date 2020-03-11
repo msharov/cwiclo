@@ -3,22 +3,11 @@
 // Copyright (c) 2019 by Mike Sharov <msharov@users.sourceforge.net>
 // This file is free software, distributed under the ISC License.
 
-#if __has_include(<curses.h>)
 #include "termscr.h"
 #include "draw.h"
+#include "app.h"
 #include <signal.h>
-#include <curses.h>
-#undef addch
-#undef addstr
-#undef addnstr
-#undef attron
-#undef attroff
-#undef hline
-#undef vline
-#undef box
-#undef erase
-#undef getch
-#undef clear
+#include <termio.h>
 
 namespace cwiclo {
 namespace ui {
@@ -28,15 +17,59 @@ namespace ui {
 DEFINE_INTERFACE (Screen)
 DEFINE_INTERFACE (ScreenR)
 
+// termios settings before TerminalScreen activation
+static struct termios s_old_termios = {};
+
+//}}}-------------------------------------------------------------------
+//{{{ T_ terminal code strings
+
+#define T_ESC			"\033"
+#define T_CSI			T_ESC "["
+#define T_ALTSCREEN_ON		T_CSI "?1049h"
+#define T_ALTSCREEN_OFF		T_CSI "?1049l"
+#define T_ALTCHARSET_ENABLE	T_ESC "(B" T_ESC ")0"
+#define T_ALTCHARSET_DISABLE	T_ESC "(B" T_ESC ")B"
+#define T_SET_DEFAULT_ATTRS	"\017" T_CSI "0;39;49m"
+#define T_CARET_ON		T_CSI "?25h"
+#define T_CARET_OFF		T_CSI "?25l"
+#define T_SKIP_N		T_CSI "%huC"
+#define T_MOVE_TO_ORIGIN	T_CSI "H"
+#define T_MOVE_TO_LINE		T_CSI "%hu;1H"
+#define T_MOVE_TO		T_CSI "%hu;%huH"
+#define T_CLEAR_TO_BOTTOM	T_CSI "J"
+#define T_CLEAR_SCREEN		T_MOVE_TO_ORIGIN T_CLEAR_TO_BOTTOM
+
+//}}}-------------------------------------------------------------------
+//{{{ TerminalScreen::Surface
+
+void TerminalScreen::Surface::draw_surface (const Point& pt, const Surface& src)
+{
+    auto visrect = Rect(size()).clip (Rect (pt, src.size()));
+    if (visrect.empty())
+	return;
+    auto d = iat (visrect.pos());
+    auto s = src.iat (visrect.pos()-pt);
+    size_t sskip = src.size().w, dskip = size().w - visrect.w;
+    for (auto rows = visrect.h; rows--; s += sskip)
+	d = copy_n (s, visrect.w, d) + dskip;
+}
+
 //}}}-------------------------------------------------------------------
 //{{{ TerminalScreen
 
 TerminalScreen::TerminalScreen (void)
 : Msger()
 ,_windows()
+,_tout()
+,_tin()
+,_surface()
 ,_scrinfo()
-,_uiinput (msger_id())
+,_lastcell (Surface::default_cell())
+,_curwpos()
+,_ptermi (msger_id())
+,_ptermo (msger_id())
 {
+    _tin.reserve (255);
 }
 
 TerminalScreen::~TerminalScreen (void)
@@ -45,66 +78,141 @@ TerminalScreen::~TerminalScreen (void)
     unregister_window (nullptr);
 }
 
+bool TerminalScreen::dispatch (Msg& msg)
+{
+    return PTimerR::dispatch (this, msg)
+	|| PSignal::dispatch (this, msg)
+	|| Msger::dispatch (msg);
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ Terminal state management
+
+void TerminalScreen::ui_mode (void)
+{
+    if (flag (f_UIMode))
+	return;
+    signal (SIGTSTP, SIG_IGN);		// Disable suspend signal in addition to the key.
+    if (0 == tcgetattr (STDIN_FILENO, &s_old_termios)) {
+	auto tios = s_old_termios;
+	tios.c_lflag &= ~(ICANON| ECHO);// No by-line buffering, no echo.
+	tios.c_iflag &= ~(IXON| IXOFF);	// No ^s scroll lock (whose dumb idea was it?)
+	tios.c_cc[VMIN] = 1;		// Read at least 1 character on each read().
+	tios.c_cc[VTIME] = 0;		// Disable time-based preprocessing (Esc sequences)
+	tios.c_cc[VQUIT] = 0xff;	// Disable ^\. Root window will handle.
+	tios.c_cc[VSUSP] = 0xff;	// Disable ^z. Suspends in UI mode result in garbage.
+	tcsetattr (STDIN_FILENO, TCSAFLUSH, &tios);
+    }
+    _tout =
+	T_ALTSCREEN_ON
+	T_ALTCHARSET_ENABLE;
+    for (int fd = STDIN_FILENO; fd <= STDOUT_FILENO; ++fd)
+	PTimer::make_nonblocking (fd);
+    set_flag (f_UIMode);
+    update_screen_size();
+}
+
+void TerminalScreen::tt_mode (void)
+{
+    if (!flag (f_UIMode))
+	return;
+    // Set default colors, leave altcharset, disable altcharset, restore cursor (to bottom), turn cursor on, restore normal screen
+    _tout.clear();
+    for (int fd = STDIN_FILENO; fd <= STDOUT_FILENO; ++fd)
+	PTimer::make_blocking (fd);
+    printf (
+	T_ALTSCREEN_OFF
+	T_SET_DEFAULT_ATTRS
+	T_ALTCHARSET_DISABLE
+	T_CARET_ON
+	T_MOVE_TO_LINE, screen_info().size().h);
+    if (s_old_termios.c_lflag)	// don't set termios if it wasn't read successfully in ui_mode
+	tcsetattr (STDIN_FILENO, TCSAFLUSH, &s_old_termios);
+    signal (SIGTSTP, SIG_DFL);	// reenable Ctrl-Z
+    set_flag (f_CaretOn, true);
+    set_flag (f_UIMode, false);
+}
+
+void TerminalScreen::reset (void)
+{
+    set_flag (f_CaretOn, false);
+    _curwpos = Point();
+    _lastcell = Surface::default_cell();
+    _surface.clear();
+    _tout +=
+	T_CARET_OFF
+	T_SET_DEFAULT_ATTRS
+	T_CLEAR_SCREEN;
+}
+
+void TerminalScreen::update_screen_size (void)
+{
+    Size nsz (80, 24);
+    if (struct winsize ws; !ioctl (STDIN_FILENO, TIOCGWINSZ, &ws)) {
+	nsz.w = ws.ws_col;
+	nsz.h = ws.ws_row;
+    } else {
+	if (auto e = getenv("COLUMNS"); e)
+	    if (auto w = atoi(e); w > 0)
+		nsz.w = w;
+	if (auto e = getenv("LINES"); e)
+	    if (auto h = atoi(e); h > 0)
+		nsz.h = h;
+    }
+    if (_scrinfo.size() != nsz) {
+	_scrinfo.set_size (nsz);
+	_surface.resize (nsz);
+	reset();
+	for (auto& w : _windows)
+	    w->on_new_screen_info();
+    }
+}
+
+void TerminalScreen::Signal_signal (int sig)
+{
+    if (sig == SIGWINCH)
+	update_screen_size();
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ TerminalScreen window management
+
 void TerminalScreen::register_window (TerminalScreenWindow* w)
 {
     assert (w);
     assert (!linear_search (_windows, w));
     _windows.push_back (w);
-
     if (_scrinfo.size().w)
 	return;
-    static WINDOW* s_rootwin = nullptr;
-    if (!s_rootwin && !(s_rootwin = initscr())) {
-	error ("unable to initialize terminal output");
-	return;
-    }
-    start_color();
-    use_default_colors();
-    noecho();
-    cbreak();
-    curs_set (false);
-    ESCDELAY = 10;		// reduce esc key compose wait to 10ms
-    signal (SIGTSTP, SIG_IGN);	// disable Ctrl-Z
-    _scrinfo.set_size (COLS, LINES);
+    ui_mode();
 }
 
 void TerminalScreen::unregister_window (const TerminalScreenWindow* w)
 {
     remove (_windows, w);
     if (_windows.empty()) {
-	_uiinput.stop();
-	if (_scrinfo.size().w) {
-	    flushinp();
-	    endwin();
-	    _scrinfo.set_size (0, 0);
-	    signal (SIGTSTP, SIG_DFL);	// reenable Ctrl-Z
-	}
+	_ptermi.stop();
+	_ptermo.stop();
+	if (_scrinfo.size().w)
+	    tt_mode();
     } else {
 	// This implementation has only one window stack,
 	// with _windows.back() always the focused window.
 
-	// Turn caret on or off as the new top window needs
-	_windows.back()->set_caret (_windows.back()->flag (TerminalScreenWindow::f_CaretOn));
-
 	// Redraw all windows to erase the one that was destroyed
-	werase (stdscr);
-	wnoutrefresh (stdscr);
 	for (auto& bw : _windows)
 	    bw->draw();
-
-	// Restart listening for keys
-	TimerR_timer (STDIN_FILENO);
     }
 }
 
-void TerminalScreen::create_window (WindowInfo& winfo, WINDOW*& pwin)
+Rect TerminalScreen::position_window (Rect warea) const
 {
-    auto warea = winfo.area();
     // Maximize window if empty
     if (!warea.w)
 	warea.w = screen_info().size().w;
     if (!warea.h)
 	warea.h = screen_info().size().h;
+
     // Center windows that are not explicitly positioned
     if (!warea.x && !warea.y) {
 	warea.w = min (warea.w, screen_info().size().w);
@@ -114,73 +222,301 @@ void TerminalScreen::create_window (WindowInfo& winfo, WINDOW*& pwin)
 	if (warea.h < screen_info().size().h)
 	    warea.y = (screen_info().size().h - warea.h)/2u;
     }
-    winfo.set_area (warea);
 
-    // Create or recreate curses window
-    if (auto ow = exchange (pwin, newwin (warea.h,warea.w,warea.y,warea.x)); ow)
-	delwin (ow);
-    leaveok (pwin, true);
-    keypad (pwin, true);
-    meta (pwin, true);
-    nodelay (pwin, true);
+    // Clip the window to the screen area
+    return Rect(screen_info().size()).clip (warea);
+}
 
-    // Start listening for key events
+//}}}-------------------------------------------------------------------
+//{{{ draw_window
+
+void TerminalScreen::draw_window (const TerminalScreenWindow* w)
+{
+    assert (position_window(w->area()) == w->area() && "you must use position_window to set window area");
+    auto wpos (w->area().pos());
+    auto oci = _surface.iat (wpos);
+    size_t oskip = screen_info().size().w - w->area().w;
+
+    foreach (ici, w->surface()) {
+	// Skip writing if nothing changed
+	if (*oci != *ici) {
+	    // Collect numbers for the term sgr command
+	    uint8_t sgr[8], nsgr = 0;
+
+	    // {Off,On} sequences for attributes
+	    static const uint8_t c_attr_tseq[][2] = {
+		{22,1},	// Bold
+		{23,3},	// Italic
+		{24,4},	// Underline
+		{25,5},	// Blink
+		{27,7}	// Reverse
+	    };
+	    auto chattr = _lastcell.attr ^ ici->attr;
+	    if (chattr) {
+		for (auto a = 0u; a < size(c_attr_tseq); ++a)
+		    if (get_bit (chattr, a))
+			sgr[nsgr++] = c_attr_tseq[a][get_bit(ici->attr,a)];
+		_lastcell.attr = ici->attr;
+	    }
+
+	    // Set colors
+	    if (ici->bg != _lastcell.bg) {
+		if (ici->bg < 8)
+		    sgr[nsgr] = 40+ici->bg;
+		else if (ici->bg < 16)
+		    sgr[nsgr] = 100+ici->bg;
+		else if (ici->bg == IColor::Default)
+		    sgr[nsgr] = 49;
+		else {
+		    sgr[nsgr++] = 48;
+		    sgr[nsgr++] = 5;
+		    sgr[nsgr] = ici->bg;
+		}
+		++nsgr;
+		_lastcell.bg = ici->bg;
+	    }
+	    if (ici->fg != _lastcell.fg) {
+		if (ici->fg < 8)
+		    sgr[nsgr] = 30+ici->fg;
+		else if (ici->fg < 16)
+		    sgr[nsgr] = 90+ici->fg;
+		else if (ici->fg == IColor::Default)
+		    sgr[nsgr] = 39;
+		else {
+		    sgr[nsgr++] = 38;
+		    sgr[nsgr++] = 5;
+		    sgr[nsgr] = ici->fg;
+		}
+		++nsgr;
+		_lastcell.fg = ici->fg;
+	    }
+
+	    // Skip over unchanged content on the screen
+	    if (wpos != _curwpos) {
+		auto dpos = wpos - _curwpos;
+		if (!wpos.x && dpos.dy > 0 && dpos.dy < 8 && !w->area().x)
+		    _tout.append ('\n', dpos.dy);
+		else if (!dpos.dy && dpos.dx > 0) {
+		    if (dpos.dx < 5 && ici-dpos.dx >= w->surface().begin()) {
+			// Rewrite unchanged chars if only a few and no attributes changed
+			for (; dpos.dx; --dpos.dx) {
+			    auto uici = ici-dpos.dx;
+			    if (uici->attr != _lastcell.attr)
+				break;
+			    _tout += char(uici->c);
+			}
+		    }
+		    if (dpos.dx > 0)
+			_tout.appendf (T_SKIP_N, dpos.dx);
+		} else
+		    _tout.appendf (T_MOVE_TO, wpos.y+1, wpos.x+1);
+		_curwpos = wpos;
+	    }
+
+	    // Write the sgr sequence
+	    if (nsgr > 0) {
+		_tout += T_CSI;
+		for (auto i = 0u; i < nsgr; ++i)
+		    _tout.appendf ("%hhu;", sgr[i]);
+		_tout.back() = 'm';
+	    }
+
+	    // Enable (14) or disable (15) altcharset if changed
+	    if (get_bit (chattr, Surface::Attr::Altcharset))
+		_tout += char(15-get_bit (ici->attr, Surface::Attr::Altcharset));
+
+	    // Write the character
+	    _tout += char(ici->c);
+
+	    // Adjust screen position after the char
+	    if (++_curwpos.x >= _scrinfo.size().w) {
+		_curwpos.x = 0;
+		if (_curwpos.y < _scrinfo.size().h)
+		    ++_curwpos.y;
+	    }
+	}
+
+	// Advance output and position
+	*oci++ = *ici;
+	if (++wpos.x >= w->area().w) {
+	    wpos.x = w->area().x;
+	    ++wpos.y;
+	    oci += oskip;
+	}
+    }
+    // Turn on the caret, if set in window
+    if (auto caretpos = w->caret(); w->area().contains (caretpos)) {
+	caretpos += w->area().pos();
+	if (_curwpos != caretpos) {
+	    _curwpos = caretpos;
+	    _tout.appendf (T_MOVE_TO, caretpos.y+1, caretpos.x+1);
+	}
+	if (!flag (f_CaretOn)) {
+	    _tout += T_CARET_ON;
+	    set_flag (f_CaretOn);
+	}
+    } else if (flag (f_CaretOn)) {
+	_tout += T_CARET_OFF;
+	set_flag (f_CaretOn, false);
+    }
+
+    // Write the buffer
     TimerR_timer (STDIN_FILENO);
 }
 
-bool TerminalScreen::dispatch (Msg& msg)
-{
-    return PTimerR::dispatch (this, msg)
-	|| Msger::dispatch (msg);
-}
-
-Event::key_t TerminalScreen::event_key_from_curses (int k) // static
-{
-    // Keys that curses should have defined, but does not
-    enum {
-	KEY_ESCAPE = '\e',
-	KEY_BKSPACE = '~'+1
-    };
-    // Curses key to Event Key
-    static const struct { int ck; Event::key_t ek; } c_keymap[] = {
-	{ '\t',		Key::Tab	},
-	{ '\n',		Key::Enter	},
-	{ KEY_ESCAPE,	Key::Escape	},
-	{ KEY_LEFT,	Key::Left	},
-	{ KEY_RIGHT,	Key::Right	},
-	{ KEY_UP,	Key::Up		},
-	{ KEY_DOWN,	Key::Down	},
-	{ KEY_HOME,	Key::Home	},
-	{ KEY_END,	Key::End	},
-	{ KEY_IC,	Key::Insert	},
-	{ KEY_DC,	Key::Delete	},
-	{ KEY_BACKSPACE,Key::Backspace	},
-	{ KEY_BKSPACE,	Key::Backspace	}
-    };
-    for (auto& km : c_keymap)
-	if (km.ck == k)
-	    return km.ek;
-    return Event::key_t(k);
-}
+//}}}-------------------------------------------------------------------
+//{{{ Terminal input processing
 
 void TerminalScreen::TimerR_timer (PTimerR::fd_t)
 {
-    if (_windows.empty())
-	return;
-    auto wfocus = _windows.back();
-    assert (wfocus);
-    if (!*wfocus)
-	return;
-    for (int k; 0 < (k = wfocus->getch());) {
-	if (k == KEY_RESIZE) {
-	    _scrinfo.set_size (COLS, LINES);
-	    for (auto w : _windows)
-		w->Screen_get_info();
-	} else
-	    wfocus->on_event (Event (Event::Type::KeyDown, event_key_from_curses(k)));
+    while (!_tout.empty()) {
+	auto bw = write (STDOUT_FILENO, _tout.data(), _tout.size());
+	if (bw == 0)
+	    return error ("terminal closed");
+	else if (bw < 0) {
+	    if (errno == EINTR)
+		continue;
+	    if (errno == EAGAIN) {
+		_ptermo.wait_write (STDOUT_FILENO);
+		break;
+	    }
+	    return error_libc ("write");
+	}
+	_tout.erase (_tout.begin(), bw);
     }
-    if (!wfocus->flag (TerminalScreenWindow::f_Unused) && !isendwin())
-	_uiinput.wait_read (STDIN_FILENO);
+    for (;;) {
+	parse_keycodes (false);
+	if (_tin.capacity() <= _tin.size())
+	    break;
+	auto br = read (STDIN_FILENO, _tin.end(), _tin.capacity()-_tin.size());
+	if (br == 0) {
+	    if (!_windows.empty())
+		_windows.back()->on_event (Event (Event::Type::Close, 0));
+	    break;
+	} else if (br < 0) {
+	    if (errno == EINTR)
+		continue;
+	    if (errno == EAGAIN) {
+		parse_keycodes();
+		_ptermo.wait_read (STDIN_FILENO);
+		break;
+	    }
+	    return error_libc ("read");
+	}
+	_tin.shrink (_tin.size()+br);
+    }
+}
+
+struct EscSeq { char s[4]; uint16_t k; };
+
+static const EscSeq* match_escape_sequence (const char* s, size_t n)
+{
+    //{{{2 c_seq - key escape sequence mapping
+    static const EscSeq c_seq[] = {
+	{ "O2P",		Key::Print	},
+	{ "O2Q",		Key::Break	},
+	{ "OA",			Key::Up		},
+	{ "OB",			Key::Down	},
+	{ "OC",			Key::Right	},
+	{ "OD",			Key::Left	},
+	{ "OE",			Key::Center	},
+	{ "OF",			Key::End	},
+	{ "OH",			Key::Home	},
+	{ "OP",			Key::F1		},
+	{ "OQ",			Key::F2		},
+	{ "OR",			Key::F3		},
+	{ "OS",			Key::F4		},
+	{ "Ou",			Key::Center	},
+	{ {'[','1','1','~'},	Key::F1		},
+	{ {'[','1','2','~'},	Key::F2		},
+	{ {'[','1','3','~'},	Key::F3		},
+	{ {'[','1','4','~'},	Key::F4		},
+	{ {'[','1','5','~'},	Key::F5		},
+	{ {'[','1','7','~'},	Key::F6		},
+	{ {'[','1','8','~'},	Key::F7		},
+	{ {'[','1','9','~'},	Key::F8		},
+	{ "[1~",		Key::Home	},
+	{ {'[','2','0','~'},	Key::F9		},
+	{ {'[','2','1','~'},	Key::F10	},
+	{ {'[','2','3','~'},	Key::F11	},
+	{ {'[','2','4','~'},	Key::F12	},
+	{ "[2~",		Key::Insert	},
+	{ "[3~",		Key::Delete	},
+	{ "[4~",		Key::End	},
+	{ "[5~",		Key::PageUp	},
+	{ "[6~",		Key::PageDown	},
+	{ "[7~",		Key::Home	},
+	{ "[8~",		Key::End	},
+	{ "[<",			Key::Wheel	},
+	{ "[A",			Key::Up		},
+	{ "[B",			Key::Down	},
+	{ "[C",			Key::Right	},
+	{ "[D",			Key::Left	},
+	{ "[E",			Key::Center	},
+	{ "[F",			Key::End	},
+	{ "[G",			Key::Center	},
+	{ "[H",			Key::Home	},
+	{ "[M",			Key::Wheel	},
+	{ "[P",			Key::Break	},
+	{ "[[A",		Key::F1		},
+	{ "[[B",		Key::F2		},
+	{ "[[C",		Key::F3		},
+	{ "[[D",		Key::F4		},
+	{ "[[E",		Key::F5		}
+    };
+    //}}}2
+    const EscSeq* match = nullptr;
+    for (auto& sm : c_seq) {
+	match = &sm;
+	for (auto i = 0u; i < size(sm.s) && sm.s[i]; ++i) {
+	    if (i >= n || sm.s[i] != s[i]) {
+		match = nullptr;
+		break;
+	    }
+	}
+	if (match)
+	    break;
+    }
+    return match;
+}
+
+void TerminalScreen::parse_keycodes (bool isfinal)
+{
+    if (_windows.empty() || !_windows.back()->is_mapped())
+	return;
+    istream is (_tin.data(), _tin.size());
+    while (is.remaining()) {
+	auto ic = is.ptr<char>();
+	Event::key_t c = *ic;
+	if (c == 8)
+	    c = Key::Backspace;
+	else if (c == '\t')
+	    c = Key::Tab;
+	else if (c == '\n')
+	    c = Key::Enter;
+	else if (c < 27)	// 1-26 is ctrl+a - ctrl+z with exceptions of backspace, tab, and newline above
+	    c = KMod::Ctrl+('a'-1+c);
+	else if (c == 27) {	// Esc key or a compound key sequence
+	    auto ematch = match_escape_sequence (ic+1, is.end()-(ic+1));
+	    if (ematch) {	// compound sequence
+		c = ematch->k;
+		is.skip (4-(ematch->s[3]?0:(ematch->s[2]?1:2))); // sequences are 2-4 bytes
+	    } else if (!isfinal)// assume a sequence is always read whole
+		break;		// possible incomplete sequence, try again later
+	    else if (ic+1 < is.end() && *(ic+1) >= ' ' && *(ic+1) <= '~') {
+		// Alt+key for printable characters is Esc+key
+		c = KMod::Alt+*(ic+1);
+		is.skip(1);
+	    } else		// fallback to plain Esc
+		c = Key::Escape;
+	} else if (c == 28)
+	    c = Key::Print;
+	else if (c == 127)
+	    c = Key::Backspace;
+	is.skip (1);
+	_windows.back()->on_event (Event (Event::Type::KeyDown, c));
+    }
+    _tin.erase (_tin.begin(), is.begin());
 }
 
 //}}}-------------------------------------------------------------------
@@ -188,10 +524,12 @@ void TerminalScreen::TimerR_timer (PTimerR::fd_t)
 
 TerminalScreenWindow::TerminalScreenWindow (const Msg::Link& l)
 : Msger (l)
+,_surface()
+,_viewport()
+,_pos()
+,_caret (-1,-1)
+,_attr (Surface::default_cell())
 ,_reply (l)
-,_w()
-,_viewport{}
-,_caret{-1,-1}
 ,_winfo()
 {
     TerminalScreen::instance().register_window (this);
@@ -199,8 +537,6 @@ TerminalScreenWindow::TerminalScreenWindow (const Msg::Link& l)
 
 TerminalScreenWindow::~TerminalScreenWindow (void)
 {
-    if (auto w = exchange(_w,nullptr); w)
-	delwin(w);
     TerminalScreen::instance().unregister_window (this);
 }
 
@@ -210,211 +546,307 @@ bool TerminalScreenWindow::dispatch (Msg& msg)
 	|| Msger::dispatch (msg);
 }
 
-void TerminalScreenWindow::on_event (const Event& ev)
-{
-    _reply.event (ev);
-}
-
-void TerminalScreenWindow::Screen_close (void)
-{
-    set_unused (true);
-}
-
 //}}}-------------------------------------------------------------------
 //{{{ Sizing and layout
-
-void TerminalScreenWindow::Screen_get_info (void)
-{
-    _reply.screen_info (screen_info());
-}
 
 void TerminalScreenWindow::Screen_open (const WindowInfo& wi)
 {
     _winfo = wi;
-    TerminalScreen::instance().create_window (_winfo, _w);
-    _reply.restate (_winfo);
+    on_resize (clip_to_screen());
+}
+
+void TerminalScreenWindow::reset (void)
+{
+    _viewport = interior_area();
+    _attr = Surface::default_cell();
+    _pos = Point();
+    _caret = Point(-1,-1);
+    _surface.clear();
+}
+
+void TerminalScreenWindow::on_resize (const Rect& warea)
+{
+    _winfo.set_area (warea);
+    _surface.resize (_winfo.area().size());
+    _reply.resize (_winfo);
+    reset();
+}
+
+void TerminalScreenWindow::on_new_screen_info (void)
+{
+    if (auto newarea = clip_to_screen(); newarea != area())
+	on_resize (newarea);
+    _reply.screen_info (screen_info());
 }
 
 //}}}-------------------------------------------------------------------
 //{{{ Drawing operations
 
-void TerminalScreenWindow::Screen_draw (const cmemlink& dl)
+void TerminalScreenWindow::Draw_reset (void)
 {
-    clear();
-    _caret.x = -1;
-    Drawlist::dispatch (this, dl);
-    if (_caret.x >= 0) {
-	if (!flag (f_CaretOn))
-	    set_caret (true);
-	wmove (_w, _caret.y, _caret.x);
-    } else if (flag (f_CaretOn))
-	set_caret (false);
-    refresh();
+    reset();
+    TerminalScreen::instance().reset();
 }
 
-void TerminalScreenWindow::draw_color (IColor c)
+void TerminalScreenWindow::Draw_enable (uint8_t f)
 {
-    if (c == IColor::DefaultBold)
-	wattron (_w, A_BOLD);
-    else if (c == IColor::DefaultBackground)
-	wattron (_w, A_REVERSE);
-    else
-	wattroff (_w, A_BOLD| A_REVERSE);
+    if (f < Drawlist::Feature::Last)
+	set_bit (_attr.attr, f);
 }
 
-void TerminalScreenWindow::fill_color (IColor c)
+void TerminalScreenWindow::Draw_disable (uint8_t f)
 {
-    if (c == IColor::DefaultBold)
-	wattron (_w, A_BLINK);
-    else if (c == IColor::DefaultForeground)
-	wattron (_w, A_REVERSE);
-    else
-	wattroff (_w, A_BLINK| A_REVERSE);
+    if (f < Drawlist::Feature::Last)
+	set_bit (_attr.attr, f, false);
 }
 
-unsigned TerminalScreenWindow::clip_dx (unsigned dx) const
-    { return min (dx, viewport().x + viewport().w - getcurx(_w)); }
-unsigned TerminalScreenWindow::clip_dy (unsigned dx) const
-    { return min (dx, viewport().y + viewport().h - getcury(_w)); }
-
-void TerminalScreenWindow::move_to (coord_t x, coord_t y)
-    { wmove (_w, viewport().y+y, viewport().x+x); }
-void TerminalScreenWindow::move_by (coord_t dx, coord_t dy)
-    { wmove (_w, dy+getcury(_w), dx+getcurx(_w)); }
-void TerminalScreenWindow::addch (wchar_t c)
-    { waddch (_w, c); }
-void TerminalScreenWindow::noutrefresh (void)
-    { wnoutrefresh (_w); }
-void TerminalScreenWindow::refresh (void)
-    { wrefresh (_w); }
-int TerminalScreenWindow::getch (void)
-    { return wgetch (_w); }
-void TerminalScreenWindow::set_caret (bool on)
-    { leaveok (_w, !on); curs_set (on); set_flag (f_CaretOn, on); }
-void TerminalScreenWindow::hline (unsigned n, wchar_t c)
-    { whline (_w, c, clip_dx(n)); }
-void TerminalScreenWindow::vline (unsigned n, wchar_t c)
-    { wvline (_w, c, clip_dy(n)); }
-
-void TerminalScreenWindow::box (dim_t w, dim_t h)
+void TerminalScreenWindow::Draw_move_to (const Point& p)
+    { _pos = _viewport.pos() + p; }
+void TerminalScreenWindow::Draw_move_by (const Offset& o)
+    { _pos += o; }
+void TerminalScreenWindow::Draw_viewport (const Rect& vp)
 {
-    auto tlx = getcurx(_w);
-    auto tly = getcury(_w);
-    hline (w, 0);
-    vline (h, 0);
-    addch (ACS_ULCORNER);
-    wmove (_w, tly, tlx+w-1);
-    vline (h, 0);
-    addch (ACS_URCORNER);
-    wmove (_w, tly+h-1, tlx);
-    hline (w, 0);
-    addch (ACS_LLCORNER);
-    wmove (_w, tly+h-1, tlx+w-1);
-    addch (ACS_LRCORNER);
-    wmove (_w, tly, tlx);
+    // Viewport must always be inside the window rect
+    _viewport = interior_area().clip (vp);
+    _pos = _viewport.pos();
 }
 
-void TerminalScreenWindow::bar (dim_t w, dim_t h)
+icolor_t TerminalScreenWindow::clip_color (icolor_t c, Surface::Attr::EAttr fattr)
 {
-    auto tlx = getcurx(_w), tly = getcury(_w);
-    for (dim_t y = 0; y < h; ++y) {
-	wmove (_w, tly+y, tlx);
-	hline (w, ' ');
+    if (screen_info().depth() < 3)
+	return IColor::Default;
+    if (screen_info().depth() < 4)
+	set_bit (_attr.attr, fattr, c >= 8);
+    if (c != IColor::Default)
+	c &= (1u<<screen_info().depth())-1;
+    return c;
+}
+
+void TerminalScreenWindow::Draw_draw_color (icolor_t c)
+    { _attr.fg = clip_color (c, Surface::Attr::Bold); }
+void TerminalScreenWindow::Draw_fill_color (icolor_t c)
+    { _attr.bg = clip_color (c, Surface::Attr::Blink); }
+
+auto TerminalScreenWindow::cell_from_char (wchar_t c) const -> Cell
+{
+    Cell cc (_attr);
+    static const char c_acs_sym[] = "lmkjtuwvqxnoprs,+-.0hazy|g~f`i{}";
+    if (unsigned acsi = c - wchar_t(Drawlist::GChar::ULCorner); acsi < size(c_acs_sym)) {
+	c = c_acs_sym [acsi];
+	set_bit (cc.attr, Surface::Attr::Altcharset);
     }
-    wmove (_w, tly, tlx);
+    cc.c = c;
+    return cc;
 }
 
-void TerminalScreenWindow::erase (void)
+void TerminalScreenWindow::Draw_char (wchar_t c, HAlign, VAlign)
 {
-    draw_color (IColor::DefaultForeground);
-    fill_color (IColor::DefaultBackground);
-    move_to (viewport().pos());
-    bar (viewport().w, viewport().h);
+    if (_viewport.contains (_pos))
+	*_surface.iat(_pos) = cell_from_char (c);
+    ++_pos.x;
 }
 
-void TerminalScreenWindow::clear (void)
+void TerminalScreenWindow::Draw_char_bar (const Size& wh, wchar_t c)
 {
-    _viewport = area();
-    werase (_w);
-}
-
-void TerminalScreenWindow::panel (const Size& wh, PanelType t)
-{
-    if (t == PanelType::Raised || t == PanelType::Button) {
-	bar (wh.w, wh.h);
-	addch ('[');
-	move_by (wh.w-2, 0);
-	addch (']');
-	move_by (-wh.w, 0);
-    } else if (t == PanelType::PressedButton) {
-	bar (wh.w, wh.h);
-	addch ('>');
-	move_by (wh.w-2, 0);
-	addch ('<');
-	move_by (-wh.w, 0);
-    } else if (t == PanelType::Sunken || t == PanelType::Editbox) {
-	wattron (_w, A_UNDERLINE);
-	bar (wh.w, wh.h);
-	wattroff (_w, A_UNDERLINE);
-    } else if (t == PanelType::Selection || t == PanelType::StatusBar) {
-	wattron (_w, A_REVERSE);
-	bar (wh.w, wh.h);
-	wattroff (_w, A_REVERSE);
+    auto orect = interior_area().clip (Rect (_pos, wh));
+    if (orect.empty())
+	return;
+    auto o = _surface.iat (orect.pos());
+    auto rowskip = _surface.size().w - orect.w;
+    auto oc = cell_from_char (c);
+    for (auto r = orect.h; r--; o += rowskip) {
+	for (auto x = orect.w; x--; ++o) {
+	    o->c = oc.c;
+	    if (oc.c == ' ') {
+		o->bg = oc.bg;
+		o->attr = oc.attr;
+	    } else {
+		o->fg = oc.fg;
+		o->attr |= oc.attr;
+	    }
+	}
     }
 }
 
 void TerminalScreenWindow::Draw_edit_text (const string& t, uint32_t cp, HAlign ha, VAlign va)
 {
-    _caret.x = getcurx(_w)+cp;
-    _caret.y = getcury(_w);
-    Draw_text (t, ha, va);
-}
+    auto nlines = 1u + count (t,'\n');
+    if (va == VAlign::Center)
+	_pos.y -= nlines/2;
+    else if (va == VAlign::Bottom)
+	_pos.y -= nlines;
 
-//}}}-------------------------------------------------------------------
-//{{{ Drawlist dispatch
+    auto lsz = 0u;
+    auto tx = _pos.x, ly = _pos.y;
 
-void TerminalScreenWindow::Draw_line (const Offset& o)
-{
-    if (o.dy)
-	vline (o.dy, ACS_VLINE);
-    else
-	hline (o.dx, ACS_HLINE);
-}
+    // Caret position iterator
+    auto cpi = t.begin();
+    if (cp <= t.size()) {
+	cpi += cp;
+	// Special case for empty string that draws nothing
+	if (t.empty())
+	    _caret = _pos;
+    }
 
-void TerminalScreenWindow::Draw_text (const string& t, HAlign ha, VAlign)
-{
-    auto tx = getcurx(_w);
-    auto ty = getcury(_w);
-    for (auto l = t.begin(), tend = t.end(); l < tend; ++ty) {
+    for (auto l = t.begin(), tend = t.end(); l < tend; ++ly) {
 	auto lend = t.find ('\n', l);
 	if (!lend)
 	    lend = tend;
-	auto n = lend-l;
+	lsz = lend-l;
 
-	auto loff = 0;
-	if (ha == HAlign::Center)
-	    loff = divide_ceil(n,2);
-	else if (ha == HAlign::Right)
-	    loff = n;
+	// Clip lines above and below the viewport
+	if (dim_t(ly-_viewport.y) < _viewport.h) {
+	    auto lx = tx;
+	    if (ha == HAlign::Center)
+		lx -= lsz/2;
+	    else if (ha == HAlign::Right)
+		lx -= lsz;
 
-	wmove (_w, ty, tx-loff);
-	auto attrs = winch (_w);
-	attrs &= A_ATTRIBUTES| A_COLOR;
-	wattron (_w, attrs);
-	waddnstr (_w, l, clip_dx(n));
-	wattroff (_w, attrs);
+	    // Clip to left edge of viewport
+	    auto vlx = lx - _viewport.x;
+	    if (vlx < 0) {
+		l -= vlx;
+		lx -= vlx;
+	    }
 
-	// End position for Center and Right alignments is the left edge
-	// taking advantage of text measurement needed to draw the text.
-	if (ha != HAlign::Left)
-	    wmove (_w, ty, tx-loff);
+	    // l is now the first visible char, line invisible if l is past lend
+	    if (l < lend) {
+		// Clip against the right side of the viewport
+		auto nvis = min (lend-l, (_viewport.x + _viewport.w) - lx);
+		auto vislend = l + nvis;
 
-	l = lend+1;
+		// Set the caret position if it is on this line and visible
+		if (vislend >= cpi && l <= cpi) {
+		    _caret.x = lx + (cpi-l);
+		    _caret.y = ly;
+		}
+
+		// Draw the actual characters
+		for (auto o = _surface.iat (lx, ly); l < vislend; ++o, ++l) {
+		    auto cc = cell_from_char (*l);
+		    o->c = cc.c;
+		    o->fg = cc.fg;
+		    o->attr |= cc.attr;
+		}
+	    }
+	}
+	l = lend+1;	// go to next line
     }
+    // Set end _pos.
+    // End position for Center and Right alignments is the left edge
+    // taking advantage of text measurement needed to draw the text.
+    _pos.y = ly-1;
+    _pos.x = tx;
+    if (ha == HAlign::Center)
+	_pos.x -= lsz/2;
+    else if (ha == HAlign::Right)
+	_pos.x -= lsz;
+    else
+	_pos.x += lsz;
+}
+
+void TerminalScreenWindow::Draw_text (const string& t, HAlign ha, VAlign va)
+{
+    auto oldcaret = _caret;
+    Draw_edit_text (t, 0, ha, va);
+    _caret = oldcaret;
+}
+
+void TerminalScreenWindow::Draw_clear (void)
+{
+    Draw_move_to (Point());
+    Draw_bar (_viewport.size());
+}
+
+void TerminalScreenWindow::Draw_line (const Offset& o)
+{
+    // The resulting position is at the end of the line
+    auto newpos = _pos + o;
+
+    // Horizontal and vertical lines are drawn with different chars
+    Drawlist::GChar lc;
+    // Normalize line direction and bar thickness
+    Size lsz;
+    if (!o.dx) { // vertical line
+	lsz.w = 1; // vertical lines are 1 char wide
+	lc = Drawlist::GChar::VLine;
+	// Reverse line direction if offset is negative
+	if (o.dy < 0) {
+	    _pos.y += o.dy;
+	    lsz.h = -o.dy;
+	} else
+	    lsz.h = o.dy;
+    } else { // horizontal line
+	lsz.h = 1;
+	lc = Drawlist::GChar::HLine;
+	if (o.dx < 0) {
+	    _pos.x += o.dx;
+	    lsz.w = -o.dx;
+	} else
+	    lsz.w = o.dx;
+    }
+    Draw_char_bar (lsz, wchar_t(lc));
+    _pos = newpos;
+}
+
+void TerminalScreenWindow::Draw_box (const Size& wh)
+{
+    Offset sides[] = {
+	{coord_t(wh.w-1),0},
+	{0,coord_t(wh.h-2)},
+	{coord_t(-(wh.w-1)),0},
+	{0,coord_t(-(wh.h-1))}
+    };
+    static constexpr const Drawlist::GChar cornchar[] = {
+	Drawlist::GChar::URCorner,
+	Drawlist::GChar::LRCorner,
+	Drawlist::GChar::LLCorner,
+	Drawlist::GChar::ULCorner
+    };
+    for (auto i = 0u; i < size(sides); --_pos.x,_pos.y+=!i++) {
+	Draw_line (sides[i]);
+	Draw_char (wchar_t(cornchar[i]));
+    }
+}
+
+void TerminalScreenWindow::Draw_bar (const Size& wh)
+    { Draw_char_bar (wh, ' '); }
+
+void TerminalScreenWindow::Draw_panel (const Size& wh, PanelType t)
+{
+    auto oldpos = _pos; // panel preserves pos
+    if (t == PanelType::Raised || t == PanelType::Button) {
+	Draw_bar (wh);
+	Draw_char ('[');
+	Draw_move_by (Offset (wh.w-2, 0));
+	Draw_char (']');
+    } else if (t == PanelType::PressedButton) {
+	Draw_bar (wh);
+	Draw_char ('>');
+	Draw_move_by (Offset (wh.w-2, 0));
+	Draw_char ('<');
+    } else if (t == PanelType::Sunken || t == PanelType::Editbox) {
+	auto oldattr = _attr.attr;
+	set_bit (_attr.attr, Surface::Attr::Underline);
+	Draw_bar (wh);
+	_attr.attr = oldattr;
+    } else if (t == PanelType::Selection || t == PanelType::StatusBar) {
+	auto oldattr = _attr.attr;
+	set_bit (_attr.attr, Surface::Attr::Reverse);
+	Draw_bar (wh);
+	_attr.attr = oldattr;
+    }
+    _pos = oldpos;
+}
+
+void TerminalScreenWindow::Screen_draw (const cmemlink& dl)
+{
+    reset();
+    Drawlist::dispatch (this, dl);
+    TerminalScreen::instance().draw_window (this);
 }
 
 //}}}-------------------------------------------------------------------
 
 } // namespace ui
 } // namespace cwiclo
-#endif // __has_include(<curses.h>)

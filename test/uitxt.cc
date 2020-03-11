@@ -15,7 +15,7 @@ public:
 private:
     DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
     void on_key (key_t k) override;
-    void on_restate (void) override;
+    void on_resize (void) override;
 private:
     enum : widgetid_t {
 	wid_ScreenHole = wid_First,
@@ -55,10 +55,10 @@ UITWindow::UITWindow (const Msg::Link& l)
     set_widget_text (wid_Status, "Status line text\0Indicators");
 }
 
-void UITWindow::on_restate (void)
+void UITWindow::on_resize (void)
 {
     set_widget_size_hints (wid_ScreenHole, 0, area().h-11);
-    Window::on_restate();
+    Window::on_resize();
 }
 
 DEFINE_WIDGET_WRITE_DRAWLIST (UITWindow, Drawlist, dlw)
@@ -70,7 +70,7 @@ DEFINE_WIDGET_WRITE_DRAWLIST (UITWindow, Drawlist, dlw)
 void UITWindow::on_key (key_t k)
 {
     if (k == 'q' || k == '/' || k == Key::Enter || k == Key::Escape)
-	set_unused();
+	close();
     else
 	Window::on_key (k);
 }
@@ -91,5 +91,7 @@ BEGIN_CWICLO_APP (TestApp)
     REGISTER_MSGER (PTimer, App::Timer)
     REGISTER_MSGER (PScreen, TerminalScreenWindow)
 END_CWICLO_APP
+
+SET_WIDGET_FACTORY (Widget::default_factory)
 
 //}}}-------------------------------------------------------------------

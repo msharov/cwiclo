@@ -13,16 +13,21 @@ class Drawlist {
 protected:
     //{{{ Cmd enum -----------------------------------------------------
     enum class Cmd : uint8_t {
+	Reset,
+	Enable,
+	Disable,
 	Clear,
 	MoveTo,
 	MoveBy,
 	Viewport,
 	DrawColor,
 	FillColor,
+	Char,
 	Text,
 	Line,
 	Box,
 	Bar,
+	CharBar,
 	Panel,
 	EditText,
 	Last
@@ -34,6 +39,31 @@ protected:
     };
     //}}}---------------------------------------------------------------
 public:
+    //{{{ GChar --------------------------------------------------------
+    // Graphical characters for line drawing on text terminals.
+    enum class GChar : uint16_t {
+	ULCorner = 0xfdd0, LLCorner, URCorner, LRCorner,
+	LeftT, RightT, TopT, BottomT,
+	HLine, VLine, Plus, HLine1,
+	HLine3, HLine7, HLine9, LeftArrow,
+	RightArrow, UpArrow, DownArrow, Block,
+	Board, Checkerboard, GreaterEqual, LessEqual,
+	NotEqual, PlusMinus, Bullet, Degree,
+	Diamond, Lantern, Pi, Sterling
+    };
+    //}}}---------------------------------------------------------------
+    //{{{ Features for Cmd::Enable/Disable
+    struct Feature {
+	enum : uint8_t {
+	    BoldText,
+	    ItalicText,
+	    UnderlineText,
+	    BlinkText,
+	    ReverseColors,
+	    Last
+	};
+    };
+    //}}}---------------------------------------------------------------
     //{{{ Writer
     template <typename Stm>
     class Writer {
@@ -76,6 +106,9 @@ public:
 	inline constexpr void	line (const Offset& d)		{ write (Cmd::Line, 0, d); }
 	inline constexpr void	line (coord_t dx, coord_t dy)	{ line (Offset {dx,dy}); }
     public:
+	inline constexpr void	reset (void)			{ write (Cmd::Reset); }
+	inline constexpr void	enable (uint8_t feature)	{ write (Cmd::Enable, feature); }
+	inline constexpr void	disable (uint8_t feature)	{ write (Cmd::Disable, feature); }
 	inline constexpr void	clear (void)			{ write (Cmd::Clear); }
 	inline constexpr void	move_to (const Point& pt)	{ write (Cmd::MoveTo, 0, pt); }
 	inline constexpr void	move_to (coord_t x, coord_t y)	{ move_to (Point {x,y}); }
@@ -83,9 +116,11 @@ public:
 	inline constexpr void	move_by (coord_t dx, coord_t dy){ move_by (Offset {dx,dy}); }
 	inline constexpr void	viewport (const Rect& r)	{ write (Cmd::Viewport, 0, r); }
 	inline constexpr void	draw_color (icolor_t c)		{ write (Cmd::DrawColor, c); }
-	inline constexpr void	draw_color (IColor c)		{ draw_color (icolor_t(c)); }
 	inline constexpr void	fill_color (icolor_t c)		{ write (Cmd::FillColor, c); }
-	inline constexpr void	fill_color (IColor c)		{ fill_color (icolor_t(c)); }
+	inline constexpr void	draw_char (wchar_t c, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
+				    { write (Cmd::Char, pack_alignment_byte (ha,va), uint32_t(c)); }
+	inline constexpr void	draw_char (GChar c, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
+				    { draw_char (wchar_t(c), ha, va); }
 	inline constexpr void	text (const string& s, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
 				    { write (Cmd::Text, pack_alignment_byte (ha,va), s); }
 	inline constexpr void	text (const string_view& s, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
@@ -114,6 +149,9 @@ public:
 	inline constexpr void	bar (const Size& wh)		{ write (Cmd::Bar, 0, wh); }
 	inline constexpr void	bar (dim_t w, dim_t h)		{ bar (Size(w,h)); }
 	inline constexpr void	bar (const Rect& r)		{ move_to (r.pos()); bar (r.size()); }
+	inline constexpr void	char_bar (const Size& wh, wchar_t c)	{ write (Cmd::CharBar, 0, wh, uint32_t(c)); }
+	inline constexpr void	char_bar (dim_t w, dim_t h, wchar_t c)	{ char_bar (Size(w,h), c); }
+	inline constexpr void	char_bar (const Rect& r, wchar_t c)	{ move_to (r.pos()); char_bar (r.size(), c); }
 	inline constexpr void	panel (const Size& wh, PanelType t = PanelType::Raised)	{ write (Cmd::Panel, uint8_t(t), wh); }
 	inline constexpr void	panel (dim_t w, dim_t h, PanelType t=PanelType::Raised)	{ panel (Size(w,h), t); }
 	inline constexpr void	panel (const Rect& r, PanelType t = PanelType::Raised)	{ move_to (r.pos()); panel (r.size(), t); }
@@ -140,16 +178,21 @@ protected:
     }
     inline static auto validate_cmd (uint8_t cmd, istream args) {
 	static constexpr const char c_sigs[] =
-	    ""				// Clear
+	    ""				// Reset
+	    "\0"			// Enable
+	    "\0"			// Disable
+	    "\0"			// Clear
 	    "\0" SIGNATURE_ui_Point	// MoveTo
 	    "\0" SIGNATURE_ui_Offset	// MoveBy
 	    "\0" SIGNATURE_ui_Rect	// Viewport
 	    "\0" "u"			// DrawColor
 	    "\0" "u"			// FillColor
+	    "\0" "u"			// Char
 	    "\0" "s"			// Text
 	    "\0" SIGNATURE_ui_Offset	// Line
 	    "\0" SIGNATURE_ui_Size	// Box
 	    "\0" SIGNATURE_ui_Size	// Bar
+	    "\0" SIGNATURE_ui_Size "u"	// CharBar
 	    "\0" SIGNATURE_ui_Size	// Panel
 	    "\0" "us"			// EditText
 	;
@@ -185,19 +228,25 @@ protected:
     inline static constexpr void dispatch_cmd (Impl* impl, const CmdHeader& h, istream argstm) {
 	assert (argstm.remaining() == validate_cmd (h.cmd, argstm) && "validate the drawlist before dispatching");
 	switch (Cmd(h.cmd)) {
+	    case Cmd::Reset:	impl->Draw_reset(); break;
+	    case Cmd::Enable:	impl->Draw_enable (h.a1); break;
+	    case Cmd::Disable:	impl->Draw_disable (h.a1); break;
 	    case Cmd::Clear:	impl->Draw_clear(); break;
 	    case Cmd::MoveTo:	impl->Draw_move_to (argstm.read<Point>()); break;
 	    case Cmd::MoveBy:	impl->Draw_move_by (argstm.read<Offset>()); break;
 	    case Cmd::Viewport:	impl->Draw_viewport (argstm.read<Rect>()); break;
 	    case Cmd::DrawColor: impl->Draw_draw_color (h.a1); break;
 	    case Cmd::FillColor: impl->Draw_fill_color (h.a1); break;
+	    case Cmd::Char:	impl->Draw_char (argstm.read<uint32_t>(), HAlign(h.a1&3), VAlign(h.a1>>2)); break;
 	    case Cmd::Text:	impl->Draw_text (argstm.read<string_view>(), HAlign(h.a1&3), VAlign(h.a1>>2)); break;
 	    case Cmd::Line:	impl->Draw_line (argstm.read<Offset>()); break;
 	    case Cmd::Box:	impl->Draw_box (argstm.read<Size>()); break;
 	    case Cmd::Bar:	impl->Draw_bar (argstm.read<Size>()); break;
+	    case Cmd::CharBar:	{ decltype(auto) sz = argstm.read<Size>();
+				  impl->Draw_char_bar (move(sz), argstm.read<uint32_t>()); break; }
 	    case Cmd::Panel:	impl->Draw_panel (argstm.read<Size>(), PanelType(h.a1)); break;
 	    case Cmd::EditText: { auto cp = argstm.read<uint32_t>();
-				impl->Draw_edit_text (argstm.read<string_view>(), cp, HAlign(h.a1&3), VAlign(h.a1>>2));
+				  impl->Draw_edit_text (argstm.read<string_view>(), cp, HAlign(h.a1&3), VAlign(h.a1>>2));
 				break; }
 	    default:		break;
 	};

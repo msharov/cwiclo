@@ -19,6 +19,7 @@ Widget::Widget (Window* w, const Layout& lay)
 ,_size_hints()
 ,_selection()
 ,_flags()
+,_nexp{}
 ,_layinfo(lay)
 {
 }
@@ -81,52 +82,47 @@ auto Widget::measure_text (const string_view& text) -> Size
 Rect Widget::compute_size_hints (void)
 {
     // The returned size hints contain w/h size and x/y zero sub size counts
-    Rect rsh;
-
-    // For leaf widgets, size_hints is all that is needed
     if (_widgets.empty())
-	rsh.resize (size_hints());
-    else {
-	// Iterate over all widgets on the same level
-	for (auto& w : _widgets) {
-	    // Get the size hints and update the aggregate
-	    auto sh = w->compute_size_hints();
+	return Rect (Point(_nexp.x,_nexp.y), size_hints());
+    // Iterate over all widgets on the same level
+    Rect rsh;
+    for (auto& w : _widgets) {
+	// Get the size hints and update the aggregate
+	auto sh = w->compute_size_hints();
 
-	    // Count expandables
-	    if (sh.x || !sh.w)
-		++rsh.x;
-	    if (sh.y || !sh.h)
-		++rsh.y;
+	// Count expandables
+	if (sh.x || !sh.w)
+	    ++rsh.x;
+	if (sh.y || !sh.h)
+	    ++rsh.y;
 
-	    // Packers add up widget sizes in one direction, expand to fit them in the other
-	    if (layinfo().type() == Type::HBox) {
-		rsh.w += sh.w;
-		rsh.h = max (rsh.h, sh.h);
-	    } else {
-		rsh.w = max (rsh.w, sh.w);
-		rsh.h += sh.h;
-	    }
-	}
-	// Frames add border thickness after all the subwidgets have been collected
-	if (layinfo().type() == Type::GroupFrame) {
-	    rsh.w += 2;
-	    rsh.h += 2;
+	// Packers add up widget sizes in one direction, expand to fit them in the other
+	if (layinfo().type() == Type::HBox) {
+	    rsh.w += sh.w;
+	    rsh.h = max (rsh.h, sh.h);
+	} else {
+	    rsh.w = max (rsh.w, sh.w);
+	    rsh.h += sh.h;
 	}
     }
-    // The hints are saved in _area for the subsequent layout call
-    set_area (rsh);
+    // Frames add border thickness after all the subwidgets have been collected
+    if (layinfo().type() == Type::GroupFrame) {
+	rsh.w += 2;
+	rsh.h += 2;
+    }
+    // Save expandables count and size hints for resize
+    _nexp.x = rsh.x;
+    _nexp.y = rsh.y;
+    if (!flag (f_ForcedSizeHints))
+	_size_hints = rsh.size();
     return rsh;
 }
 
-void Widget::place (const Rect& inarea)
+void Widget::resize (const Rect& inarea)
 {
-    // inarea contains the final laid out size of this widget.
-    // Number of expandables is in current area().pos(), set in collect_size_hints.
-    //
-    auto fixed = area().size();
-    unsigned nexpsx = area().x, nexpsy = area().y;
     // With expandable size extracted, can place the widget where indicated.
-    resize (inarea);
+    set_area (inarea);
+    on_resize();
 
     // Now for the subwidgets, if there are any.
     auto subpos = inarea.pos();
@@ -140,22 +136,22 @@ void Widget::place (const Rect& inarea)
     }
     // Compute extra size for expandables
     Size extra;
-    if (fixed.w < inarea.w)
-	extra.w = inarea.w - fixed.w;
+    if (size_hints().w < inarea.w)
+	extra.w = inarea.w - size_hints().w;
     // If no expandables, pad to align
-    if (!nexpsx) {
-	// padding may be negative if inarea is smaller than fixed
-	coord_t padding = inarea.w - fixed.w;
+    if (!_nexp.x) {
+	// padding may be negative if inarea is smaller than fixed size hints
+	coord_t padding = inarea.w - size_hints().w;
 	if (layinfo().halign() == HAlign::Right)
 	    subpos.x += padding;
 	else if (layinfo().halign() == HAlign::Center)
 	    subpos.x += padding/2;
     }
     // Same for y
-    if (fixed.h < inarea.h)
-	extra.h = inarea.h - fixed.h;
-    if (!nexpsy) {
-	coord_t padding = inarea.h - fixed.h;
+    if (size_hints().h < inarea.h)
+	extra.h = inarea.h - size_hints().h;
+    if (!_nexp.y) {
+	coord_t padding = inarea.h - size_hints().h;
 	if (layinfo().halign() == HAlign::Right)
 	    subpos.y += padding;
 	else if (layinfo().halign() == HAlign::Center)
@@ -163,20 +159,20 @@ void Widget::place (const Rect& inarea)
     }
 
     // Starting with the one after f. If there are no subwidgets, return.
+    unsigned nexpx = _nexp.x, nexpy = _nexp.y;
     for (auto& w : _widgets) {
-	auto warea = w->area();
-	// See if this subwidget gets extra space
-	bool xexp = warea.x || !warea.w;
-	bool yexp = warea.y || !warea.h;
 	// Widget position already computed
-	warea.move_to (subpos);
+	auto warea = Rect (subpos, w->size_hints());
+	// See if this subwidget gets extra space
+	bool xexp = w->expandables().x || !warea.w;
+	bool yexp = w->expandables().y || !warea.h;
 
 	// Packer-type dependent area computation and subpos adjustment
 	if (layinfo().type() == Type::HBox) {
 	    auto sw = min (subsz.w, warea.w);
 	    // Add extra space, if available
-	    if (xexp && nexpsx) {
-		auto ew = extra.w/nexpsx--;	// divided equally between expandable subwidgets
+	    if (xexp && nexpx) {
+		auto ew = extra.w/nexpx--;	// divided equally between expandable subwidgets
 		extra.w -= ew;
 		sw += ew;
 	    }
@@ -187,8 +183,8 @@ void Widget::place (const Rect& inarea)
 	} else {
 	    warea.w = subsz.w;
 	    auto sh = min (subsz.h, warea.h);
-	    if (yexp && nexpsy) {
-		auto eh = extra.h/nexpsy--;
+	    if (yexp && nexpy) {
+		auto eh = extra.h/nexpy--;
 		extra.h -= eh;
 		sh += eh;
 	    }
@@ -198,14 +194,8 @@ void Widget::place (const Rect& inarea)
 	}
 
 	// Recurse to layout w.
-	w->place (warea);
+	w->resize (warea);
     }
-}
-
-void Widget::resize (int l, int c, int y, int x)
-{
-    set_area (x, y, c, l);
-    on_resize();
 }
 
 //}}}-------------------------------------------------------------------

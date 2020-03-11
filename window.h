@@ -21,7 +21,8 @@ public:
     explicit		Window (const Msg::Link& l);
     void		draw (void);
     virtual void	on_event (const Event& ev);
-    virtual void	on_modified (widgetid_t, const string_view&) {}
+    virtual void	on_modified (widgetid_t, const string_view&) { draw(); }
+    virtual void	on_selection (widgetid_t, dim_t, dim_t) { draw(); }
     virtual void	on_key (key_t key);
     void		close (void);
 
@@ -31,7 +32,7 @@ public:
 			    { on_modified (wid, t); }
     void		ScreenR_event (const Event& ev)	{ on_event (ev); }
     void		ScreenR_expose (void)		{ draw(); }
-    void		ScreenR_restate (const Info& wi);
+    void		ScreenR_resize (const Info& wi);
     void		ScreenR_screen_info (const ScreenInfo& scrinfo)
 			    { _scrinfo = scrinfo; layout(); }
 
@@ -42,7 +43,7 @@ protected:
     bool		dispatch (Msg& msg) override;
     virtual Rect	compute_size_hints (void) const;
     void		layout (void);
-    virtual void	on_restate (void);
+    virtual void	on_resize (void);
     void		create_widgets (const Layout* f, const Layout* l);
     template <unsigned N>
     void		create_widgets (const Layout (&l)[N])

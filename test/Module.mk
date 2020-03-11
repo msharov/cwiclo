@@ -30,7 +30,7 @@ $Otest/ipcom:	$Otest/ping.o | $Otest/ipcomsrv
 
 ${test/TESTS}: $Otest/%: $Otest/%.o ${LIBA}
 	@echo "Linking $@ ..."
-	@${CC} ${LDFLAGS} -o $@ $^ -lncurses
+	@${CC} ${LDFLAGS} -o $@ $^
 
 $Otest/ipcomsrv:	$Otest/ipcomsrv.o $Otest/ping.o ${LIBA}
 	@echo "Linking $@ ..."

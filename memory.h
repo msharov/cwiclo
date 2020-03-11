@@ -376,7 +376,7 @@ inline constexpr auto zero_fill_n (I f, size_t n)
     if constexpr (is_trivially_assignable<ovalue_type>::value)
 	{ __builtin_memset (to_address(f), 0, n*sizeof(ovalue_type)); advance(f,n); }
     else for (auto l = next(f,n); f < l; advance(f))
-	*f = 0;
+	*f = ovalue_type{};
     return f;
 }
 
@@ -385,9 +385,9 @@ inline constexpr auto zero_fill (I f, I l)
 {
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
     if constexpr (is_trivially_assignable<ovalue_type>::value)
-	return zero_fill_n (f, distance(f,l));
-    for (; f < l; advance(f))
-	*f = 0;
+	f = zero_fill_n (f, distance(f,l));
+    else for (; f < l; advance(f))
+	*f = ovalue_type{};
     return f;
 }
 

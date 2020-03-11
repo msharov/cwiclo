@@ -197,10 +197,11 @@ constexpr const T& max (const T& a, const remove_reference_t<T>& b)
 
 template <typename T>
 constexpr bool is_negative (const T& v) {
-    if constexpr (!is_signed<T>::value)
-	return false;
-    return v < 0;
+    if constexpr (is_signed<T>::value)
+	return v < 0;
+    return false;
 }
+
 template <typename T>
 constexpr auto sign (T v)
     { return (0 < v) - is_negative(v); }
@@ -212,7 +213,7 @@ template <typename T>
     { return is_negative<T>(f) ? -t : t; }
 
 //}}}----------------------------------------------------------------------
-//{{{ Align
+//{{{ ceilg and other alignment functionality
 
 template <typename T>
 [[nodiscard]] constexpr T floorg (T n, remove_reference_t<T> g)
@@ -220,9 +221,6 @@ template <typename T>
 template <typename T>
 [[nodiscard]] constexpr auto ceilg (T n, remove_reference_t<T> g)
     { return floorg<T>(n + copy_sign<T>(n, g-1), g); }
-template <typename T>
-constexpr bool divisible_by (T n, remove_reference_t<T> g)
-    { return !(n % g); }
 template <typename T>
 [[nodiscard]] constexpr auto roundg (T n, remove_reference_t<T> g)
     { return floorg<T>(n + copy_sign<T>(n, g/2), g); }
@@ -240,9 +238,6 @@ template <typename T>
 template <typename T>
 [[nodiscard]] constexpr auto ceilg (const T* p, remove_reference_t<T> g)
     { return floorg<T>(p + g-1, g); }
-template <typename T>
-constexpr bool divisible_by (const T* p, remove_reference_t<T> g)
-    { return !(pointer_value(p) % g); }
 
 template <typename T>
 [[nodiscard]] constexpr auto assume_aligned (T* p, size_t g, size_t o = 0)
@@ -257,6 +252,14 @@ template <typename T>
 template <typename T>
 [[nodiscard]] constexpr T divide_round (T n1, remove_reference_t<T> n2)
     { return (n1 + copy_sign<T>(n1,n2/2)) / n2; }
+
+template <typename T>
+constexpr bool divisible_by (T n, remove_reference_t<T> g)
+    { return !(n % g); }
+template <typename T>
+constexpr bool divisible_by (const T* p, remove_reference_t<T> g)
+    { return !(pointer_value(p) % g); }
+
 template <typename T>
 [[nodiscard]] constexpr make_unsigned_t<T> square (T n)
     { return n*n; }

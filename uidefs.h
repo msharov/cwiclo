@@ -26,6 +26,7 @@ public:
     constexpr		Offset (void)			: dx(0),dy(0) {}
     constexpr		Offset (coord_t nx, coord_t ny)	: dx(nx),dy(ny) {}
     constexpr bool	operator== (const Offset& o) const { return dx == o.dx && dy == o.dy; }
+    constexpr bool	operator!= (const Offset& o) const { return !operator==(o); }
     constexpr auto	operator+ (const Offset& o) const { return Offset (dx+o.dx, dy+o.dy); }
     constexpr auto	operator- (const Offset& o) const { return Offset (dx-o.dx, dy-o.dy); }
     constexpr auto&	operator+= (const Offset& o)	{ dx += o.dx; dy += o.dy; return *this; }
@@ -42,10 +43,12 @@ public:
     constexpr		Size (void)			: w(0),h(0) {}
     constexpr		Size (coord_t nw, coord_t nh)	: w(nw),h(nh) {}
     constexpr bool	operator== (const Size& o) const{ return w == o.w && h == o.h; }
+    constexpr bool	operator!= (const Size& o) const{ return !operator==(o); }
     constexpr auto	operator+ (const Size& o) const	{ return Size (w+o.w, h+o.h); }
     constexpr auto	operator- (const Size& o) const	{ return Size (w-o.w, h-o.h); }
     constexpr auto&	operator+= (const Size& o)	{ w += o.w; h += o.h; return *this; }
     constexpr auto&	operator-= (const Size& o)	{ w -= o.w; h -= o.h; return *this; }
+    constexpr auto	as_offset (void) const		{ return Offset(w,h); }
 };
 #define SIGNATURE_ui_Size	"(qq)"
 
@@ -59,15 +62,20 @@ public:
     constexpr		Point (void)			: x(0),y(0) {}
     constexpr		Point (coord_t nx, coord_t ny)	: x(nx),y(ny) {}
     constexpr bool	operator== (const Point& p) const { return x == p.x && y == p.y; }
+    constexpr bool	operator!= (const Point& p) const { return !operator==(p); }
     constexpr auto	operator+ (const Offset& o) const { return Point (x+o.dx, y+o.dy); }
     constexpr auto	operator+ (const Size& o) const   { return Point (x+o.w, y+o.h); }
+    constexpr auto	operator+ (const Point& o) const  { return Point (x+o.x, y+o.y); }
     constexpr auto	operator- (const Offset& o) const { return Point (x-o.dx, y-o.dy); }
     constexpr auto	operator- (const Size& o) const   { return Point (x-o.w, y-o.h); }
     constexpr auto	operator- (const Point& p) const  { return Offset (x-p.x, y-p.y); }
     constexpr auto&	operator+= (const Offset& o)	{ x += o.dx; y += o.dy; return *this; }
     constexpr auto&	operator+= (const Size& o)	{ x += o.w; y += o.h; return *this; }
+    constexpr auto&	operator+= (const Point& o)	{ x += o.x; y += o.y; return *this; }
     constexpr auto&	operator-= (const Offset& o)	{ x -= o.dx; y -= o.dy; return *this; }
     constexpr auto&	operator-= (const Size& o)	{ x -= o.w; y -= o.h; return *this; }
+    constexpr auto&	operator-= (const Point& o)	{ x -= o.x; y -= o.y; return *this; }
+    constexpr auto	as_offset (void) const		{ return Offset(x,y); }
 };
 #define SIGNATURE_ui_Point	"(nn)"
 
@@ -87,7 +95,9 @@ public:
 			struct Composite { Point xy; Size wh; };
     constexpr auto&	pos (void) const		{ return pointer_cast<Composite>(this)->xy; }
     constexpr auto&	size (void) const		{ return pointer_cast<Composite>(this)->wh; }
+    constexpr bool	empty (void) const		{ return !(w && h); }
     constexpr bool	operator== (const Rect& r) const{ return pos() == r.pos() && size() == r.size(); }
+    constexpr bool	operator!= (const Rect& r) const{ return !operator==(r); }
     constexpr bool	contains (coord_t px, coord_t py) const	{ return dim_t(px-x) < w && dim_t(py-y) < h; }
     constexpr bool	contains (const Point& p) const	{ return contains (p.x, p.y); }
     constexpr bool	contains (const Rect& r) const	{ return contains (r.pos()) && contains (r.pos()+r.size()); }
@@ -95,6 +105,14 @@ public:
     constexpr void	move_by (const Offset& o)	{ x += o.dx; y += o.dy; }
     constexpr void	resize (const Size& s)		{ w = s.w; h = s.h; }
     constexpr void	assign (const Point& p, const Size& s)	{ move_to(p); resize(s); }
+    [[nodiscard]] constexpr Rect clip (const Rect& r) const {
+			    Rect cr;
+			    cr.x = min (max (r.x, x), x+w);
+			    cr.y = min (max (r.y, y), y+h);
+			    cr.w = min (max (r.x+r.w, cr.x), x+w) - cr.x;
+			    cr.h = min (max (r.y+r.h, cr.y), y+h) - cr.y;
+			    return cr;
+			}
 };
 #define SIGNATURE_ui_Rect	"(nnqq)"
 
@@ -110,14 +128,8 @@ enum class MSAA : uint8_t { OFF, X2, X4, X8, X16, MAX = X16 };
 
 // Various types of custom-drawn UI elements
 enum class PanelType : uint8_t {
-    Raised,
-    Sunken,
-    Listbox,
-    Editbox,
-    Selection,
-    Button,
-    PressedButton,
-    StatusBar
+    Raised, Sunken, Listbox, Editbox,
+    Selection, Button, PressedButton, StatusBar
 };
 
 //----------------------------------------------------------------------
@@ -133,32 +145,18 @@ inline static constexpr color_t RGB (color_t c)
 
 //----------------------------------------------------------------------
 
-// Color names for the standard 256 color VGA palette
-enum class IColor : icolor_t {
-    Black,
-    Blue,
-    Green,
-    Cyan,
-    Red,
-    Magenta,
-    Brown,
-    Gray,
-    DarkGray,
-    LightBlue,
-    LightGreen,
-    LightCyan,
-    LightRed,
-    LightMagenta,
-    Yellow,
-    White,
-    Gray0, Gray1, Gray2, Gray3, Gray4, Gray5, Gray6, Gray7,
-    Gray8, Gray9, GrayA, GrayB, GrayC, GrayD, GrayE, GrayF,
-    // VGA palette cells 0xf0-0xff are unassigned.
-    // Used here to specify terminal default color variations.
-    DefaultBold = numeric_limits<icolor_t>::max()-3,
-    DefaultUnderlined,
-    DefaultBackground,
-    DefaultForeground
+// Color names for the standard 256 color xterm palette
+struct IColor {
+    enum : icolor_t {
+	Black, Red, Green, Brown, Blue, Magenta, Cyan, Gray,
+	DarkGray, LightRed, LightGreen, Yellow,
+	LightBlue, LightMagenta, LightCyan, White,
+	Default,
+	Gray0 = 232, Gray08, Gray1, Gray2, Gray28, Gray3,
+	Gray4, Gray48, Gray5, Gray6, Gray68, Gray7,
+	Gray8, Gray88, Gray9, GrayA, GrayA8, GrayB,
+	GrayC, GrayC8, GrayD, GrayE, GrayE8, GrayF
+    };
 };
 
 //}}}-------------------------------------------------------------------
@@ -320,7 +318,7 @@ struct Key {
 	Hibernate, History, LogOff, Mail, Mute,
 	New, Open, Options, Play, PowerDown,
 	Print, Refresh, Save, ScreenSaver, Spell,
-	Stop, VolumeDown, VolumeUp, WWW, WheelButton,
+	Stop, VolumeDown, VolumeUp, WWW, Wheel,
 	ZoomIn, ZoomOut
     };
 };
@@ -384,14 +382,16 @@ class ScreenInfo {
 public:
     inline constexpr		ScreenInfo (void)
 				    :_scrsz{},_physz{},_type(ScreenType::Text)
-				    ,_depth(4),_gapi(0),_msaa(MSAA::OFF) {}
+				    ,_depth(8),_gapi(0),_msaa(MSAA::OFF) {}
     inline constexpr		ScreenInfo (const Size& ssz, ScreenType st, uint8_t d, uint8_t gav = 0, MSAA aa = MSAA::OFF, const Size& phy = {})
 				    :_scrsz{ssz},_physz{phy},_type(st),_depth(d),_gapi(gav),_msaa(aa) {}
     inline constexpr auto&	size (void) const		{ return _scrsz; }
+    inline constexpr void	set_size (const Size& sz)	{ _scrsz = sz; }
     inline constexpr void	set_size (dim_t w, dim_t h)	{ _scrsz.w = w; _scrsz.h = h; }
     inline constexpr auto&	physical_size (void) const	{ return _physz; }
     inline constexpr auto	type (void) const		{ return _type; }
     inline constexpr auto	depth (void) const		{ return _depth; }
+    inline constexpr void	set_depth (uint8_t d)		{ _depth = d; }
     inline constexpr auto	gapi_version (void) const	{ return _gapi; }
     inline constexpr auto	msaa (void) const		{ return _msaa; }
 private:
@@ -548,15 +548,15 @@ class PScreenR : public ProxyR {
     DECLARE_INTERFACE (ScreenR,
 	(event, SIGNATURE_ui_Event)
 	(expose, "")
-	(restate, SIGNATURE_ui_WindowInfo)
+	(resize, SIGNATURE_ui_WindowInfo)
 	(screen_info, SIGNATURE_ui_ScreenInfo)
     )
 public:
     constexpr	PScreenR (const Msg::Link& l)	: ProxyR (l) {}
     void	event (const Event& e) const	{ send (m_event(), e); }
     void	expose (void) const		{ send (m_expose()); }
-    void	restate (const WindowInfo& wi) const
-		    { send (m_restate(), wi); }
+    void	resize (const WindowInfo& wi) const
+		    { send (m_resize(), wi); }
     void	screen_info (const ScreenInfo& si) const
 		    { send (m_screen_info(), si); }
     template <typename O>
@@ -565,8 +565,8 @@ public:
 	    o->ScreenR_event (msg.read().read<Event>());
 	else if (msg.method() == m_expose())
 	    o->ScreenR_expose();
-	else if (msg.method() == m_restate())
-	    o->ScreenR_restate (msg.read().read<WindowInfo>());
+	else if (msg.method() == m_resize())
+	    o->ScreenR_resize (msg.read().read<WindowInfo>());
 	else if (msg.method() == m_screen_info())
 	    o->ScreenR_screen_info (msg.read().read<ScreenInfo>());
 	else

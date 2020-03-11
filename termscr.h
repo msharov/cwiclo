@@ -4,12 +4,8 @@
 // This file is free software, distributed under the ISC License.
 
 #pragma once
-#if __has_include(<curses.h>)
 #include "uidefs.h"
 #include "app.h"
-
-struct _win_st;
-using WINDOW = struct _win_st;
 
 namespace cwiclo {
 namespace ui {
@@ -20,88 +16,140 @@ class TerminalScreenWindow;
 
 class TerminalScreen : public Msger {
 public:
+    enum { f_UIMode = Msger::f_Last, f_CaretOn, f_Last };
+    //{{{ Surface
+    class Surface {
+    public:
+	struct Attr {
+	    enum EAttr {
+		Bold,
+		Italic,
+		Underline,
+		Blink,
+		Reverse,
+		Altcharset,
+		Last
+	    };
+	};
+	struct alignas(8) Cell {
+	    wchar_t	c;
+	    uint16_t	attr;
+	    icolor_t	fg,bg;
+	public:
+	    constexpr bool	operator== (const Cell& v) const { return *pointer_cast<uint64_t>(this) == *pointer_cast<uint64_t>(&v); }
+	    constexpr bool	operator!= (const Cell& v) const { return !operator==(v); }
+	};
+	using value_type	= Cell;
+	using cellvec_t		= vector<Cell>;
+	using iterator		= cellvec_t::iterator;
+	using const_iterator	= cellvec_t::const_iterator;
+    public:
+			Surface (void)		:_sz(),_cells() {}
+	auto		begin (void)		{ return _cells.begin(); }
+	auto		begin (void) const	{ return _cells.begin(); }
+	auto		end (void)		{ return _cells.end(); }
+	auto		end (void) const	{ return _cells.end(); }
+	auto&		size (void) const	{ return _sz; }
+	void		resize (const Size& sz)	{ _sz = sz; _cells.resize (_sz.w*_sz.h); }
+	auto		iat (dim_t x, dim_t y)		{ return _cells.iat (y*_sz.w+x); }
+	auto		iat (dim_t x, dim_t y) const	{ return _cells.iat (y*_sz.w+x); }
+	auto		iat (const Point& p)		{ return iat(p.x,p.y); }
+	auto		iat (const Point& p) const	{ return iat(p.x,p.y); }
+	auto		iat (const Offset& o)		{ return iat(o.dx,o.dy); }
+	auto		iat (const Offset& o) const	{ return iat(o.dx,o.dy); }
+	void		draw_surface (const Point& pt, const Surface& src);
+	static constexpr auto default_cell (void) { return Cell { ' ', 0, IColor::Default, IColor::Default }; }
+	void		clear (void)		{ fill (_cells, default_cell()); }
+    private:
+	Size		_sz;
+	vector<Cell>	_cells;
+    };
+    //}}}
+public:
     static auto& instance (void) { static TerminalScreen s_scr; return s_scr; }
+    void	ui_mode (void);
+    void	tt_mode (void);
+    void	reset (void);
+    void	update_screen_size (void);
     void	register_window (TerminalScreenWindow* w);
     void	unregister_window (const TerminalScreenWindow* w);
-    void	create_window (WindowInfo& winfo, WINDOW*& pwin);
+    Rect	position_window (Rect warea) const;
+    void	draw_window (const TerminalScreenWindow* w);
     bool	dispatch (Msg& msg) override;
+    inline void	Signal_signal (int s);
     void	TimerR_timer (PTimerR::fd_t);
     auto&	screen_info (void) const { return _scrinfo; }
 protected:
 		TerminalScreen (void);
 		~TerminalScreen (void) override;
-    static Event::key_t event_key_from_curses (int k);
+    void	parse_keycodes (bool toend = true);
 private:
     vector<TerminalScreenWindow*> _windows;
+    string	_tout,_tin;
+    Surface	_surface;
     ScreenInfo	_scrinfo;
-    PTimer	_uiinput;
+    Surface::Cell _lastcell;
+    Point	_curwpos;
+    PTimer	_ptermi;
+    PTimer	_ptermo;
 };
 
 //----------------------------------------------------------------------
 
 class TerminalScreenWindow : public Msger {
-public:
-    enum { f_CaretOn = Msger::f_Last, f_Last };
+    using Surface = TerminalScreen::Surface;
+    using Cell = Surface::Cell;
 public:
 		TerminalScreenWindow (const Msg::Link& l);
 		~TerminalScreenWindow (void) override;
     bool	dispatch (Msg& msg) override;
-    void	Screen_open (const WindowInfo& wi);
-    void	Screen_close (void);
-    void	Screen_draw (const cmemlink& dl);
-    void	Screen_get_info (void);
     auto&	screen_info (void) const	{ return TerminalScreen::instance().screen_info(); }
     auto&	window_info (void) const	{ return _winfo; }
     auto&	area (void) const		{ return window_info().area(); }
     auto&	viewport (void) const		{ return _viewport; }
-    void	on_event (const Event& ev);
-    int		getch (void);
-    void	draw (void)				{ _reply.expose(); }
-    void	set_caret (bool on);
-		operator bool (void) const		{ return _w; }
+    auto&	surface (void) const		{ return _surface; }
+    auto&	caret (void) const		{ return _caret; }
+    void	on_event (const Event& ev)	{ _reply.event (ev); }
+    void	draw (void)			{ _reply.expose(); }
+    void	reset (void);
+    void	on_resize (const Rect& warea);
+    void	on_new_screen_info (void);
+    void	Screen_open (const WindowInfo& wi);
+    void	Screen_draw (const cmemlink& dl);
+    void	Screen_get_info (void)		{ _reply.screen_info (screen_info()); }
+    void	Screen_close (void)		{ set_unused (true); }
+    bool	is_mapped (void) const		{ return area().w; }
 private:
 		friend class Drawlist;
-    void	Draw_clear (void)			{ erase(); }
-    void	Draw_move_to (const Point& p)		{ move_to (p); }
-    void	Draw_move_by (const Offset& o)		{ move_by (o); }
-    void	Draw_viewport (const Rect& vp)		{ _viewport = vp; move_to (0, 0); }
+    Rect	interior_area (void) const	{ return Rect (area().size()); }
+    Rect	clip_to_screen (void) const	{ return TerminalScreen::instance().position_window (area()); }
+    icolor_t	clip_color (icolor_t c, Surface::Attr::EAttr fattr);
+    Cell	cell_from_char (wchar_t c) const;
+    inline void	Draw_reset (void);
+    void	Draw_clear (void);
+    inline void	Draw_enable (uint8_t feature);
+    inline void	Draw_disable (uint8_t feature);
+    inline void	Draw_move_to (const Point& p);
+    inline void	Draw_move_by (const Offset& o);
+    inline void	Draw_viewport (const Rect& vp);
     void	Draw_line (const Offset& o);
-    void	Draw_draw_color (icolor_t c)		{ draw_color (IColor(c)); }
-    void	Draw_fill_color (icolor_t c)		{ fill_color (IColor(c)); }
-    void	Draw_text (const string& t, HAlign ha, VAlign va);
-    void	Draw_bar (const Size& wh)		{ bar (wh.w, wh.h); }
-    void	Draw_box (const Size& wh)		{ box (wh.w, wh.h); }
-    void	Draw_panel (const Size& wh, PanelType t){ panel (wh, t); }
+    inline void	Draw_draw_color (icolor_t c);
+    inline void	Draw_fill_color (icolor_t c);
+    inline void	Draw_char (wchar_t c, HAlign ha = HAlign::Left, VAlign va = VAlign::Top);
+    inline void	Draw_text (const string& t, HAlign ha = HAlign::Left, VAlign va = VAlign::Top);
+    void	Draw_box (const Size& wh);
+    inline void	Draw_bar (const Size& wh);
+    void	Draw_char_bar (const Size& wh, wchar_t c);
+    void	Draw_panel (const Size& wh, PanelType t);
     void	Draw_edit_text (const string& t, uint32_t cp, HAlign ha, VAlign va);
 private:
-    void	draw_color (IColor c);
-    void	fill_color (IColor c);
-    void	move_to (coord_t x, coord_t y);
-    void	move_to (const Point& pt)	{ move_to (pt.x, pt.y); }
-    void	move_by (coord_t dx, coord_t dy);
-    void	move_by (const Offset& o)	{ move_by (o.dx, o.dy); }
-    void	addch (wchar_t c);
-    void	hline (unsigned n, wchar_t c);
-    void	vline (unsigned n, wchar_t c);
-    void	box (dim_t w, dim_t h);
-    void	bar (dim_t w, dim_t h);
-    void	erase (void);
-    void	clear (void);
-    void	panel (const Size& wh, PanelType t);
-    void	panel (dim_t w, dim_t h, PanelType t)	{ panel (Size(w,h), t); }
-    void	panel (const Rect& r, PanelType t)	{ move_to (r.pos()); panel (r.size(), t); }
-    void	noutrefresh (void);
-    void	refresh (void);
-    unsigned	clip_dx (unsigned dx) const;
-    unsigned	clip_dy (unsigned dx) const;
-private:
-    PScreenR	_reply;
-    WINDOW*	_w;
+    Surface	_surface;
     Rect	_viewport;
-    Point	_caret;
+    Point	_pos,_caret;
+    Cell	_attr;
+    PScreenR	_reply;
     WindowInfo	_winfo;
 };
 
 } // namespace ui
 } // namespace cwiclo
-#endif // __has_include(<curses.h>)

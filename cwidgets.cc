@@ -33,15 +33,17 @@ void Button::on_set_text (void)
 DEFINE_WIDGET_WRITE_DRAWLIST (Button, Drawlist, drw)
 {
     if (focused())
-	drw.fill_color (IColor::DefaultForeground);
+	drw.enable (Drawlist::Feature::ReverseColors);
     drw.panel (area().size(), PanelType::Button);
-    drw.move_by (2, 0);
-    drw.draw_color (IColor::DefaultBold);
     if (!text().empty()) {
+	drw.move_by (2, 0);
+	drw.enable (Drawlist::Feature::BoldText);
 	drw.text (text()[0]);
-	drw.draw_color (IColor::DefaultForeground);
+	drw.disable (Drawlist::Feature::BoldText);
 	drw.text (text().iat(1));
     }
+    if (focused())
+	drw.disable (Drawlist::Feature::ReverseColors);
 }
 
 //}}}-------------------------------------------------------------------
@@ -138,6 +140,7 @@ void Editbox::on_set_text (void)
 
 void Editbox::on_key (key_t k)
 {
+    auto oldcpos = _cpos;
     if (k == Key::Left && _cpos)
 	--_cpos;
     else if (k == Key::Right && _cpos < coord_t (text().size()))
@@ -151,13 +154,17 @@ void Editbox::on_key (key_t k)
 	    textw().erase (text().iat(--_cpos));
 	else if (k == Key::Delete && _cpos < coord_t (text().size()))
 	    textw().erase (text().iat(_cpos));
-	else if (isprint(k))
+	else if (k >= ' ' && k <= '~')
 	    textw().insert (text().iat(_cpos++), char(k));
 	else
 	    return Widget::on_key (k);
 	report_modified();
     }
     posclip();
+    if (oldcpos != _cpos) {
+	set_selection (_cpos);
+	report_selection();
+    }
 }
 
 DEFINE_WIDGET_WRITE_DRAWLIST (Editbox, Drawlist, drw)
@@ -210,7 +217,7 @@ DEFINE_WIDGET_WRITE_DRAWLIST (GroupFrame, Drawlist, drw)
 
 DEFINE_WIDGET_WRITE_DRAWLIST (StatusLine, Drawlist, drw)
 {
-    drw.panel (area(), PanelType::StatusBar);
+    drw.panel (area().size(), PanelType::StatusBar);
     drw.move_by (1, 0);
     drw.text (text());
     if (is_modified()) {
@@ -222,25 +229,16 @@ DEFINE_WIDGET_WRITE_DRAWLIST (StatusLine, Drawlist, drw)
 //}}}-------------------------------------------------------------------
 //{{{ Default widget factory
 
-// Widget factory
-#define BEGIN_WIDGETS \
-    Widget* Widget::create (Window* w, const Widget::Layout& lay) {\
-	switch (lay.type()) {\
-	    default:			return new Widget (w,lay);
-#define REGISTER_WIDGET(type,impl) \
-	case Widget::Type::type:	return new impl (w,lay);
-#define END_WIDGETS }}
-
-BEGIN_WIDGETS
-    REGISTER_WIDGET (Label, Label)
-    REGISTER_WIDGET (Button, Button)
-    REGISTER_WIDGET (Listbox, Listbox)
-    REGISTER_WIDGET (Editbox, Editbox)
-    REGISTER_WIDGET (HSplitter, HSplitter)
-    REGISTER_WIDGET (VSplitter, VSplitter)
-    REGISTER_WIDGET (GroupFrame, GroupFrame)
-    REGISTER_WIDGET (StatusLine, StatusLine)
-END_WIDGETS
+BEGIN_WIDGET_FACTORY (Widget::default_factory)
+    WIDGET_TYPE_IMPLEMENT (Label, Label)
+    WIDGET_TYPE_IMPLEMENT (Button, Button)
+    WIDGET_TYPE_IMPLEMENT (Listbox, Listbox)
+    WIDGET_TYPE_IMPLEMENT (Editbox, Editbox)
+    WIDGET_TYPE_IMPLEMENT (HSplitter, HSplitter)
+    WIDGET_TYPE_IMPLEMENT (VSplitter, VSplitter)
+    WIDGET_TYPE_IMPLEMENT (GroupFrame, GroupFrame)
+    WIDGET_TYPE_IMPLEMENT (StatusLine, StatusLine)
+END_WIDGET_FACTORY
 
 //}}}-------------------------------------------------------------------
 

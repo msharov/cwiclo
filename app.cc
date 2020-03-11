@@ -19,7 +19,13 @@ DEFINE_INTERFACE (Signal)
 int PTimer::make_nonblocking (fd_t fd) // static
 {
     auto f = fcntl (fd, F_GETFL);
-    return f < 0 ? f : fcntl (fd, F_SETFL, f| O_NONBLOCK| O_CLOEXEC);
+    return f < 0 ? f : fcntl (fd, F_SETFL, f| O_NONBLOCK);
+}
+
+int PTimer::make_blocking (fd_t fd) // static
+{
+    auto f = fcntl (fd, F_GETFL);
+    return f < 0 ? f : fcntl (fd, F_SETFL, f&~(O_NONBLOCK));
 }
 
 auto PTimer::now (void) -> mstime_t // static
@@ -239,7 +245,6 @@ auto App::create_msger (const Msg::Link& l, iid_t iid) // static
 void App::create_dest (iid_t iid, const Msg::Link& l)
 {
     assert (valid_msger_id (l.src) && "You may only create links originating from an existing Msger");
-    assert ((l.dest == mrid_Broadcast || valid_msger_id(l.dest)) && "Invalid link destination requested");
     if (l.dest < _msgers.size() && !_msgers[l.dest]) {
 	if (_creators[l.dest] == l.src)
 	    _msgers[l.dest] = create_msger (l, iid);

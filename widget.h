@@ -46,8 +46,9 @@ public:
     using Type		= Layout::Type;
     using drawlist_t	= PScreen::drawlist_t;
     using widgetvec_t	= vector<unique_ptr<Widget>>;
-    using widget_factory_t	= Widget* (*)(mrid_t owner, const Layout& l);
-    enum { f_Focused, f_CanFocus, f_Disabled, f_Modified, f_Last };
+    using widget_factory_t	= Widget* (*)(Window* w, const Layout& l);
+    enum { f_Focused, f_CanFocus, f_Disabled, f_Modified, f_ForcedSizeHints, f_Last };
+    struct alignas(2) BytePoint { uint8_t x,y; };
 private:
     struct FocusNeighbors { widgetid_t first, prev, next, last; };
     void		get_focus_neighbors_for (widgetid_t w, FocusNeighbors& n) const;
@@ -57,18 +58,21 @@ public:
 			Widget (const Widget&) = delete;
     void		operator= (const Widget&) = delete;
     virtual		~Widget (void) {}
-    [[nodiscard]] static Widget* create (Window* w, const Layout& l);
+    [[nodiscard]] static Widget* create (Window* w, const Layout& l) { return s_factory (w, l); }
+    [[nodiscard]] static Widget* default_factory (Window* w, const Layout& l);	// body in cwidgets.cc
+    static void		set_factory (widget_factory_t f)	{ s_factory = f; }
     auto&		layinfo (void) const			{ return _layinfo; }
     auto		widget_id (void) const			{ return layinfo().id(); }
     auto&		size_hints (void) const			{ return _size_hints; }
-    void		set_size_hints (const Size& sh)		{ _size_hints = sh; }
-    void		set_size_hints (dim_t w, dim_t h)	{ _size_hints.w = w; _size_hints.h = h; }
+    auto&		expandables (void) const		{ return _nexp; }
+    void		set_size_hints (const Size& sh)		{ _size_hints = sh; set_flag (f_ForcedSizeHints); }
+    void		set_size_hints (dim_t w, dim_t h)	{ set_size_hints (Size(w,h)); }
     void		set_selection (const Size& s)		{ _selection = s; }
-    void		set_selection (dim_t f, dim_t t)	{ _selection.w = f; _selection.h = t; }
-    void		set_selection (dim_t f)			{ _selection.w = f; _selection.h = f+1; }
+    void		set_selection (dim_t f, dim_t t)	{ set_selection (Size(f,t)); }
+    void		set_selection (dim_t f)			{ set_selection (f,f+1); }
     auto&		selection (void) const			{ return _selection; }
     auto		selection_start (void) const		{ return selection().w; }
-    auto		selection_end (void) const		{ return selection().w; }
+    auto		selection_end (void) const		{ return selection().h; }
     const Widget*	widget_by_id (widgetid_t id) const PURE;
     Widget*		widget_by_id (widgetid_t id)		{ return UNCONST_MEMBER_FN (widget_by_id,id); }
     const Layout*	add_widgets (const Layout* f, const Layout* l);
@@ -83,8 +87,6 @@ public:
     void		set_area (const Point& p)		{ _area.move_to (p); }
     void		set_area (const Size& sz)		{ _area.resize (sz); }
     void		draw (drawlist_t& dl) const;
-    void		resize (int l, int c, int y, int x);
-    void		resize (const Rect& r)			{ resize (r.h, r.w, r.y, r.x); }
     auto		flag (unsigned f) const			{ return get_bit(_flags,f); }
     void		set_flag (unsigned f, bool v = true)	{ set_bit(_flags,f,v); }
     bool		is_modified (void) const		{ return flag (f_Modified); }
@@ -103,7 +105,7 @@ public:
     auto		measure (void) const			{ return measure_text (text()); }
     auto		focused (void) const			{ return flag (f_Focused); }
     Rect		compute_size_hints (void);
-    void		place (const Rect& area);
+    void		resize (const Rect& area);
 protected:
     auto		parent_window (void) const		{ return _win; }
     auto&		textw (void)				{ return _text; }
@@ -121,10 +123,12 @@ private:
     Size		_size_hints;
     Size		_selection;
     uint16_t		_flags;
+    BytePoint		_nexp;
     Layout		_layinfo;
+    static widget_factory_t s_factory;
 };
 
-//----------------------------------------------------------------------
+//{{{ Drawlist writer templates ----------------------------------------
 
 // Drawlist writer templates
 #define DEFINE_WIDGET_WRITE_DRAWLIST(widget, dltype, dlw)\
@@ -146,6 +150,25 @@ private:
 	void on_draw (drawlist_t& dl) const override;	\
 	template <typename S>				\
 	void write_drawlist (dltype::Writer<S>& drw) const
+
+//}}}-------------------------------------------------------------------
+//{{{ Widget factory
+
+#define DECLARE_WIDGET_FACTORY(name)\
+    static ::cwiclo::ui::Widget* name (::cwiclo::ui::Window* w, const ::cwiclo::ui::Widget::Layout& lay);\
+
+#define BEGIN_WIDGET_FACTORY(name)\
+    ::cwiclo::ui::Widget* name (::cwiclo::ui::Window* w, const ::cwiclo::ui::Widget::Layout& lay) {\
+	switch (lay.type()) {\
+	    default: return new ::cwiclo::ui::Widget (w,lay);
+#define WIDGET_TYPE_IMPLEMENT(type,impl) \
+	    case ::cwiclo::ui::Widget::Type::type: return new impl (w,lay);
+#define END_WIDGET_FACTORY }}
+
+#define SET_WIDGET_FACTORY(name)\
+    namespace cwiclo { namespace ui { Widget::widget_factory_t Widget::s_factory = name; }}
+
+//}}}-------------------------------------------------------------------
 
 } // namespace ui
 } // namespace cwiclo
