@@ -106,11 +106,10 @@ void memblock::reserve (size_type cap)
 	return;
     auto newcap = next_capacity (cap);
     auto oldBlock (capacity() ? data() : nullptr);
-    auto newBlock = static_cast<pointer> (_realloc (oldBlock, newcap));
+    auto newBlock = static_cast<pointer>(_realloc (oldBlock, newcap));
     if (!oldBlock && data())
 	copy_n (data(), min (newcap, size() + zero_terminated()), newBlock);
-    link (newBlock, size());
-    set_capacity (newcap);
+    manage (newBlock, size(), newcap);
 }
 
 void memblock::deallocate (void)
@@ -124,9 +123,9 @@ void memblock::deallocate (void)
 void memblock::shrink_to_fit (void)
 {
     assert (capacity() && "call copy_link first");
-    auto cap = size()+zero_terminated();
+    auto cap = size() + zero_terminated();
     set_capacity (cap);
-    link (pointer (_realloc (data(), cap)), size());
+    link (static_cast<pointer>(_realloc (data(), cap)), size());
 }
 
 void memblock::resize (size_type sz)

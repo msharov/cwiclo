@@ -12,7 +12,7 @@ class istream;
 class ostream;
 class sstream;
 
-class alignas(16) cmemlink {
+class cmemlink {
 public:
     using value_type		= char;
     using pointer		= value_type*;
@@ -23,29 +23,27 @@ public:
     using difference_type	= ptrdiff_t;
     using const_iterator	= const_pointer;
     using iterator		= pointer;
+    struct alignas(16) block_type {
+	pointer		data;		///< Pointer to the data block
+	size_type	size alignas(8);///< Used size
+	bool		zerot:1;	///< True if zero-terminated
+	size_type	capacity:31;	///< Allocated size
+    };
 public:
-    inline constexpr		cmemlink (const_pointer p, size_type n, bool z = false)	: _data(const_cast<pointer>(p)),_size(n),_capz(z) {}
+    inline constexpr		cmemlink (const_pointer p, size_type n, bool z = false)	: _d{const_cast<pointer>(p), n, z, 0} {}
     inline constexpr		cmemlink (const void* p, size_type n)			: cmemlink (static_cast<const_pointer>(p),n) {}
-#if __SSE2__ && NDEBUG		// turn off _sblk union member for debugging
-    inline constexpr		cmemlink (void)			: _sblk (simd16_t::zero()) {}
-    inline constexpr		cmemlink (const cmemlink& v)	: _sblk (v._sblk) {}
-    inline constexpr		cmemlink (cmemlink&& v)		: _sblk (exchange (v._sblk, simd16_t::zero())) {}
-    inline constexpr void	swap (cmemlink&& v)		{ ::cwiclo::swap (_sblk, v._sblk); }
-    inline constexpr void	unlink (void)			{ auto zt = zero_terminated(); _sblk = simd16_t::zero(); _capz = zt; }
-#else
-    inline constexpr		cmemlink (void)			: cmemlink (nullptr, 0, false) {}
-    inline constexpr		cmemlink (const cmemlink& v)	: cmemlink (v._data, v._size, v.zero_terminated()) {}
-    inline constexpr		cmemlink (cmemlink&& v)		: _data (exchange (v._data, nullptr)), _size (exchange (v._size, 0u)), _capz (exchange (v._capz, 0u)) {}
-    inline constexpr void	swap (cmemlink&& v)		{ ::cwiclo::swap (_data, v._data); ::cwiclo::swap (_size, v._size); ::cwiclo::swap (_capz, v._capz); }
-    inline constexpr void	unlink (void)			{ _data = nullptr; _size = 0; _capz &= 1; }
-#endif
+    inline constexpr		cmemlink (void)			: _d{}{}
+    inline constexpr		cmemlink (const cmemlink& v)	: _d{v._d}{}
+    inline constexpr		cmemlink (cmemlink&& v)		: _d (exchange (v._d, block_type{})) {}
+    inline constexpr void	swap (cmemlink&& v)		{ ::cwiclo::swap (_d, v._d); }
+    inline constexpr void	unlink (void)			{ auto zt = zero_terminated(); _d = block_type{}; _d.zerot = zt; }
     inline constexpr auto&	operator= (const cmemlink& v)	{ link (v); return *this; }
     inline constexpr auto&	operator= (cmemlink&& v)	{ swap (move(v)); return *this; }
     inline constexpr auto	max_size (void) const		{ return numeric_limits<size_type>::max()/2-1; }
-    inline constexpr auto	capacity (void) const		{ return _capz>>1; }
-    inline constexpr auto	size (void) const		{ return _size; }
+    inline constexpr auto	capacity (void) const		{ return _d.capacity; }
+    inline constexpr auto	size (void) const		{ return _d.size; }
     [[nodiscard]] inline constexpr auto	empty (void) const	{ return !size(); }
-    inline constexpr const_pointer	data (void) const	{ return _data; }
+    inline constexpr const_pointer	data (void) const	{ return _d.data; }
     inline constexpr auto	cdata (void) const		{ return data(); }
     inline constexpr auto	begin (void) const		{ return data(); }
     inline constexpr auto	cbegin (void) const		{ return begin(); }
@@ -58,12 +56,12 @@ public:
     inline constexpr auto&	operator[] (size_type i) const		{ return at (i); }
     inline bool			operator== (const cmemlink& v) const	{ return equal (v, begin()); }
     inline bool			operator!= (const cmemlink& v) const	{ return !operator==(v); }
-    inline constexpr void	link (pointer p, size_type n)		{ _data = p; _size = n; }
+    inline constexpr void	link (pointer p, size_type n)		{ _d.data = p; _d.size = n; }
     inline constexpr void	link (const_pointer p, size_type n)	{ link (const_cast<pointer>(p), n); }
     inline constexpr void	link (void* p, size_type n)		{ link (static_cast<pointer>(p), n); }
     inline constexpr void	link (const void* p, size_type n)	{ link (static_cast<const_pointer>(p), n); }
     inline constexpr void	link (const cmemlink& v)	{ link (v.begin(), v.size()); }
-    inline constexpr void	resize (size_type sz)		{ _size = sz; }
+    inline constexpr void	resize (size_type sz)		{ _d.size = sz; }
     inline constexpr void	shrink (size_type sz)		{ assert (sz <= max(capacity(),size())); resize (sz); }
     inline constexpr void	clear (void)			{ shrink (0); }
     void		link_read (istream& is, size_type elsize = sizeof(value_type));
@@ -74,23 +72,12 @@ public:
     int			write_file (const char* filename) const;
     int			write_file_atomic (const char* filename) const;
 protected:
-    constexpr auto&	dataw (void)				{ return _data; }
-    constexpr bool	zero_terminated (void) const		{ return get_bit (_capz, 0); }
-    constexpr void	set_zero_terminated (bool b = true)	{ set_bit (_capz, 0, b); }
-    constexpr void	set_capacity (size_type c)		{ _capz = (c<<1)|zero_terminated(); }
+    constexpr auto&	dataw (void)				{ return _d.data; }
+    constexpr bool	zero_terminated (void) const		{ return _d.zerot; }
+    constexpr void	set_zero_terminated (bool b = true)	{ _d.zerot = b; }
+    constexpr void	set_capacity (size_type c)		{ _d.capacity = c; }
 private:
-#if __SSE2__ && NDEBUG
-    union {
-	struct {
-#endif
-	    pointer	_data;	///< Pointer to the data block
-	    size_type	_size alignas(8);	///< Used size
-	    size_type	_capz;	///< Allocated size|zero-terminated bit
-#if __SSE2__ && NDEBUG
-	};
-	simd16_t	_sblk;	// Because gcc still can't do store merging here
-    };
-#endif
+    block_type		_d;
 };
 
 //----------------------------------------------------------------------
@@ -141,8 +128,10 @@ public:
     inline constexpr		memblock (memlink&& v)		: memlink(move(v)) {}
     inline constexpr		memblock (memblock&& v)		: memlink(move(v)) {}
     inline			~memblock (void)		{ deallocate(); }
-    inline constexpr void	manage (pointer p, size_type n)	{ assert(!capacity() && "unlink or deallocate first"); link (p, n); set_capacity(n); }
-    inline constexpr void	manage (void* p, size_type n)	{ manage (static_cast<pointer>(p), n); }
+    inline constexpr void	manage (pointer p, size_type n, size_type c)	{ link (p, n); set_capacity(c); }
+    inline constexpr void	manage (pointer p, size_type n)	{ manage (p, n, n); }
+    inline constexpr void	manage (void* p, size_type n, size_type c)	{ manage (static_cast<pointer>(p), n, c); }
+    inline constexpr void	manage (void* p, size_type n)	{ manage (p, n, n); }
     void			assign (const_pointer p, size_type n);
     inline void			assign (const cmemlink& v)	{ assign (v.data(), v.size()); }
     inline void			assign (memlink&& v)		{ deallocate(); swap (move(v)); }
