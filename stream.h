@@ -56,7 +56,7 @@ public:
     inline constexpr streamsize	alignsz (streamsize g) const		{ return alignptr(g) - begin(); }
     inline constexpr bool	can_align (streamsize g) const		{ return alignptr(g) <= end(); }
     inline constexpr bool	aligned (streamsize g) const		{ return divisible_by(_p, g); }
-    inline constexpr void	read (void* __restrict__ p, streamsize sz) __restrict__ {
+    inline void			read (void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
 				    copy_n (begin(), sz, p);
 				    skip (sz);
@@ -94,12 +94,12 @@ public:
 				}
     template <typename T>
     #if __x86__			// x86 can do direct unaligned reads, albeit slower
-    inline constexpr void	readtu (T& v) __restrict__ { readt (v); }
+    inline void			readtu (T& v) __restrict__ { readt (v); }
     #else
-    inline constexpr void	readtu (T& v) __restrict__ { read (&v, sizeof(v)); }
+    inline void			readtu (T& v) __restrict__ { read (&v, sizeof(v)); }
     #endif
     template <typename T>
-    constexpr decltype(auto)	readu (void) {
+    inline decltype(auto)	readu (void) {
 				    T v;
 				    if constexpr (is_trivially_assignable<T>::value && !has_member_function_stream_read<T>::value && !has_member_function_stream_readu<T>::value)
 					readtu<T>(v);
@@ -164,11 +164,11 @@ public:
     inline constexpr streamsize	alignsz (streamsize g) const __restrict__	{ return alignptr(g) - begin(); }
     inline constexpr bool	can_align (streamsize g) const __restrict__	{ return alignptr(g) <= end(); }
     inline constexpr bool	aligned (streamsize g) const __restrict__	{ return divisible_by (_p, g); }
-    inline constexpr void	write (const void* __restrict__ p, streamsize sz) __restrict__ {
+    inline void			write (const void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
 				    seek (copy_n (p, sz, begin()));
 				}
-    inline constexpr void	write_strz (const char* s) __restrict__	{ write (s, __builtin_strlen(s)+1); }
+    inline void			write_strz (const char* s) __restrict__	{ write (s, __builtin_strlen(s)+1); }
     template <typename T>
     inline constexpr void	writet (const T& v) __restrict__ {
 				    assert (remaining() >= sizeof(T));
@@ -184,12 +184,12 @@ public:
 				}
     template <typename T>
     #if __x86__			// x86 can do direct unaligned writes, albeit slower
-    inline constexpr void	writetu (const T& v) __restrict__ { writet (v); }
+    inline void			writetu (const T& v) __restrict__ { writet (v); }
     #else
-    inline constexpr void	writetu (const T& v) __restrict__ { write (&v, sizeof(v)); }
+    inline void			writetu (const T& v) __restrict__ { write (&v, sizeof(v)); }
     #endif
     template <typename T>
-    inline constexpr void	writeu (const T& v) {
+    inline void			writeu (const T& v) {
 				    if constexpr (is_trivially_copyable<T>::value && !has_member_function_stream_readu<T>::value && !has_member_function_stream_read<T>::value)
 					writetu (v);
 				    else if constexpr (has_member_function_stream_read<T>::value && !has_member_function_stream_readu<T>::value)
@@ -205,12 +205,12 @@ public:
     constexpr void		write_array (const T (&a)[N])	{ write_array (ARRAY_BLOCK(a)); }
     template <typename T, cmemlink::size_type N>
     inline constexpr auto&	operator<< (const T (&a)[N])	{ write_array(a); return *this; }
-    constexpr void		write_string (const char* s, uint32_t n) __restrict__
+    void			write_string (const char* s, uint32_t n) __restrict__
 				    { writet (uint32_t(n+1)); write (s, n); do { zero(1); } while (!aligned(4)); }
     template <cmemlink::size_type N>
-    inline constexpr void	write_string (const char (&s)[N]) __restrict__ { write_string (ARRAY_BLOCK(s)); }
+    inline void			write_string (const char (&s)[N]) __restrict__ { write_string (ARRAY_BLOCK(s)); }
     template <cmemlink::size_type N>
-    inline constexpr auto&	operator<< (const char (&s)[N]) __restrict__ { write_string(s); return *this; }
+    inline auto&		operator<< (const char (&s)[N]) __restrict__ { write_string(s); return *this; }
 private:
     inline constexpr const_pointer alignptr (streamsize g) const __restrict__
 				    { return assume_aligned (ceilg (_p, g), g); }

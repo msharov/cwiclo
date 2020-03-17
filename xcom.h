@@ -207,16 +207,7 @@ private:
     private:
 	constexpr auto		header_ptr (void) const		{ return begin(_hbuf)-sizeof(_h); }
 	constexpr auto		header_ptr (void)		{ return UNCONST_MEMBER_FN (header_ptr,); }
-	constexpr uint8_t	write_header_strings (methodid_t method) {
-				    // _hbuf contains iface\0method\0signature\0, padded to Msg::Alignment::Header
-				    auto iface = interface_of_method (method);
-				    assert (ptrdiff_t(sizeof(_hbuf)) >= interface_name_size(iface)+method_next_offset(method)-2 && "the interface and method names for this message are too long to export");
-				    ostream os (_hbuf);
-				    os.write (iface, interface_name_size (iface));
-				    os.write (method, method_next_offset(method)-2);
-				    os.align (Msg::Alignment::Header);
-				    return sizeof(_h) + os.ptr()-begin(_hbuf);
-				}
+	inline uint8_t		write_header_strings (methodid_t method);
     private:
 	Msg::Body		_body;
 	Header			_h;

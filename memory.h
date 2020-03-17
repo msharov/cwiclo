@@ -50,18 +50,18 @@ extern "C" [[nodiscard]] void* _alloc (size_t n) MALLOCLIKE MALLOCLIKE_ARG(1);
 
 [[nodiscard]] inline void* operator new (size_t n)	{ return _alloc(n); }
 [[nodiscard]] inline void* operator new[] (size_t n)	{ return _alloc(n); }
-inline void  operator delete (void* p)			{ free(p); }
-inline void  operator delete[] (void* p)		{ free(p); }
-inline void  operator delete (void* p, size_t)		{ free(p); }
-inline void  operator delete[] (void* p, size_t)	{ free(p); }
+inline void operator delete (void* p)			{ free(p); }
+inline void operator delete[] (void* p)			{ free(p); }
+inline void operator delete (void* p, size_t)		{ free(p); }
+inline void operator delete[] (void* p, size_t)		{ free(p); }
 
 // Default placement versions of operator new.
 [[nodiscard]] constexpr void* operator new (size_t, void* p)	{ return p; }
 [[nodiscard]] constexpr void* operator new[] (size_t, void* p)	{ return p; }
 
 // Default placement versions of operator delete.
-constexpr void  operator delete  (void*, void*)	{ }
-constexpr void  operator delete[](void*, void*)	{ }
+inline void operator delete  (void*, void*)	{ }
+inline void operator delete[](void*, void*)	{ }
 
 //}}}-------------------------------------------------------------------
 //{{{ Rvalue forwarding
@@ -242,7 +242,7 @@ inline auto make_unique (Args&&... args) { return unique_ptr<T> (new T (forward<
 //{{{ copy and fill
 
 template <typename II, typename OI>
-constexpr auto copy_n (II f, size_t n, OI r)
+auto copy_n (II f, size_t n, OI r)
 {
     using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
@@ -254,7 +254,7 @@ constexpr auto copy_n (II f, size_t n, OI r)
 }
 
 template <typename II, typename OI>
-constexpr auto copy (II f, II l, OI r)
+auto copy (II f, II l, OI r)
 {
     using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
@@ -266,7 +266,7 @@ constexpr auto copy (II f, II l, OI r)
 }
 
 template <typename C, typename OI>
-constexpr auto copy (const C& c, OI r)
+auto copy (const C& c, OI r)
     { return copy_n (begin(c), size(c), r); }
 
 template <typename II, typename OI>
@@ -396,7 +396,7 @@ inline constexpr auto zero_fill (C& c)
     { return zero_fill_n (begin(c), size(c)); }
 
 template <typename I>
-constexpr auto shift_left (I f, I l, size_t n)
+auto shift_left (I f, I l, size_t n)
 {
     auto m = next(f,n);
     assert (m >= f && m <= l);
@@ -404,7 +404,7 @@ constexpr auto shift_left (I f, I l, size_t n)
 }
 
 template <typename C, typename T>
-constexpr auto shift_left (C& c, size_t n)
+auto shift_left (C& c, size_t n)
     { return shift_left (begin(c), end(c), n); }
 
 template <typename I>
@@ -443,11 +443,6 @@ template <typename T, typename... Args>
 inline constexpr auto construct_at (T* p, Args&&... args)
     { return new (p) T (forward<Args>(args)...); }
 
-/// Calls the destructor of \p p without calling delete.
-template <typename T>
-inline constexpr void destroy_at (T* p)
-    { p->~T(); }
-
 /// Calls the placement new on \p p.
 template <typename I>
 constexpr auto uninitialized_default_construct (I f, I l)
@@ -465,9 +460,14 @@ template <typename I>
 constexpr auto uninitialized_default_construct_n (I f, size_t n)
     { return uninitialized_default_construct (f, next(f,n)); }
 
+/// Calls the destructor of \p p without calling delete.
+template <typename T>
+inline void destroy_at (T* p)
+    { p->~T(); }
+
 /// Calls the destructor on elements in range [f, l) without calling delete.
 template <typename I>
-constexpr void destroy (I f [[maybe_unused]], I l [[maybe_unused]])
+void destroy (I f [[maybe_unused]], I l [[maybe_unused]])
 {
     if constexpr (!is_trivially_destructible<typename iterator_traits<I>::value_type>::value) {
 	for (; f < l; advance(f))
@@ -481,7 +481,7 @@ constexpr void destroy (I f [[maybe_unused]], I l [[maybe_unused]])
 
 /// Calls the destructor on elements in range [f, f+n) without calling delete.
 template <typename I>
-constexpr void destroy_n (I f, size_t n)
+inline void destroy_n (I f, size_t n)
     { return destroy (f, next(f,n)); }
 
 //}}}-------------------------------------------------------------------

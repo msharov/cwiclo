@@ -91,7 +91,7 @@ public:
     inline bool		operator>= (const string& s) const		{ return 0 <= compare (s); }
     inline bool		operator>= (const_pointer s) const		{ return 0 <= compare (s); }
     inline bool		operator>= (char c) const			{ return 0 <= compare (c); }
-    inline		operator const string_view& (void) const	{ return reinterpret_cast<const string_view&>(*this); }
+    inline constexpr	operator const string_view& (void) const;
     inline auto		erase (const_iterator ep, size_type n = 1)	{ return memblock::erase (ep, n); }
     inline auto		erase (const_iterator f, const_iterator l)	{ assert (f<=l); return erase (f, l-f); }
     constexpr void	shrink (size_type sz)	{ memblock::shrink(sz); if (auto z = end(); z) { assert (capacity() && "modifying a const linked string"); *z = 0; }}
@@ -241,6 +241,12 @@ public:
 	return string_view (scp, ssz);
     }
 };
+
+//----------------------------------------------------------------------
+
+// Here because it needs definition of string_view
+constexpr string::operator const string_view& (void) const
+    { return static_cast<const string_view&>(static_cast<const cmemlink&>(*this)); }
 
 //----------------------------------------------------------------------
 

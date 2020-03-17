@@ -300,6 +300,18 @@ Extern::ExtMsg::ExtMsg (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, e
     _body.shrink (_h.sz);
 }
 
+uint8_t Extern::ExtMsg::write_header_strings (methodid_t method)
+{
+    // _hbuf contains iface\0method\0signature\0, padded to Msg::Alignment::Header
+    auto iface = interface_of_method (method);
+    assert (ptrdiff_t(sizeof(_hbuf)) >= interface_name_size(iface)+method_next_offset(method)-2 && "the interface and method names for this message are too long to export");
+    ostream os (_hbuf);
+    os.write (iface, interface_name_size (iface));
+    os.write (method, method_next_offset(method)-2);
+    os.align (Msg::Alignment::Header);
+    return sizeof(_h) + os.ptr()-begin(_hbuf);
+}
+
 void Extern::ExtMsg::write_iovecs (iovec* iov, streamsize bw)
 {
     // Setup the two iovecs, 0 for header, 1 for body
