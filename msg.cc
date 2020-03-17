@@ -150,19 +150,11 @@ streamsize Msg::validate_signature (istream is, const char* sig) // static
 //----------------------------------------------------------------------
 
 Msg& ProxyB::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo) const
-{
-    return App::instance().create_msg (link(), mid, sz, fdo);
-}
-
+    { return App::instance().create_msg (link(), mid, sz, fdo); }
 Msg& ProxyB::create_msg (methodid_t mid, streamsize sz) const
-{
-    return create_msg (mid, sz, Msg::NoFdIncluded);
-}
-
-void ProxyB::forward_msg (Msg&& msg) const
-{
-    App::instance().forward_msg (move(msg), link());
-}
+    { return create_msg (mid, sz, Msg::NoFdIncluded); }
+void ProxyB::forward_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid) const
+    { App::instance().create_msg (link(), imethod, move(body), fdo, extid); }
 
 void ProxyB::allocate_id (void)
 {

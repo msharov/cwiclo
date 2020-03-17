@@ -654,7 +654,7 @@ bool Extern::accept_incoming_message (void)
     }
 
     // Create local message from ExtMsg and forward it to the COMRelay
-    rp->relay.forward_msg (Msg (rp->relay.link(), method, _inmsg.move_body(), _inmsg.fd_offset(), _inmsg.extid()));
+    rp->relay.forward_msg (method, _inmsg.move_body(), _inmsg.fd_offset(), _inmsg.extid());
     return true;
 }
 //}}}2

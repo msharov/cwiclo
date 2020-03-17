@@ -119,8 +119,8 @@ public:
     void		create_dest_with (iid_t iid, Msger::pfn_factory_t fac, const Msg::Link& l);
     inline Msg&		create_msg (const Msg::Link& l, methodid_t mid, streamsize size, Msg::fdoffset_t fdo = Msg::NoFdIncluded)
 			    { create_dest (interface_of_method(mid),l); return _outq.emplace_back (l,mid,size,fdo); }
-    inline void		forward_msg (Msg&& msg, const Msg::Link& l)
-			    { create_dest (msg.interface(),l); _outq.emplace_back (move(msg), l); }
+    inline Msg&		create_msg (const Msg::Link& l, methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0)
+			    { create_dest (interface_of_method(mid),l); return _outq.emplace_back (l,mid,move(body),fdo,extid); }
     mrid_t		register_singleton_msger (Msger* m);
     static iid_t	interface_by_name (const char* iname, streamsize inamesz);
     msgq_t::size_type	has_messages_for (mrid_t mid) const;

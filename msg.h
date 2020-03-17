@@ -180,10 +180,8 @@ public:
 			    :_method (mid),_link (l),_extid (extid),_fdoffset (fdo),_body (move (body)) {}
     inline constexpr	Msg (const Link& l, methodid_t mid, memblock&& body, fdoffset_t fdo = NoFdIncluded, extid_t extid = 0)
 			    :_method (mid),_link (l),_extid (extid),_fdoffset (fdo),_body (move (body)) {}
-    inline constexpr	Msg (Msg&& msg, const Link& l)
-			    : Msg (l,msg.method(),msg.move_body(),msg.fd_offset(),msg.extid()) {}
     inline constexpr	Msg (Msg&& msg)
-			    : Msg (move(msg), msg.link()) {}
+			    : Msg (msg.link(), msg.method(), msg.move_body(), msg.fd_offset(), msg.extid()) {}
 			Msg (const Msg&) = delete;
     Msg&		operator= (const Msg&) = delete;
 private:
@@ -213,11 +211,11 @@ protected:
     void		operator= (const ProxyB&) = delete;
     Msg&		create_msg (methodid_t imethod, streamsize sz) const;
     Msg&		create_msg (methodid_t imethod, streamsize sz, Msg::fdoffset_t fdo) const;
-    void		forward_msg (Msg&& msg) const;
-    void		forward_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0) const
-			    { forward_msg (Msg (link(), imethod, move(body), fdo, extid)); }
+    void		forward_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0) const;
+    void		forward_msg (Msg&& msg) const
+			    { forward_msg (msg.method(), msg.move_body(), msg.fd_offset(), msg.extid()); }
     void		forward_msg (methodid_t imethod, memblock&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0) const
-			    { forward_msg (Msg (link(), imethod, move(body), fdo, extid)); }
+			    { forward_msg (imethod, reinterpret_cast<Msg::Body&&>(body), fdo, extid); }
     void		commit_msg (Msg& msg [[maybe_unused]], ostream& os [[maybe_unused]]) const
 			    { assert (!os.remaining() && msg.size() == msg.verify() && "Message body does not match method signature"); }
     inline void		send (methodid_t imethod) const

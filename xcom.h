@@ -20,7 +20,7 @@ public:
     void		error (const string& errmsg) const	{ send (m_error(), errmsg); }
     void		export_ (const string& elist) const	{ send (m_export(), elist); }
     void		delete_ (void) const			{ send (m_delete()); }
-    void		forward_msg (Msg&& msg) const		{ Proxy::forward_msg (move(msg)); }
+			using Proxy::forward_msg;
     static string	string_from_interface_list (const iid_t* elist);
     static Msg		error_msg (const string& errmsg);
     static Msg		export_msg (const string& elstr);
