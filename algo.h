@@ -173,10 +173,10 @@ public:
     }
 
     /// Returns the number of bytes required to UTF-8 encode v.
-    static constexpr auto obytes (wchar_t v)
+    static constexpr auto obytes (char32_t v)
 	{ return unsigned(v) < 0x80 ? 1u : (log2p1(v)+3)/5u; }
 
-    static constexpr auto obytes (const wchar_t* f, const wchar_t* l)
+    static constexpr auto obytes (const char32_t* f, const char32_t* l)
     {
 	auto n = 0u;
 	for (; f < l; ++f)
@@ -185,7 +185,7 @@ public:
     }
 
     template <size_t N>
-    static constexpr auto obytes (const wchar_t (&a)[N])
+    static constexpr auto obytes (const char32_t (&a)[N])
 	{ return obytes (begin(a), end(a)); }
 
     //}}}2--------------------------------------------------------------
@@ -203,7 +203,7 @@ public:
 	constexpr auto		base (void) const	{ return _i; }
 	constexpr auto		operator* (void) const {
 				    auto n = ibytes (*_i);
-				    wchar_t v = *_i & (0xff >> n);	// First byte contains bits after the header.
+				    char32_t v = *_i & (0xff >> n);	// First byte contains bits after the header.
 				    for (auto i = _i; --n && *++i;)	// Each subsequent byte has 6 bits.
 					v = (v << 6) | (*i & 0x3f);
 				    return v;
@@ -241,12 +241,12 @@ public:
 	using difference_type	= typename iterator_traits<O>::difference_type;
     public:
 	explicit constexpr	oi (const O& o) : _o(o) {}
-	constexpr auto&		operator= (wchar_t v) {
+	constexpr auto&		operator= (char32_t v) {
 				    auto n = obytes (v);
 				    if (n <= 1) // If only one byte, there is no header.
 					*_o++ = v;
 				    else {	// Write the bits 6 bits at a time, except for the first one.
-					wchar_t btw = n * 6;
+					char32_t btw = n * 6;
 					*_o++ = ((v >> (btw -= 6)) & 0x3f) | (0xff << (8 - n));
 					while (btw)
 					    *_o++ = ((v >> (btw -= 6)) & 0x3f) | 0x80;

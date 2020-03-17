@@ -408,62 +408,62 @@ void TerminalScreen::TimerR_timer (PTimerR::fd_t)
     }
 }
 
-struct EscSeq { char s[4]; uint16_t k; };
+struct EscSeq { char s[5]; unsigned char k; };
 
 static const EscSeq* match_escape_sequence (const char* s, size_t n)
 {
     //{{{2 c_seq - key escape sequence mapping
-    static const EscSeq c_seq[] = {
-	{ "O2P",		Key::Print	},
-	{ "O2Q",		Key::Break	},
-	{ "OA",			Key::Up		},
-	{ "OB",			Key::Down	},
-	{ "OC",			Key::Right	},
-	{ "OD",			Key::Left	},
-	{ "OE",			Key::Center	},
-	{ "OF",			Key::End	},
-	{ "OH",			Key::Home	},
-	{ "OP",			Key::F1		},
-	{ "OQ",			Key::F2		},
-	{ "OR",			Key::F3		},
-	{ "OS",			Key::F4		},
-	{ "Ou",			Key::Center	},
-	{ {'[','1','1','~'},	Key::F1		},
-	{ {'[','1','2','~'},	Key::F2		},
-	{ {'[','1','3','~'},	Key::F3		},
-	{ {'[','1','4','~'},	Key::F4		},
-	{ {'[','1','5','~'},	Key::F5		},
-	{ {'[','1','7','~'},	Key::F6		},
-	{ {'[','1','8','~'},	Key::F7		},
-	{ {'[','1','9','~'},	Key::F8		},
-	{ "[1~",		Key::Home	},
-	{ {'[','2','0','~'},	Key::F9		},
-	{ {'[','2','1','~'},	Key::F10	},
-	{ {'[','2','3','~'},	Key::F11	},
-	{ {'[','2','4','~'},	Key::F12	},
-	{ "[2~",		Key::Insert	},
-	{ "[3~",		Key::Delete	},
-	{ "[4~",		Key::End	},
-	{ "[5~",		Key::PageUp	},
-	{ "[6~",		Key::PageDown	},
-	{ "[7~",		Key::Home	},
-	{ "[8~",		Key::End	},
-	{ "[<",			Key::Wheel	},
-	{ "[A",			Key::Up		},
-	{ "[B",			Key::Down	},
-	{ "[C",			Key::Right	},
-	{ "[D",			Key::Left	},
-	{ "[E",			Key::Center	},
-	{ "[F",			Key::End	},
-	{ "[G",			Key::Center	},
-	{ "[H",			Key::Home	},
-	{ "[M",			Key::Wheel	},
-	{ "[P",			Key::Break	},
-	{ "[[A",		Key::F1		},
-	{ "[[B",		Key::F2		},
-	{ "[[C",		Key::F3		},
-	{ "[[D",		Key::F4		},
-	{ "[[E",		Key::F5		}
+    static constexpr const EscSeq c_seq[] = {
+	{ "O2P",	Key::Print	},
+	{ "O2Q",	Key::Break	},
+	{ "OA",		Key::Up		},
+	{ "OB",		Key::Down	},
+	{ "OC",		Key::Right	},
+	{ "OD",		Key::Left	},
+	{ "OE",		Key::Center	},
+	{ "OF",		Key::End	},
+	{ "OH",		Key::Home	},
+	{ "OP",		Key::F1		},
+	{ "OQ",		Key::F2		},
+	{ "OR",		Key::F3		},
+	{ "OS",		Key::F4		},
+	{ "Ou",		Key::Center	},
+	{ "[11~",	Key::F1		},
+	{ "[12~",	Key::F2		},
+	{ "[13~",	Key::F3		},
+	{ "[14~",	Key::F4		},
+	{ "[15~",	Key::F5		},
+	{ "[17~",	Key::F6		},
+	{ "[18~",	Key::F7		},
+	{ "[19~",	Key::F8		},
+	{ "[1~",	Key::Home	},
+	{ "[20~",	Key::F9		},
+	{ "[21~",	Key::F10	},
+	{ "[23~",	Key::F11	},
+	{ "[24~",	Key::F12	},
+	{ "[2~",	Key::Insert	},
+	{ "[3~",	Key::Delete	},
+	{ "[4~",	Key::End	},
+	{ "[5~",	Key::PageUp	},
+	{ "[6~",	Key::PageDown	},
+	{ "[7~",	Key::Home	},
+	{ "[8~",	Key::End	},
+	{ "[<",		Key::Wheel	},
+	{ "[A",		Key::Up		},
+	{ "[B",		Key::Down	},
+	{ "[C",		Key::Right	},
+	{ "[D",		Key::Left	},
+	{ "[E",		Key::Center	},
+	{ "[F",		Key::End	},
+	{ "[G",		Key::Center	},
+	{ "[H",		Key::Home	},
+	{ "[M",		Key::Wheel	},
+	{ "[P",		Key::Break	},
+	{ "[[A",	Key::F1		},
+	{ "[[B",	Key::F2		},
+	{ "[[C",	Key::F3		},
+	{ "[[D",	Key::F4		},
+	{ "[[E",	Key::F5		}
     };
     //}}}2
     const EscSeq* match = nullptr;
@@ -628,26 +628,31 @@ void TerminalScreenWindow::Draw_draw_color (icolor_t c)
 void TerminalScreenWindow::Draw_fill_color (icolor_t c)
     { _attr.bg = clip_color (c, Surface::Attr::Blink); }
 
-auto TerminalScreenWindow::cell_from_char (wchar_t c) const -> Cell
+auto TerminalScreenWindow::cell_from_char (char32_t c) const -> Cell
 {
     Cell cc (_attr);
     static const char c_acs_sym[] = "lmkjtuwvqxnoprs,+-.0hazy|g~f`i{}";
-    if (unsigned acsi = c - wchar_t(Drawlist::GChar::ULCorner); acsi < size(c_acs_sym)) {
-	c = c_acs_sym [acsi];
+    if (unsigned acsi = c - char32_t(Drawlist::GChar::ULCorner); acsi < size(c_acs_sym)) {
+	c = c_acs_sym [acsi];	// ACS char, substitute
 	set_bit (cc.attr, Surface::Attr::Altcharset);
+    } else if (c < ' ' || c > '~') {
+	c = '?';		// unprintable character
+	set_bit (cc.attr, Surface::Attr::Blink);
+	cc.fg = IColor::White;
+	cc.bg = IColor::Red;
     }
     cc.c = c;
     return cc;
 }
 
-void TerminalScreenWindow::Draw_char (wchar_t c, HAlign, VAlign)
+void TerminalScreenWindow::Draw_char (char32_t c, HAlign, VAlign)
 {
     if (_viewport.contains (_pos))
 	*_surface.iat(_pos) = cell_from_char (c);
     ++_pos.x;
 }
 
-void TerminalScreenWindow::Draw_char_bar (const Size& wh, wchar_t c)
+void TerminalScreenWindow::Draw_char_bar (const Size& wh, char32_t c)
 {
     auto orect = interior_area().clip (Rect (_pos, wh));
     if (orect.empty())
@@ -786,7 +791,7 @@ void TerminalScreenWindow::Draw_line (const Offset& o)
 	} else
 	    lsz.w = o.dx;
     }
-    Draw_char_bar (lsz, wchar_t(lc));
+    Draw_char_bar (lsz, char32_t(lc));
     _pos = newpos;
 }
 
@@ -806,7 +811,7 @@ void TerminalScreenWindow::Draw_box (const Size& wh)
     };
     for (auto i = 0u; i < size(sides); --_pos.x,_pos.y+=!i++) {
 	Draw_line (sides[i]);
-	Draw_char (wchar_t(cornchar[i]));
+	Draw_char (char32_t(cornchar[i]));
     }
 }
 

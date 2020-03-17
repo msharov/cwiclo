@@ -33,21 +33,21 @@ public:
     inline auto		insert (const_iterator ip, const string& s)			{ return insert (ip, s.c_str(), s.size()); }
     inline auto		insert (const_iterator ip, const_pointer s)			{ return insert (ip, s, strlen(s)); }
     inline auto		insert (const_iterator ip, const_pointer f, const_iterator l)	{ return insert (ip, f, l-f); }
-    iterator		insert (const_iterator ip, wchar_t c);
+    iterator		insert (const_iterator ip, char32_t c);
     int			insertv (const_iterator ip, const char* fmt, va_list args);
     int			insertf (const_iterator ip, const char* fmt, ...) PRINTFARGS(3,4);
 			using memblock::append;
     inline auto		append (char c, size_type n = 1)		{ return insert (end(), c, n); }
     inline auto	   	append (const_pointer s)			{ return append (s, strlen(s)); }
     inline auto		append (const_iterator i1, const_iterator i2)	{ assert (i1<=i2); return append (i1, i2-i1); }
-    inline auto		append (wchar_t c)				{ return insert (end(), c); }
+    inline auto		append (char32_t c)				{ return insert (end(), c); }
     int			appendv (const char* fmt, va_list args);
     int			appendf (const char* fmt, ...) PRINTFARGS(2,3);
 			using memblock::assign;
     inline void		assign (value_type c)				{ assign (&c, 1); }
     inline void	    	assign (const_pointer s)			{ assign (s, strlen(s)); }
     inline void		assign (const_iterator i1, const_iterator i2)	{ assert (i1<=i2); assign (i1, i2-i1); }
-    void		assign (wchar_t c)				{ clear(); append (c); }
+    void		assign (char32_t c)				{ clear(); append (c); }
     int			assignv (const char* fmt, va_list args);
     int			assignf (const char* fmt, ...) PRINTFARGS(2,3);
     inline static auto	create_from_file (const char* filename)		{ string r; r.read_file (filename); return r; }
@@ -62,17 +62,17 @@ public:
     inline auto&	operator= (const cmemlink& s)			{ assign (s); return *this; }
     inline auto&	operator= (const_pointer s)			{ assign (s); return *this; }
     inline auto&	operator= (char c)				{ assign (c); return *this; }
-    inline auto&	operator= (wchar_t c)				{ assign (c); return *this; }
+    inline auto&	operator= (char32_t c)				{ assign (c); return *this; }
     inline auto&	operator+= (const string& s)			{ append (s); return *this; }
     inline auto&	operator+= (const cmemlink& s)			{ append (s); return *this; }
     inline auto&	operator+= (const_pointer s)			{ append (s); return *this; }
     inline auto&	operator+= (char c)				{ push_back (c); return *this; }
-    inline auto&	operator+= (wchar_t c)				{ append (c); return *this; }
+    inline auto&	operator+= (char32_t c)				{ append (c); return *this; }
     inline auto		operator+ (const string& s) const		{ auto r (*this); return r += s; }
     inline auto		operator+ (const cmemlink& s) const		{ auto r (*this); return r += s; }
     inline auto		operator+ (const_pointer s) const		{ auto r (*this); return r += s; }
     inline auto		operator+ (char c) const			{ auto r (*this); return r += c; }
-    inline auto		operator+ (wchar_t c) const			{ auto r (*this); return r += c; }
+    inline auto		operator+ (char32_t c) const			{ auto r (*this); return r += c; }
     inline bool		operator== (const string& s) const		{ return memblock::operator== (s); }
     bool		operator== (const_pointer s) const;
     constexpr bool	operator== (char c) const			{ return size() == 1 && c == at(0); }

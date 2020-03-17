@@ -31,12 +31,12 @@ public:
 		Last
 	    };
 	};
-	struct alignas(8) Cell {
-	    wchar_t	c;
-	    uint16_t	attr;
+	struct alignas(4) Cell {
+	    char	c;
+	    uint8_t	attr;
 	    icolor_t	fg,bg;
 	public:
-	    constexpr bool	operator== (const Cell& v) const { return *pointer_cast<uint64_t>(this) == *pointer_cast<uint64_t>(&v); }
+	    constexpr bool	operator== (const Cell& v) const { return *pointer_cast<uint32_t>(this) == *pointer_cast<uint32_t>(&v); }
 	    constexpr bool	operator!= (const Cell& v) const { return !operator==(v); }
 	};
 	using value_type	= Cell;
@@ -124,7 +124,7 @@ private:
     Rect	interior_area (void) const	{ return Rect (area().size()); }
     Rect	clip_to_screen (void) const	{ return TerminalScreen::instance().position_window (area()); }
     icolor_t	clip_color (icolor_t c, Surface::Attr::EAttr fattr);
-    Cell	cell_from_char (wchar_t c) const;
+    Cell	cell_from_char (char32_t c) const;
     inline void	Draw_reset (void);
     void	Draw_clear (void);
     inline void	Draw_enable (uint8_t feature);
@@ -135,11 +135,11 @@ private:
     void	Draw_line (const Offset& o);
     inline void	Draw_draw_color (icolor_t c);
     inline void	Draw_fill_color (icolor_t c);
-    inline void	Draw_char (wchar_t c, HAlign ha = HAlign::Left, VAlign va = VAlign::Top);
+    inline void	Draw_char (char32_t c, HAlign ha = HAlign::Left, VAlign va = VAlign::Top);
     inline void	Draw_text (const string& t, HAlign ha = HAlign::Left, VAlign va = VAlign::Top);
     void	Draw_box (const Size& wh);
     inline void	Draw_bar (const Size& wh);
-    void	Draw_char_bar (const Size& wh, wchar_t c);
+    void	Draw_char_bar (const Size& wh, char32_t c);
     void	Draw_panel (const Size& wh, PanelType t);
     void	Draw_edit_text (const string& t, uint32_t cp, HAlign ha, VAlign va);
 private:

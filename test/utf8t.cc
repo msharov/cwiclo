@@ -11,23 +11,23 @@ class TestApp : public App {
     inline		TestApp (void) : App() {}
 public:
     static auto&	instance (void) { static TestApp s_app; return s_app; }
-    static void		widen_utf8 (const string& str, vector<wchar_t>& result);
-    static void		dump_wchar (wchar_t c);
-    static void		dump_wchars (const vector<wchar_t>& v);
+    static void		widen_utf8 (const string& str, vector<char32_t>& result);
+    static void		dump_wchar (char32_t c);
+    static void		dump_wchars (const vector<char32_t>& v);
     inline int		run (void);
 };
 
 BEGIN_CWICLO_APP (TestApp)
 END_CWICLO_APP
 
-void TestApp::widen_utf8 (const string& str, vector<wchar_t>& result) // static
+void TestApp::widen_utf8 (const string& str, vector<char32_t>& result) // static
 {
     result.resize (str.length());
     fill (result, 0);
     copy (str.wbegin(), str.wend(), result.begin());
 }
 
-void TestApp::dump_wchar (wchar_t c) // static
+void TestApp::dump_wchar (char32_t c) // static
 {
     if (c < CHAR_MAX && isprint(char(c)))
 	printf (" '%c'", char(c));
@@ -35,7 +35,7 @@ void TestApp::dump_wchar (wchar_t c) // static
 	printf (" %u", unsigned(c));
 }
 
-void TestApp::dump_wchars (const vector<wchar_t>& v) // static
+void TestApp::dump_wchars (const vector<char32_t>& v) // static
 {
     for (auto i : v)
 	dump_wchar (i);
@@ -44,7 +44,7 @@ void TestApp::dump_wchars (const vector<wchar_t>& v) // static
 int TestApp::run (void)
 {
     printf ("Generating Unicode characters ");
-    vector<wchar_t> wch;
+    vector<char32_t> wch;
     wch.resize (0xffff);
     iota (wch, 0);
     printf ("%u - %u\n", unsigned(wch[0]), unsigned(wch.back()));
@@ -73,7 +73,7 @@ int TestApp::run (void)
     }
 
     puts ("Decoding back.");
-    vector<wchar_t> dwch;
+    vector<char32_t> dwch;
     widen_utf8 (encoded, dwch);
 
     printf ("Comparing.\nsrc = %u chars, encoded = %u chars, decoded = %u\n", wch.size(), encoded.size(), dwch.size());
@@ -89,14 +89,14 @@ int TestApp::run (void)
     puts ("Testing wide character string::insert");
     string ws ("1234567890");
 
-    ws.insert (ws.find('1'), wchar_t(1234));
-    static constexpr const wchar_t c_wchars[] = { 3456, 4567 };
+    ws.insert (ws.find('1'), char32_t(1234));
+    static constexpr const char32_t c_wchars[] = { 3456, 4567 };
     auto i3 = ws.find('3');
     for (auto i = 0u; i < 2; ++i)
 	for (auto j : c_wchars)
 	    i3 = ws.insert (i3, j);
-    ws.insert (ws.find('3'), wchar_t(2345));
-    ws.append (wchar_t(5678));
+    ws.insert (ws.find('3'), char32_t(2345));
+    ws.append (char32_t(5678));
 
     printf ("Values[%u]:", ws.length());
     for (auto j = ws.wbegin(); j < ws.wend(); ++j)

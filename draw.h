@@ -41,8 +41,8 @@ protected:
 public:
     //{{{ GChar --------------------------------------------------------
     // Graphical characters for line drawing on text terminals.
-    enum class GChar : uint16_t {
-	ULCorner = 0xfdd0, LLCorner, URCorner, LRCorner,
+    enum class GChar : uint8_t {
+	ULCorner = 0x80, LLCorner, URCorner, LRCorner,
 	LeftT, RightT, TopT, BottomT,
 	HLine, VLine, Plus, HLine1,
 	HLine3, HLine7, HLine9, LeftArrow,
@@ -117,10 +117,10 @@ public:
 	inline constexpr void	viewport (const Rect& r)	{ write (Cmd::Viewport, 0, r); }
 	inline constexpr void	draw_color (icolor_t c)		{ write (Cmd::DrawColor, c); }
 	inline constexpr void	fill_color (icolor_t c)		{ write (Cmd::FillColor, c); }
-	inline constexpr void	draw_char (wchar_t c, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
+	inline constexpr void	draw_char (char32_t c, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
 				    { write (Cmd::Char, pack_alignment_byte (ha,va), uint32_t(c)); }
 	inline constexpr void	draw_char (GChar c, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
-				    { draw_char (wchar_t(c), ha, va); }
+				    { draw_char (char32_t(c), ha, va); }
 	inline constexpr void	text (const string& s, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
 				    { write (Cmd::Text, pack_alignment_byte (ha,va), s); }
 	inline constexpr void	text (const string_view& s, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
@@ -149,9 +149,12 @@ public:
 	inline constexpr void	bar (const Size& wh)		{ write (Cmd::Bar, 0, wh); }
 	inline constexpr void	bar (dim_t w, dim_t h)		{ bar (Size(w,h)); }
 	inline constexpr void	bar (const Rect& r)		{ move_to (r.pos()); bar (r.size()); }
-	inline constexpr void	char_bar (const Size& wh, wchar_t c)	{ write (Cmd::CharBar, 0, wh, uint32_t(c)); }
-	inline constexpr void	char_bar (dim_t w, dim_t h, wchar_t c)	{ char_bar (Size(w,h), c); }
-	inline constexpr void	char_bar (const Rect& r, wchar_t c)	{ move_to (r.pos()); char_bar (r.size(), c); }
+	inline constexpr void	char_bar (const Size& wh, char32_t c)	{ write (Cmd::CharBar, 0, wh, c); }
+	inline constexpr void	char_bar (dim_t w, dim_t h, char32_t c)	{ char_bar (Size(w,h), c); }
+	inline constexpr void	char_bar (const Rect& r, char32_t c)	{ move_to (r.pos()); char_bar (r.size(), c); }
+	inline constexpr void	char_bar (const Size& wh, GChar c)	{ char_bar (wh, char32_t(c)); }
+	inline constexpr void	char_bar (dim_t w, dim_t h, GChar c)	{ char_bar (w, h, char32_t(c)); }
+	inline constexpr void	char_bar (const Rect& r, GChar c)	{ char_bar (r, char32_t(c)); }
 	inline constexpr void	panel (const Size& wh, PanelType t = PanelType::Raised)	{ write (Cmd::Panel, uint8_t(t), wh); }
 	inline constexpr void	panel (dim_t w, dim_t h, PanelType t=PanelType::Raised)	{ panel (Size(w,h), t); }
 	inline constexpr void	panel (const Rect& r, PanelType t = PanelType::Raised)	{ move_to (r.pos()); panel (r.size(), t); }

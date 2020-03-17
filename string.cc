@@ -8,7 +8,7 @@
 
 namespace cwiclo {
 
-string::iterator string::insert (const_iterator ip, wchar_t c)
+string::iterator string::insert (const_iterator ip, char32_t c)
 {
     auto ioi = utf8::out (memblock::insert (ip, utf8::obytes(c)));
     *ioi++ = c;

@@ -280,53 +280,46 @@ private:
 //{{{2 KMod ------------------------------------------------------------
 
 struct KMod {
-    enum : Event::key_t { Mask = numeric_limits<Event::key_t>::max() << (bits_in_type<Event::key_t>::value-8) };
-    enum : Event::key_t {
-	Shift	= (Mask-1)<<1,
-	Ctrl	= Shift<<1,
-	Alt	= Ctrl<<1,
-	Banner	= Alt<<1,
-	Left	= Banner<<1,
-	Middle	= Left<<1,
-	Right	= Middle<<1
-    };
+    enum : Event::key_t { FirstBit = bits_in_type<Event::key_t>::value-8 };
+    static constexpr const Event::key_t Shift	= bit_mask<Event::key_t>(FirstBit+0);
+    static constexpr const Event::key_t Ctrl	= Shift<<1;
+    static constexpr const Event::key_t Alt	= Ctrl<<1;
+    static constexpr const Event::key_t Banner	= Alt<<1;
+    static constexpr const Event::key_t Left	= Banner<<1;
+    static constexpr const Event::key_t Middle	= Left<1;
+    static constexpr const Event::key_t Right	= Middle<<1;
+    static constexpr const Event::key_t Mask	= Shift-1;
 };
 
 //}}}2------------------------------------------------------------------
 //{{{2 Key
 
 struct Key {
-    enum : Event::key_t { Mask = ~KMod::Mask };
+    static constexpr const Event::key_t Mask = ~KMod::Mask;
     enum : Event::key_t {
-	Null, Menu, PageUp, Copy, Break,
-	Insert, Delete, Pause, Backspace, Tab,
-	Enter, Redo, PageDown, Home, Alt,
-	Shift, Ctrl, CapsLock, NumLock, ScrollLock,
-	SysReq, Banner, Paste, Close, Cut,
-	End, Undo, Escape, Right, Left,
-	Up, Down, Space,
-	// Space through '~' are printable characters.
-	// Then there are keys with unicode values.
-	// Put the rest of the codes in the Unicode private use region.
-	F0 = 0xe000, F1, F2, F3, F4,
-	F5, F6, F7, F8, F9,
-	F10, F11, F12, F13, F14,
-	F15, F16, F17, F18, F19,
-	F20, F21, F22, F23, F24,
-	Back, Calculator, Center, Documents, Eject,
-	Explorer, Favorites, Find, Forward, Help,
-	Hibernate, History, LogOff, Mail, Mute,
-	New, Open, Options, Play, PowerDown,
-	Print, Refresh, Save, ScreenSaver, Spell,
-	Stop, VolumeDown, VolumeUp, WWW, Wheel,
-	ZoomIn, ZoomOut
+	Null, Shift, PageUp, End, Pause,
+	Search, Mute, Play, Backspace, Tab,
+	Enter, Forward, PageDown, Home, CapsLock,
+	F1, F2, F3, F4, F5,
+	F6, F7, F8, F9, F10,
+	F11, F12, Escape, Print, Paste,
+	Save, Open, Space,
+	Delete = '~'+1,
+	Options, History, Break, Refresh, Favorites,
+	Down, Copy, Cut, Center, Help,
+	Back, Right, Left, Up, Alt,
+	NumLock, SysReq, VolumeUp, Redo, ScrollLock,
+	Undo, Mail, ZoomIn, ZoomOut, New,
+	Wheel, Insert, Ctrl, Stop, Banner,
+	VolumeDown, Menu
     };
 };
 
 //}}}2------------------------------------------------------------------
-//{{{2 MouseKey
+//{{{2 MouseButton
 
-struct MouseKey {
+struct MouseButton {
+    static constexpr const Event::key_t Mask = Key::Mask;
     enum : Event::key_t {
 	None, Left, Middle, Right,
 	WheelUp, WheelDown, WheelLeft, WheelRight
