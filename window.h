@@ -17,6 +17,7 @@ public:
     using Layout	= WidgetLayout;
     using Info		= WindowInfo;
     using drawlist_t	= PScreen::drawlist_t;
+    enum { f_DrawInProgress = Msger::f_Last, f_DrawPending, f_Last };
 public:
     explicit		Window (const Msg::Link& l);
     void		draw (void);
@@ -42,6 +43,7 @@ public:
     auto&		area (void) const		{ return window_info().area(); }
 protected:
     bool		dispatch (Msg& msg) override;
+    void		on_msger_destroyed (mrid_t mid) override;
     virtual Rect	compute_size_hints (void) const;
     void		layout (void);
     virtual void	on_resize (void);

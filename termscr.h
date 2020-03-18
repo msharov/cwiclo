@@ -16,7 +16,7 @@ class TerminalScreenWindow;
 
 class TerminalScreen : public Msger {
 public:
-    enum { f_UIMode = Msger::f_Last, f_CaretOn, f_Last };
+    enum { f_UIMode = Msger::f_Last, f_CaretOn, f_InputEOF, f_Last };
     //{{{ Surface
     class Surface {
     public:
@@ -82,7 +82,7 @@ public:
 protected:
 		TerminalScreen (void);
 		~TerminalScreen (void) override;
-    void	parse_keycodes (bool toend = true);
+    void	parse_keycodes (void);
 private:
     vector<TerminalScreenWindow*> _windows;
     string	_tout,_tin;

@@ -121,11 +121,11 @@ void TerminalScreen::tt_mode (void)
     for (int fd = STDIN_FILENO; fd <= STDOUT_FILENO; ++fd)
 	PTimer::make_blocking (fd);
     printf (
-	T_ALTSCREEN_OFF
 	T_SET_DEFAULT_ATTRS
 	T_ALTCHARSET_DISABLE
+	T_CLEAR_SCREEN
 	T_CARET_ON
-	T_MOVE_TO_LINE, screen_info().size().h);
+	T_ALTSCREEN_OFF);
     if (s_old_termios.c_lflag)	// don't set termios if it wasn't read successfully in ui_mode
 	tcsetattr (STDIN_FILENO, TCSAFLUSH, &s_old_termios);
     signal (SIGTSTP, SIG_DFL);	// reenable Ctrl-Z
@@ -181,10 +181,9 @@ void TerminalScreen::register_window (TerminalScreenWindow* w)
 {
     assert (w);
     assert (!linear_search (_windows, w));
+    if (!flag (f_UIMode))
+	ui_mode();
     _windows.push_back (w);
-    if (_scrinfo.size().w)
-	return;
-    ui_mode();
 }
 
 void TerminalScreen::unregister_window (const TerminalScreenWindow* w)
@@ -193,7 +192,7 @@ void TerminalScreen::unregister_window (const TerminalScreenWindow* w)
     if (_windows.empty()) {
 	_ptermi.stop();
 	_ptermo.stop();
-	if (_scrinfo.size().w)
+	if (flag (f_UIMode))
 	    tt_mode();
     } else {
 	// This implementation has only one window stack,
@@ -393,27 +392,25 @@ void TerminalScreen::TimerR_timer (PTimerR::fd_t)
 	    if (w->flag (TerminalScreenWindow::f_DrawInProgress) || w->flag (TerminalScreenWindow::f_DrawPending))
 		_windows.back()->on_event (c_vsync_event);
 
-    for (;;) {
-	parse_keycodes (false);
-	if (_tin.capacity() <= _tin.size())
-	    break;
+    while (_tin.capacity() > _tin.size()) {
 	auto br = read (STDIN_FILENO, _tin.end(), _tin.capacity()-_tin.size());
 	if (br == 0) {
-	    //if (!_windows.empty())
-		//_windows.back()->on_event (c_close_event);
+	    if (!flag (f_InputEOF)) {
+		set_flag (f_InputEOF);
+		eachfor (w, _windows) // close all windows
+		    (*w)->on_event (c_close_event);
+	    }
 	    break;
 	} else if (br < 0) {
 	    if (errno == EINTR)
 		continue;
-	    if (errno == EAGAIN) {
-		parse_keycodes();
-		_ptermi.wait_read (STDIN_FILENO);
+	    if (errno == EAGAIN)
 		break;
-	    }
 	    return error_libc ("read");
 	}
 	_tin.shrink (_tin.size()+br);
     }
+    parse_keycodes();
 }
 
 struct EscSeq { char s[5]; unsigned char k; };
@@ -489,7 +486,7 @@ static const EscSeq* match_escape_sequence (const char* s, size_t n)
     return match;
 }
 
-void TerminalScreen::parse_keycodes (bool isfinal)
+void TerminalScreen::parse_keycodes (void)
 {
     if (_windows.empty() || !_windows.back()->is_mapped())
 	return;
@@ -510,7 +507,7 @@ void TerminalScreen::parse_keycodes (bool isfinal)
 	    if (ematch) {	// compound sequence
 		c = ematch->k;
 		is.skip (4-(ematch->s[3]?0:(ematch->s[2]?1:2))); // sequences are 2-4 bytes
-	    } else if (!isfinal)// assume a sequence is always read whole
+	    } else if (_tin.capacity() <= _tin.size())
 		break;		// possible incomplete sequence, try again later
 	    else if (ic+1 < is.end() && *(ic+1) >= ' ' && *(ic+1) <= '~') {
 		// Alt+key for printable characters is Esc+key
@@ -526,6 +523,8 @@ void TerminalScreen::parse_keycodes (bool isfinal)
 	_windows.back()->on_event (Event (Event::Type::KeyDown, c));
     }
     _tin.erase (_tin.begin(), is.begin());
+    if (_tin.capacity() > _tin.size() && !flag (f_InputEOF))
+	_ptermi.wait_read (STDIN_FILENO);
 }
 
 //}}}-------------------------------------------------------------------
@@ -563,7 +562,8 @@ void TerminalScreenWindow::on_event (const Event& ev)
 	    draw();
 	    return;	// for multiple draws per frame, only send vsync for the last one
 	}
-    }
+    } else if (ev.type() == Event::Type::Close && flag (f_Unused))
+	return; // already closed
     _reply.event (ev);
 }
 
@@ -874,7 +874,7 @@ void TerminalScreenWindow::Screen_draw (const cmemlink& dl)
 
 void TerminalScreenWindow::draw (void)
 {
-    if (flag (f_DrawInProgress))
+    if (flag (f_DrawInProgress) || flag (f_Unused))
 	set_flag (f_DrawPending);
     else {
 	set_flag (f_DrawPending, false);

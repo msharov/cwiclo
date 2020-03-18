@@ -518,6 +518,7 @@ public:
     drawlist_t	begin_draw (void) const		{ return drawlist_t(4); }
     void	end_draw (drawlist_t&& d) const
 		    { ostream(d) << uint32_t(d.size()-4); recreate_msg (m_draw(), move(d)); }
+    bool	has_outgoing_draw (void) const	{ return has_outgoing_msg (m_draw()); }
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_draw())

@@ -22,7 +22,15 @@ Window::Window (const Msg::Link& l)
 
 void Window::close (void)
 {
+    _scr.close();
     set_unused();
+}
+
+void Window::on_msger_destroyed (mrid_t mid)
+{
+    if (mid == _scr.dest())
+	close();
+    Msger::on_msger_destroyed (mid);
 }
 
 void Window::create_widgets (const Widget::Layout* f, const Widget::Layout* l)
@@ -109,6 +117,13 @@ void Window::ScreenR_resize (const Info& wi)
 
 void Window::draw (void)
 {
+    if (flag (f_DrawInProgress)) {
+	set_flag (f_DrawPending);
+	if (!_scr.has_outgoing_draw())
+	    return;
+    }
+    set_flag (f_DrawPending, false);
+    set_flag (f_DrawInProgress);
     auto dl = _scr.begin_draw();
     on_draw (dl);
     if (_widgets)
@@ -126,7 +141,11 @@ void Window::on_event (const Event& ev)
 	on_key (ev.key());	// key events unused by widgets are processed in the window handler
     else if (ev.type() == Event::Type::Close)
 	close();
-    else if (_widgets)
+    else if (ev.type() == Event::Type::VSync) {
+	set_flag (f_DrawInProgress, false);
+	if (flag (f_DrawPending))
+	    draw();
+    } else if (_widgets)
 	_widgets->on_event (ev);
 }
 
