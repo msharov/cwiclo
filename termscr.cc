@@ -86,7 +86,7 @@ bool TerminalScreen::dispatch (Msg& msg)
 }
 
 //}}}-------------------------------------------------------------------
-//{{{ Terminal state management
+//{{{ TerminalScreen state management
 
 void TerminalScreen::ui_mode (void)
 {
@@ -228,7 +228,7 @@ Rect TerminalScreen::position_window (Rect warea) const
 }
 
 //}}}-------------------------------------------------------------------
-//{{{ draw_window
+//{{{ TerminalScreen draw_window
 
 void TerminalScreen::draw_window (const TerminalScreenWindow* w)
 {
@@ -362,14 +362,17 @@ void TerminalScreen::draw_window (const TerminalScreenWindow* w)
     }
 
     // Write the buffer
-    TimerR_timer (STDIN_FILENO);
+    _ptermo.wait_write (STDOUT_FILENO);
 }
 
 //}}}-------------------------------------------------------------------
-//{{{ Terminal input processing
+//{{{ TerminalScreen input processing
 
 void TerminalScreen::TimerR_timer (PTimerR::fd_t)
 {
+    static constexpr const Event c_vsync_event (Event::Type::VSync, 0, 60);
+    static constexpr const Event c_close_event (Event::Type::Close);
+
     while (!_tout.empty()) {
 	auto bw = write (STDOUT_FILENO, _tout.data(), _tout.size());
 	if (bw == 0)
@@ -385,21 +388,26 @@ void TerminalScreen::TimerR_timer (PTimerR::fd_t)
 	}
 	_tout.erase (_tout.begin(), bw);
     }
+    if (_tout.empty())
+	for (auto& w : _windows)
+	    if (w->flag (TerminalScreenWindow::f_DrawInProgress) || w->flag (TerminalScreenWindow::f_DrawPending))
+		_windows.back()->on_event (c_vsync_event);
+
     for (;;) {
 	parse_keycodes (false);
 	if (_tin.capacity() <= _tin.size())
 	    break;
 	auto br = read (STDIN_FILENO, _tin.end(), _tin.capacity()-_tin.size());
 	if (br == 0) {
-	    if (!_windows.empty())
-		_windows.back()->on_event (Event (Event::Type::Close, 0));
+	    //if (!_windows.empty())
+		//_windows.back()->on_event (c_close_event);
 	    break;
 	} else if (br < 0) {
 	    if (errno == EINTR)
 		continue;
 	    if (errno == EAGAIN) {
 		parse_keycodes();
-		_ptermo.wait_read (STDIN_FILENO);
+		_ptermi.wait_read (STDIN_FILENO);
 		break;
 	    }
 	    return error_libc ("read");
@@ -547,8 +555,20 @@ bool TerminalScreenWindow::dispatch (Msg& msg)
 	|| Msger::dispatch (msg);
 }
 
+void TerminalScreenWindow::on_event (const Event& ev)
+{
+    if (ev.type() == Event::Type::VSync && (flag (f_DrawInProgress) || flag (f_DrawPending))) {
+	set_flag (f_DrawInProgress, false);
+	if (flag (f_DrawPending)) {
+	    draw();
+	    return;	// for multiple draws per frame, only send vsync for the last one
+	}
+    }
+    _reply.event (ev);
+}
+
 //}}}-------------------------------------------------------------------
-//{{{ Sizing and layout
+//{{{ TerminalScreenWindow sizing and layout
 
 void TerminalScreenWindow::Screen_open (const WindowInfo& wi)
 {
@@ -581,7 +601,7 @@ void TerminalScreenWindow::on_new_screen_info (void)
 }
 
 //}}}-------------------------------------------------------------------
-//{{{ Drawing operations
+//{{{ TerminalScreenWindow drawing operations
 
 void TerminalScreenWindow::Draw_reset (void)
 {
@@ -849,7 +869,18 @@ void TerminalScreenWindow::Screen_draw (const cmemlink& dl)
 {
     reset();
     Drawlist::dispatch (this, dl);
-    TerminalScreen::instance().draw_window (this);
+    draw();
+}
+
+void TerminalScreenWindow::draw (void)
+{
+    if (flag (f_DrawInProgress))
+	set_flag (f_DrawPending);
+    else {
+	set_flag (f_DrawPending, false);
+	set_flag (f_DrawInProgress);
+	TerminalScreen::instance().draw_window (this);
+    }
 }
 
 //}}}-------------------------------------------------------------------

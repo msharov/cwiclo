@@ -229,7 +229,8 @@ private:
 
 class Event {
 public:
-    using key_t	= uint32_t;
+    using key_t	= char32_t;
+    //{{{2 Type
     enum class Type : uint8_t {
 	None,
 	// User input
@@ -239,7 +240,6 @@ public:
 	ButtonUp,
 	Motion,
 	Crossing,
-	Selection,
 	Clipboard,
 	// Window control events
 	Destroy,
@@ -249,33 +249,33 @@ public:
 	Focus,
 	Visibility
     };
+    //}}}2
 public:
     constexpr		Event (void)
-			    :_src(wid_None),_type(Type::None),_mods(0),_key(0) {}
-    constexpr		Event (Type t, key_t k, widgetid_t src = wid_None)
-			    :_src(src),_type(t),_mods(0),_key(k) {}
+			    :_type(Type::None),_mods(0),_src(wid_None),_key(0) {}
+    explicit constexpr	Event (Type t, key_t k = 0, uint8_t mods = 0, widgetid_t src = wid_None)
+			    :_type(t),_mods(mods),_src(src),_key(k) {}
     constexpr		Event (Type t, const Point& pt, uint8_t mods = 0, widgetid_t src = wid_None)
-			    :_src(src),_type(t),_mods(mods),_pt(pt) {}
+			    :_type(t),_mods(mods),_src(src),_pt(pt) {}
     constexpr		Event (Type t, const Size& sz, uint8_t mods = 0, widgetid_t src = wid_None)
-			    :_src(src),_type(t),_mods(mods),_sz(sz) {}
+			    :_type(t),_mods(mods),_src(src),_sz(sz) {}
     constexpr auto	src (void) const	{ return _src; }
     constexpr auto	type (void) const	{ return _type; }
     constexpr auto	mods (void) const	{ return _mods; }
     constexpr auto&	loc (void) const	{ return _pt; }
-    constexpr auto	selection_start (void) const	{ return _sz.w; }
-    constexpr auto	selection_end (void) const	{ return _sz.h; }
+    constexpr auto&	size (void) const	{ return _sz; }
     constexpr auto	key (void) const	{ return _key; }
 private:
-    widgetid_t	_src;
     Type	_type;
     uint8_t	_mods;
+    widgetid_t	_src;
     union {
+	key_t	_key;
 	Point	_pt;
 	Size	_sz;
-	key_t	_key;
     };
 };
-#define SIGNATURE_ui_Event "(qyyu)"
+#define SIGNATURE_ui_Event "(yyqu)"
 
 //{{{2 KMod ------------------------------------------------------------
 

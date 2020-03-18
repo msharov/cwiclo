@@ -203,15 +203,10 @@ void Widget::resize (const Rect& inarea)
 
 PWidgetR Widget::widget_reply (void) const
     { return PWidgetR (parent_window()->msger_id(), parent_window()->msger_id()); }
-void Widget::create_event (const Event& ev) const
-    { widget_reply().event (ev); }
 void Widget::report_selection (void) const
-    { create_event (Event (Event::Type::Selection, _selection, 0, widget_id())); }
-
+    { widget_reply().selection (widget_id(), selection()); }
 void Widget::report_modified (void) const
-{
-    widget_reply().modified (widget_id(), text());
-}
+    { widget_reply().modified (widget_id(), text()); }
 
 void Widget::draw (drawlist_t& dl) const
 {
@@ -290,7 +285,7 @@ void Widget::on_key (key_t k)
     // Retuning directly to on_event to avoid sequencing problems with returned
     // and directly handled key events.
     if (widget_id() && _widgets.empty() && flag (f_CanFocus))
-	_win->on_event (Event (Event::Type::KeyDown, k, widget_id()));
+	_win->on_event (Event (Event::Type::KeyDown, k, 0, widget_id()));
 }
 
 //}}}-------------------------------------------------------------------

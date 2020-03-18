@@ -97,8 +97,10 @@ private:
 //----------------------------------------------------------------------
 
 class TerminalScreenWindow : public Msger {
+public:
     using Surface = TerminalScreen::Surface;
     using Cell = Surface::Cell;
+    enum { f_DrawInProgress = Msger::f_Last, f_DrawPending, f_Last };
 public:
 		TerminalScreenWindow (const Msg::Link& l);
 		~TerminalScreenWindow (void) override;
@@ -109,8 +111,8 @@ public:
     auto&	viewport (void) const		{ return _viewport; }
     auto&	surface (void) const		{ return _surface; }
     auto&	caret (void) const		{ return _caret; }
-    void	on_event (const Event& ev)	{ _reply.event (ev); }
-    void	draw (void)			{ _reply.expose(); }
+    void	on_event (const Event& ev);
+    void	draw (void);
     void	reset (void);
     void	on_resize (const Rect& warea);
     void	on_new_screen_info (void);

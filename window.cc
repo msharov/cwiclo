@@ -126,8 +126,6 @@ void Window::on_event (const Event& ev)
 	on_key (ev.key());	// key events unused by widgets are processed in the window handler
     else if (ev.type() == Event::Type::Close)
 	close();
-    else if (ev.type() == Event::Type::Selection)
-	on_selection (ev.src(), ev.selection_start(), ev.selection_end());
     else if (_widgets)
 	_widgets->on_event (ev);
 }

@@ -69,7 +69,7 @@ DEFINE_WIDGET_WRITE_DRAWLIST (UITWindow, Drawlist, dlw)
 
 void UITWindow::on_key (key_t k)
 {
-    if (k == 'q' || k == '/' || k == Key::Enter || k == Key::Escape)
+    if (k == Key::Escape)
 	close();
     else
 	Window::on_key (k);
@@ -81,11 +81,21 @@ class TestApp : public App {
 public:
     static auto& instance (void) { static TestApp s_app; return s_app; }
     int run (void) { _uitwp.create_dest_as<UITWindow>(); return App::run(); }
+    inline void process_args (argc_t argc, argv_t argv);
 private:
     TestApp (void) : App(),_uitwp (mrid_App) {}
 private:
     Proxy	_uitwp;
 };
+
+void TestApp::process_args (argc_t argc [[maybe_unused]], argv_t argv [[maybe_unused]])
+{
+    #ifndef NDEBUG
+	for (int opt; 0 < (opt = getopt (argc, argv, "d"));)
+	    if (opt == 'd')
+		set_flag (f_DebugMsgTrace);
+    #endif
+}
 
 BEGIN_CWICLO_APP (TestApp)
     REGISTER_MSGER (PTimer, App::Timer)

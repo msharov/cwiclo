@@ -39,8 +39,7 @@ public:
     static constexpr mstime_t TimerNone = UINT64_MAX;
 public:
     explicit	PTimer (mrid_t caller) : Proxy (caller) {}
-    void	watch (WatchCmd cmd, fd_t fd, mstime_t timeoutms = TimerNone) const
-		    { send (m_watch(), cmd, fd, timeoutms); }
+    void	watch (WatchCmd cmd, fd_t fd, mstime_t timeoutms = TimerNone) const;
     void	stop (void) const				{ watch (WatchCmd::Stop, -1, TimerNone); }
     void	timer (mstime_t timeoutms) const		{ watch (WatchCmd::Timer, -1, timeoutms); }
     void	wait_read (fd_t fd, mstime_t t=TimerNone) const	{ watch (WatchCmd::Read, fd, t); }

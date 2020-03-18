@@ -12,22 +12,25 @@ namespace ui {
 //{{{ PWidgetR ---------------------------------------------------------
 
 class PWidgetR : public ProxyR {
-    DECLARE_INTERFACE (WidgetR, (event,SIGNATURE_ui_Event)(modified,"qqs"))
+    DECLARE_INTERFACE (WidgetR, (event,SIGNATURE_ui_Event)(modified,"qqs")(selection,SIGNATURE_ui_Size"q"))
 public:
     constexpr		PWidgetR (const Msg::Link& l)	: ProxyR(l) {}
     constexpr		PWidgetR (mrid_t f, mrid_t t)	: ProxyR(Msg::Link{f,t}) {}
-    void		event (const Event& ev) const	{ send (m_event(), ev); }
     void		modified (widgetid_t wid, const string& t) const
 			    { send (m_modified(), wid, uint16_t(0), t); }
+    void		selection (widgetid_t wid, const Size& s) const
+			    { send (m_selection(), s, wid); }
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
-	if (msg.method() == m_event())
-	    o->PWidgetR_event (msg.read().read<Event>());
-	else if (msg.method() == m_modified()) {
+	if (msg.method() == m_modified()) {
 	    auto is = msg.read();
 	    auto wid = is.read<widgetid_t>();
 	    is.skip (2);
 	    o->PWidgetR_modified (wid, is.read<string_view>());
+	} else if (msg.method() == m_selection()) {
+	    auto is = msg.read();
+	    decltype(auto) s = is.read<Size>();
+	    o->PWidgetR_selection (is.read<widgetid_t>(), move(s));
 	} else
 	    return false;
 	return true;
@@ -109,7 +112,6 @@ public:
 protected:
     auto		parent_window (void) const		{ return _win; }
     auto&		textw (void)				{ return _text; }
-    void		create_event (const Event& ev) const;
     void		report_modified (void) const;
     void		report_selection (void) const;
 private:
