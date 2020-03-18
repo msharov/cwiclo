@@ -133,9 +133,12 @@ public:					\
 
 class Msg {
 public:
-    struct Link {
+    struct alignas(4) Link {
 	mrid_t	src;
 	mrid_t	dest;
+    public:
+	constexpr bool operator== (const Link& l) const { return *pointer_cast<uint32_t>(this) == *pointer_cast<uint32_t>(&l); }
+	constexpr bool operator!= (const Link& l) const { return !operator==(l); }
     };
     using Body		= memblaz;
     using value_type	= Body::value_type;
@@ -170,6 +173,8 @@ public:
     constexpr auto	extid (void) const	{ return _extid; }
     constexpr auto	fd_offset (void) const	{ return _fdoffset; }
     constexpr auto&&	move_body (void)	{ return move(_body); }
+    void		resize_body (streamsize sz) { _body.resize (sz); }
+    void		replace_body (Body&& b)	{ _body = move(b); }
     inline constexpr auto read (void) const	{ return istream (data(),size()); }
     inline constexpr auto write (void)		{ return ostream (data(),size()); }
     static streamsize	validate_signature (istream is, const char* sig);
@@ -211,13 +216,17 @@ protected:
     void		operator= (const ProxyB&) = delete;
     Msg&		create_msg (methodid_t imethod, streamsize sz) const;
     Msg&		create_msg (methodid_t imethod, streamsize sz, Msg::fdoffset_t fdo) const;
-    void		forward_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0) const;
+    Msg&		create_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0) const;
+    Msg&		create_msg (methodid_t imethod, memblock&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0) const
+			    { return create_msg (imethod, reinterpret_cast<Msg::Body&&>(body), fdo, extid); }
+    Msg&		recreate_msg (methodid_t imethod, streamsize sz) const;
+    Msg&		recreate_msg (methodid_t imethod, Msg::Body&& body) const;
     void		forward_msg (Msg&& msg) const
-			    { forward_msg (msg.method(), msg.move_body(), msg.fd_offset(), msg.extid()); }
-    void		forward_msg (methodid_t imethod, memblock&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0) const
-			    { forward_msg (imethod, reinterpret_cast<Msg::Body&&>(body), fdo, extid); }
+			    { create_msg (msg.method(), msg.move_body(), msg.fd_offset(), msg.extid()); }
     void		commit_msg (Msg& msg [[maybe_unused]], ostream& os [[maybe_unused]]) const
 			    { assert (!os.remaining() && msg.size() == msg.verify() && "Message body does not match method signature"); }
+    bool		has_outgoing_msg (methodid_t imethod) const
+			    { return get_outgoing_msg (imethod); }
     inline void		send (methodid_t imethod) const
 			    { create_msg (imethod, 0); }
     template <typename... Args>
@@ -230,8 +239,15 @@ protected:
 			    auto& msg = create_msg (imethod, stream_size_of(fd), 0);
 			    commit_msg (msg, msg.write() << fd);
 			}
+    template <typename... Args>
+    inline void		resend (methodid_t imethod, const Args&... args) const {
+			    auto& msg = recreate_msg (imethod, variadic_stream_size(args...));
+			    commit_msg (msg, (msg.write() << ... << args));
+			}
     void		allocate_id (void);
     void		free_id (void);
+private:
+    Msg*		get_outgoing_msg (methodid_t imethod) const;
 private:
     Msg::Link		_link;
 };

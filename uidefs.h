@@ -517,7 +517,7 @@ public:
     void	open (const WindowInfo& wi) const { send (m_open(), wi); }
     drawlist_t	begin_draw (void) const		{ return drawlist_t(4); }
     void	end_draw (drawlist_t&& d) const
-		    { ostream(d) << uint32_t(d.size()-4); forward_msg (m_draw(), move(d)); }
+		    { ostream(d) << uint32_t(d.size()-4); recreate_msg (m_draw(), move(d)); }
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_draw())

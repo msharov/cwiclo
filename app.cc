@@ -414,6 +414,14 @@ App::msgq_t::size_type App::has_messages_for (mrid_t mid) const
     return count_if (_outq, [=](auto& msg){ return msg.dest() == mid; });
 }
 
+Msg* App::has_outq_msg (methodid_t mid, const Msg::Link& l)
+{
+    eachfor (mi, _outq)
+	if (mi->method() == mid && mi->link() == l)
+	    return mi;
+    return nullptr;
+}
+
 //}}}-------------------------------------------------------------------
 //{{{ Timers
 

@@ -123,6 +123,7 @@ public:
     mrid_t		register_singleton_msger (Msger* m);
     static iid_t	interface_by_name (const char* iname, streamsize inamesz);
     msgq_t::size_type	has_messages_for (mrid_t mid) const;
+    Msg*		has_outq_msg (methodid_t mid, const Msg::Link& l);
     constexpr auto	has_timers (void) const		{ return _timers.size(); }
     bool		valid_msger_id (mrid_t id)const	{ assert (_msgers.size() == _creators.size()); return id <= _msgers.size(); }
     constexpr void	quit (void)			{ set_flag (f_Quitting); }

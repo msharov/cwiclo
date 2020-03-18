@@ -153,8 +153,29 @@ Msg& ProxyB::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo) con
     { return App::instance().create_msg (link(), mid, sz, fdo); }
 Msg& ProxyB::create_msg (methodid_t mid, streamsize sz) const
     { return create_msg (mid, sz, Msg::NoFdIncluded); }
-void ProxyB::forward_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid) const
-    { App::instance().create_msg (link(), imethod, move(body), fdo, extid); }
+Msg& ProxyB::create_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid) const
+    { return App::instance().create_msg (link(), imethod, move(body), fdo, extid); }
+
+Msg* ProxyB::get_outgoing_msg (methodid_t imethod) const
+    { return App::instance().has_outq_msg (imethod, link()); }
+
+Msg& ProxyB::recreate_msg (methodid_t imethod, streamsize sz) const
+{
+    if (auto msg = get_outgoing_msg (imethod); msg) {
+	msg->resize_body (sz);
+	return *msg;
+    }
+    return create_msg (imethod, sz);
+}
+
+Msg& ProxyB::recreate_msg (methodid_t imethod, Msg::Body&& body) const
+{
+    if (auto msg = get_outgoing_msg (imethod); msg) {
+	msg->replace_body (move(body));
+	return *msg;
+    }
+    return create_msg (imethod, move(body));
+}
 
 void ProxyB::allocate_id (void)
 {

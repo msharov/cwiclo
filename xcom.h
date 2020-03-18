@@ -21,6 +21,8 @@ public:
     void		export_ (const string& elist) const	{ send (m_export(), elist); }
     void		delete_ (void) const			{ send (m_delete()); }
 			using Proxy::forward_msg;
+    decltype(auto)	forward_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid) const
+			    { return Proxy::create_msg (imethod, move(body), fdo, extid); }
     static string	string_from_interface_list (const iid_t* elist);
     static Msg		error_msg (const string& errmsg);
     static Msg		export_msg (const string& elstr);

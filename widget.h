@@ -17,9 +17,9 @@ public:
     constexpr		PWidgetR (const Msg::Link& l)	: ProxyR(l) {}
     constexpr		PWidgetR (mrid_t f, mrid_t t)	: ProxyR(Msg::Link{f,t}) {}
     void		modified (widgetid_t wid, const string& t) const
-			    { send (m_modified(), wid, uint16_t(0), t); }
+			    { resend (m_modified(), wid, uint16_t(0), t); }
     void		selection (widgetid_t wid, const Size& s) const
-			    { send (m_selection(), s, wid); }
+			    { resend (m_selection(), s, wid); }
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_modified()) {
