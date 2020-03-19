@@ -9,7 +9,13 @@
 namespace cwiclo {
 namespace ui {
 
-//{{{ Widget creation --------------------------------------------------
+//{{{ Statics ----------------------------------------------------------
+
+DEFINE_INTERFACE (Screen)
+DEFINE_INTERFACE (ScreenR)
+
+//}}}-------------------------------------------------------------------
+//{{{ Widget creation
 
 Window::Window (const Msg::Link& l)
 : Msger (l)

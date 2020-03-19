@@ -57,7 +57,6 @@ public:
 	auto		iat (const Point& p) const	{ return iat(p.x,p.y); }
 	auto		iat (const Offset& o)		{ return iat(o.dx,o.dy); }
 	auto		iat (const Offset& o) const	{ return iat(o.dx,o.dy); }
-	void		draw_surface (const Point& pt, const Surface& src);
 	static constexpr auto default_cell (void) { return Cell { ' ', 0, IColor::Default, IColor::Default }; }
 	void		clear (void)		{ fill (_cells, default_cell()); }
     private:
@@ -67,10 +66,7 @@ public:
     //}}}
 public:
     static auto& instance (void) { static TerminalScreen s_scr; return s_scr; }
-    void	ui_mode (void);
-    void	tt_mode (void);
     void	reset (void);
-    void	update_screen_size (void);
     void	register_window (TerminalScreenWindow* w);
     void	unregister_window (const TerminalScreenWindow* w);
     Rect	position_window (Rect warea) const;
@@ -82,7 +78,12 @@ public:
 protected:
 		TerminalScreen (void);
 		~TerminalScreen (void) override;
-    void	parse_keycodes (void);
+private:
+    inline void	ui_mode (void);
+    void	tt_mode (void);
+    void	update_screen_size (void);
+    inline void	parse_keycodes (void);
+    void	caret_state (bool on);
 private:
     vector<TerminalScreenWindow*> _windows;
     string	_tout;
