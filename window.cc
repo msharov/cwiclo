@@ -29,7 +29,7 @@ void Window::close (void)
 void Window::on_msger_destroyed (mrid_t mid)
 {
     if (mid == _scr.dest())
-	close();
+	set_unused();
     Msger::on_msger_destroyed (mid);
 }
 

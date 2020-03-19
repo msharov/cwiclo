@@ -85,7 +85,8 @@ protected:
     void	parse_keycodes (void);
 private:
     vector<TerminalScreenWindow*> _windows;
-    string	_tout,_tin;
+    string	_tout;
+    memblaz	_tin;
     Surface	_surface;
     ScreenInfo	_scrinfo;
     Surface::Cell _lastcell;

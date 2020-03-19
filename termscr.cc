@@ -200,7 +200,7 @@ void TerminalScreen::unregister_window (const TerminalScreenWindow* w)
 
 	// Redraw all windows to erase the one that was destroyed
 	for (auto& bw : _windows)
-	    bw->draw();
+	    draw_window (bw);
     }
 }
 
@@ -522,7 +522,7 @@ void TerminalScreen::parse_keycodes (void)
 	is.skip (1);
 	_windows.back()->on_event (Event (Event::Type::KeyDown, c));
     }
-    _tin.erase (_tin.begin(), is.begin());
+    _tin.erase (_tin.begin(), is.begin()-_tin.begin());
     if (_tin.capacity() > _tin.size() && !flag (f_InputEOF))
 	_ptermi.wait_read (STDIN_FILENO);
 }

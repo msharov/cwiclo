@@ -27,6 +27,7 @@ public:
     constexpr auto	wend (void) const				{ return utf8::in (end()); }
     constexpr auto	wiat (size_type i) const			{ return wbegin()+i; }
     constexpr size_type	length (void) const				{ return wend()-wbegin(); }
+    constexpr size_type	capacity (void) const				{ return memblock::capacity()-1; }
     inline void		push_back (char c)				{ resize(size()+1); back() = c; }
     auto		insert (const_iterator ip, value_type c, size_type n = 1)	{ return fill_n (memblock::insert (ip, n), n, c); }
     inline auto		insert (const_iterator ip, const_pointer s, size_type n)	{ return memblock::insert (ip, s, n); }
@@ -94,7 +95,7 @@ public:
     inline constexpr	operator const string_view& (void) const;
     inline auto		erase (const_iterator ep, size_type n = 1)	{ return memblock::erase (ep, n); }
     inline auto		erase (const_iterator f, const_iterator l)	{ assert (f<=l); return erase (f, l-f); }
-    constexpr void	shrink (size_type sz)	{ memblock::shrink(sz); if (auto z = end(); z) { assert (capacity() && "modifying a const linked string"); *z = 0; }}
+    constexpr void	shrink (size_type sz)	{ memblock::shrink(sz); if (auto z = end(); z) { assert (memblock::capacity() && "modifying a const linked string"); *z = 0; }}
     constexpr void	pop_back (void)		{ shrink (size()-1); }
     constexpr void	clear (void)		{ shrink (0); }
 

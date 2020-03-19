@@ -23,7 +23,7 @@ public:
     void		draw (void);
     virtual void	on_event (const Event& ev);
     virtual void	on_modified (widgetid_t, const string_view&) { draw(); }
-    virtual void	on_selection (widgetid_t, const Size&) { draw(); }
+    virtual void	on_selection (widgetid_t, unsigned, unsigned) { draw(); }
     virtual void	on_key (key_t key);
     void		close (void);
 
@@ -31,7 +31,7 @@ public:
     void		PWidgetR_modified (widgetid_t wid, const string_view& t)
 			    { on_modified (wid, t); }
     void		PWidgetR_selection (widgetid_t wid, const Size& sel)
-			    { on_selection (wid, sel); }
+			    { on_selection (wid, sel.w, sel.h); }
     void		ScreenR_event (const Event& ev)	{ on_event (ev); }
     void		ScreenR_expose (void)		{ draw(); }
     void		ScreenR_resize (const Info& wi);
