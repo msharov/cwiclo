@@ -55,7 +55,7 @@ int TestApp::run (void)
 	printf ("%u", s3.max_size());
     printf (", capacity() = %u\n", s3.capacity());
 
-    s1.unlink();
+    s1.deallocate();
     s1 = c_TestString2;
     s1 += c_TestString3;
     s1 += '$';

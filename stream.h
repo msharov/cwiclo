@@ -58,7 +58,7 @@ public:
     inline constexpr bool	aligned (streamsize g) const		{ return divisible_by(_p, g); }
     inline void			read (void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
-				    copy_n (begin(), sz, p);
+				    copy_n (begin(), sz, pointer_cast<char>(p));
 				    skip (sz);
 				}
     inline constexpr auto	read_strz (void) {
@@ -166,7 +166,7 @@ public:
     inline constexpr bool	aligned (streamsize g) const __restrict__	{ return divisible_by (_p, g); }
     inline void			write (const void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
-				    seek (copy_n (p, sz, begin()));
+				    seek (copy_n (pointer_cast<char>(p), sz, begin()));
 				}
     inline void			write_strz (const char* s) __restrict__	{ write (s, __builtin_strlen(s)+1); }
     template <typename T>

@@ -65,7 +65,7 @@ void brotate (void* vf, void* vm, void* vl)
     const auto lsz (m-f), hsz (l-m), hm (min (lsz, hsz));
     if (!hm)
 	return;
-    auto t = alloca (hm);
+    auto t = (char*) alloca (hm);
     if (hsz < lsz) {
 	copy_n (m, hsz, t);
 	copy_backward_n (f, lsz, f+hsz);

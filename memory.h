@@ -239,16 +239,53 @@ template <typename T, typename... Args>
 inline auto make_unique (Args&&... args) { return unique_ptr<T> (new T (forward<Args>(args)...)); }
 
 //}}}-------------------------------------------------------------------
-//{{{ copy and fill
+//{{{ copy
+
+template <typename T> inline auto rep_movs (const T*& f, size_t n, T*& r)
+    { memmove (r, f, n*sizeof(T)); advance (r, n); advance (f, n); return r; }
+#if __x86__
+#define CWICLO_REP_MOVS(T,instr)\
+template <> inline auto rep_movs (const T*& f, size_t n, T*& r)\
+    { __asm__ volatile (instr:"+S"(f),"+D"(r),"+c"(n)::"cc","memory"); return r; }
+#if __x86_64__
+CWICLO_REP_MOVS (uint64_t, "rep movsq")
+CWICLO_REP_MOVS ( int64_t, "rep movsq")
+#endif
+CWICLO_REP_MOVS (uint32_t, "rep movsl")
+CWICLO_REP_MOVS ( int32_t, "rep movsl")
+CWICLO_REP_MOVS (uint16_t, "rep movsw")
+CWICLO_REP_MOVS ( int16_t, "rep movsw")
+CWICLO_REP_MOVS ( uint8_t, "rep movsb")
+CWICLO_REP_MOVS (  int8_t, "rep movsb")
+#undef CWICLO_REP_MOVS
+#endif
 
 template <typename II, typename OI>
 auto copy_n (II f, size_t n, OI r)
 {
+    #if __x86__
     using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
-    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
-	return OI (__builtin_mempcpy (to_address(r), to_address(f), n*sizeof(ovalue_type)));
-    else for (auto l = next(f,n); f < l; advance(r), advance(f))
+    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
+	#define CWICLO_CALL_REP_MOVS(type) do {\
+	    auto ef = pointer_cast<const type>(to_address(f));\
+	    auto er = pointer_cast<type>(to_address(r));\
+	    r = OI (rep_movs (ef, n*sizeof(ovalue_type)/sizeof(type), er)); } while (false)
+	#if __x86_64__
+	if constexpr (!(sizeof(ovalue_type)%8))
+	    CWICLO_CALL_REP_MOVS (uint64_t);
+	else
+	#endif
+	if constexpr (!(sizeof(ovalue_type)%4))
+	    CWICLO_CALL_REP_MOVS (uint32_t);
+	else if constexpr (!(sizeof(ovalue_type)%2))
+	    CWICLO_CALL_REP_MOVS (uint16_t);
+	else
+	    CWICLO_CALL_REP_MOVS (uint8_t);
+	#undef CWICLO_CALL_REP_MOVS
+    } else
+    #endif
+    for (auto l = next(f,n); f < l; advance(r), advance(f))
 	*r = *f;
     return r;
 }
@@ -272,44 +309,31 @@ auto copy (const C& c, OI r)
 template <typename II, typename OI>
 auto copy_backward_n (II f, size_t n, OI r)
 {
+    #if __x86__
     using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
     if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
-    #if __x86__
-	if constexpr (compile_constant(n))
-    #endif
-	    __builtin_memmove (to_address(r), to_address(f), n*sizeof(ovalue_type));
-    #if __x86__
-	else {
-	    __asm__ volatile ("std":::"cc");
+	__asm__ volatile ("std":::"cc");
+	#define CWICLO_CALL_REP_MOVS(type) do {\
+	    auto ef = pointer_cast<const type>(to_address(next(f,n)))-1;\
+	    auto er = pointer_cast<type>(to_address(next(r,n)))-1;\
+	    r = OI (rep_movs (ef, n*sizeof(ovalue_type)/sizeof(type), er)); } while (false)
 	#if __x86_64__
-	    if constexpr (!(sizeof(ovalue_type)%8)) {
-		auto ef = reinterpret_cast<const uint64_t*>(to_address(next(f,n)))-1;
-		auto er = reinterpret_cast<uint64_t*>(to_address(next(r,n)))-1;
-		n *= sizeof(ovalue_type)/8;
-		__asm__ volatile ("rep movsq":"+S"(ef),"+D"(er),"+c"(n)::"cc","memory");
-	    }
+	if constexpr (!(sizeof(ovalue_type)%8))
+	    CWICLO_CALL_REP_MOVS (uint64_t);
+	else
 	#endif
-	    else if constexpr (!(sizeof(ovalue_type)%4)) {
-		auto ef = reinterpret_cast<const uint32_t*>(to_address(next(f,n)))-1;
-		auto er = reinterpret_cast<uint32_t*>(to_address(next(r,n)))-1;
-		n *= sizeof(ovalue_type)/4;
-		__asm__ volatile ("rep movsl":"+S"(ef),"+D"(er),"+c"(n)::"cc","memory");
-	    } else if constexpr (!(sizeof(ovalue_type)%2)) {
-		auto ef = reinterpret_cast<const uint16_t*>(to_address(next(f,n)))-1;
-		auto er = reinterpret_cast<uint16_t*>(to_address(next(r,n)))-1;
-		n *= sizeof(ovalue_type)/2;
-		__asm__ volatile ("rep movsw":"+S"(ef),"+D"(er),"+c"(n)::"cc","memory");
-	    } else {
-		auto ef = reinterpret_cast<const uint8_t*>(to_address(next(f,n)))-1;
-		auto er = reinterpret_cast<uint8_t*>(to_address(next(r,n)))-1;
-		n *= sizeof(ovalue_type);
-		 __asm__ volatile ("rep movsb":"+S"(ef),"+D"(er),"+c"(n)::"cc","memory");
-	    }
-	    __asm__ volatile ("cld":::"cc");
-	}
+	if constexpr (!(sizeof(ovalue_type)%4))
+	    CWICLO_CALL_REP_MOVS (uint32_t);
+	else if constexpr (!(sizeof(ovalue_type)%2))
+	    CWICLO_CALL_REP_MOVS (uint16_t);
+	else
+	    CWICLO_CALL_REP_MOVS (uint8_t);
+	#undef CWICLO_CALL_REP_MOVS
+	__asm__ volatile ("cld":::"cc");
+    } else
     #endif // !__x86__
-    } else while (n--)
+    while (n--)
 	r[n] = f[n];
     return r;
 }
@@ -330,6 +354,28 @@ template <typename C, typename OI>
 auto copy_backward (const C& c, OI r)
     { return copy_backward_n (begin(c), size(c), r); }
 
+//}}}-------------------------------------------------------------------
+//{{{ fill
+
+template <typename T> inline auto rep_stos (T* f, size_t n, const T& v)
+    { for (auto l = next(f,n); f < l; advance(f)) *f = v; return f; }
+#if __x86__
+#define CWICLO_REP_STOS(T,instr)\
+template <> inline auto rep_stos (T* f, size_t n, const T& v)\
+    { __asm__ volatile (instr:"+D"(f),"+c"(n):"a"(v):"cc","memory"); return f; }
+#if __x86_64__
+CWICLO_REP_STOS (uint64_t, "rep stosq")
+CWICLO_REP_STOS ( int64_t, "rep stosq")
+#endif
+CWICLO_REP_STOS (uint32_t, "rep stosl")
+CWICLO_REP_STOS ( int32_t, "rep stosl")
+CWICLO_REP_STOS (uint16_t, "rep stosw")
+CWICLO_REP_STOS ( int16_t, "rep stosw")
+CWICLO_REP_STOS ( uint8_t, "rep stosb")
+CWICLO_REP_STOS (  int8_t, "rep stosb")
+#undef CWICLO_REP_STOS
+#endif
+
 template <typename I, typename T>
 auto fill_n (I f, size_t n, const T& v)
 {
@@ -338,16 +384,13 @@ auto fill_n (I f, size_t n, const T& v)
     constexpr bool canstos = is_trivially_assignable<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value;
     if constexpr (canstos && sizeof(ovalue_type) == 1)
 	{ __builtin_memset (to_address(f), bit_cast<uint8_t>(v), n); advance(f,n); }
-#if __x86__
-    else if constexpr (canstos && sizeof(ovalue_type) == 2)
-	__asm__ volatile ("rep stosw":"+D"(f),"+c"(n):"a"(bit_cast<uint16_t>(v)):"cc","memory");
-    else if constexpr (canstos && sizeof(ovalue_type) == 4)
-	__asm__ volatile ("rep stosl":"+D"(f),"+c"(n):"a"(bit_cast<uint32_t>(v)):"cc","memory");
-#if __x86_64__
-    else if constexpr (canstos && sizeof(ovalue_type) == 8)
-	__asm__ volatile ("rep stosq":"+D"(f),"+c"(n):"a"(bit_cast<uint64_t>(v)):"cc","memory");
-#endif
-#endif
+#define CWICLO_IF_CALL_REP_STOS(type)\
+    else if constexpr (canstos && sizeof(ovalue_type) == sizeof(type))\
+	f = I (rep_stos (pointer_cast<type>(to_address(f)), n, bit_cast<type>(v)))
+    CWICLO_IF_CALL_REP_STOS (uint16_t);
+    CWICLO_IF_CALL_REP_STOS (uint32_t);
+    CWICLO_IF_CALL_REP_STOS (uint64_t);
+#undef CWICLO_IF_CALL_REP_STOS
     else for (auto l = next(f,n); f < l; advance(f))
 	*f = v;
     return f;
@@ -394,6 +437,9 @@ inline constexpr auto zero_fill (I f, I l)
 template <typename C>
 inline constexpr auto zero_fill (C& c)
     { return zero_fill_n (begin(c), size(c)); }
+
+//}}}-------------------------------------------------------------------
+//{{{ shift and rotate
 
 template <typename I>
 auto shift_left (I f, I l, size_t n)
