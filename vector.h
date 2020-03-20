@@ -104,7 +104,7 @@ public:
     inline auto			append (initlist_t v)			{ return append (v.begin(), v.end()); }
     inline void			pop_back (void)				{ auto ns = _data.size() - sizeof(T); auto b = iback(); _data.memlink::resize (ns); destroy_at (b); }
     inline void			manage (pointer p, size_type n)		{ _data.manage (p, n * sizeof(T)); }
-    inline constexpr bool	is_linked (void) const			{ return !_data.capacity(); }
+    inline constexpr bool	is_linked (void) const			{ return _data.is_linked(); }
     inline constexpr void	unlink (void)				{ _data.unlink(); }
     inline void			copy_link (void);
     inline constexpr void	link (pointer p, size_type n)		{ _data.link (p, n*sizeof(T)); }

@@ -13,7 +13,7 @@ namespace cwiclo {
 /// Reads the object from stream \p s
 void cmemlink::link_read (istream& is, size_type elsize)
 {
-    assert (!capacity() && "allocated memory in cmemlink; deallocate or unlink first");
+    assert (is_linked() && "allocated memory in cmemlink; deallocate or unlink first");
     size_type n; is >> n; n *= elsize;
     auto nskip = ceilg (n, stream_align<size_type>::value);
     if (is.remaining() < nskip)
@@ -105,7 +105,7 @@ void memblock::reserve (size_type cap)
     if ((cap += zero_terminated()) <= capacity())
 	return;
     auto newcap = next_capacity (cap);
-    auto oldBlock (capacity() ? data() : nullptr);
+    auto oldBlock (is_linked() ? nullptr : data());
     auto newBlock = static_cast<pointer>(_realloc (oldBlock, newcap));
     if (!oldBlock && data())
 	copy_n (data(), min (newcap, size() + zero_terminated()), newBlock);
@@ -114,15 +114,15 @@ void memblock::reserve (size_type cap)
 
 void memblock::deallocate (void)
 {
-    assert ((!capacity() || data()) && "Internal error: space allocated, but the pointer is nullptr");
-    auto d = capacity() ? data() : nullptr;
+    assert ((is_linked() || data()) && "Internal error: space allocated, but the pointer is nullptr");
+    auto d = is_linked() ? nullptr : data();
     unlink();
     free (d);
 }
 
 void memblock::shrink_to_fit (void)
 {
-    assert (capacity() && "call copy_link first");
+    assert (!is_linked() && "call copy_link first");
     auto cap = size() + zero_terminated();
     set_capacity (cap);
     link (static_cast<pointer>(_realloc (data(), cap)), size());
@@ -131,7 +131,7 @@ void memblock::shrink_to_fit (void)
 void memblock::resize (size_type sz)
 {
     reserve (sz);
-    memlink::resize (sz);
+    shrink (sz);
     if (zero_terminated())
 	*end() = 0;
 }
@@ -185,7 +185,7 @@ void memblock::read (istream& is)
     if (zero_terminated() && n)
 	--n;
     reserve (nskip);
-    memlink::resize (n);
+    shrink (n);
     is.read (data(), nskip);
 }
 
@@ -236,7 +236,7 @@ void memblaz::deallocate (void)
 void memblaz::resize (size_type sz)
 {
     reserve (sz);
-    memlink::resize (sz);
+    shrink (sz);
 }
 
 void memblaz::assign (const_pointer p, size_type sz)

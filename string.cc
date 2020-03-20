@@ -57,7 +57,7 @@ int string::appendf (const char* fmt, ...)
 
 int string::assignv (const char* fmt, va_list args)
 {
-    clear();
+    memblock::clear();
     return insertv (begin(), fmt, args);
 }
 

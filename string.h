@@ -14,9 +14,11 @@ class string_view;
 class string : public memblock {
 public:
     inline constexpr	string (void)					: memblock() { set_zero_terminated(); }
+    inline constexpr	string (const_pointer s, size_type len, size_type cap)  : memblock (s,len,cap,true) {}
+    inline constexpr	string (pointer s, size_type len, size_type cap): memblock (s,len,cap,true) {}
     inline		string (const_pointer s, size_type len)		: memblock (s,len,true) {}
     inline		string (const_pointer s1, const_pointer s2)	: string (s1,s2-s1) {}
-    inline		string (const_pointer s)			: memblock (s, __builtin_strlen(s), true) {}
+    inline constexpr	string (const_pointer s)			: string (s,__builtin_strlen(s),0u) {}
     inline constexpr	string (string&& s)				: memblock (move(s)) {}
     inline		string (const string& s)			: string (s.data(), s.size()) {}
     inline		string (const cmemlink& s)			: string (s.data(), s.size()) {}
@@ -95,12 +97,12 @@ public:
     inline constexpr	operator const string_view& (void) const;
     inline auto		erase (const_iterator ep, size_type n = 1)	{ return memblock::erase (ep, n); }
     inline auto		erase (const_iterator f, const_iterator l)	{ assert (f<=l); return erase (f, l-f); }
-    constexpr void	shrink (size_type sz)	{ memblock::shrink(sz); if (auto z = end(); z) { assert (memblock::capacity() && "modifying a const linked string"); *z = 0; }}
+    inline constexpr void shrink (size_type sz)	{ memblock::shrink(sz); if (auto z = end(); z) { assert (!is_linked() && "modifying a const linked string"); *z = 0; }}
     constexpr void	pop_back (void)		{ shrink (size()-1); }
     constexpr void	clear (void)		{ shrink (0); }
 
     template <typename Stm> // Override cmemlink's write to support lack of terminating 0
-    inline constexpr void write (Stm& os) const	{ os.write_string (begin(), size()); }
+    inline constexpr void write (Stm& os) const	{ os.write_string (data(), size()); }
 
     inline auto		replace (const_iterator f, const_iterator l, const_pointer s, size_type slen)	{ return memblock::replace (f, l-f, s, slen); }
     inline auto		replace (const_iterator f, const_iterator l, const_pointer s)			{ return replace (f, l, s, strlen(s)); }
@@ -225,6 +227,7 @@ public:
     constexpr auto	find_first_not_of (const string& s) const		{ return str().find_first_not_of (s); }
 
     void		resize (size_type sz) = delete;
+    void		shrink (void) = delete;
     void		clear (void) = delete;
 
     template <typename Stm> // Override cmemlink's write to support lack of terminating 0
