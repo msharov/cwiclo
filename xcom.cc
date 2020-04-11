@@ -485,13 +485,15 @@ bool Extern::write_outgoing (void)
 
 	// See how many messages can be written at once, limited by fd passing.
 	// Can only pass one fd per sendmsg call, but can aggregate the rest.
-	while (nm < _outq.size() && !_outq[nm].has_fd())
+	enum { MAX_MSGS_PER_SEND = 32 };
+	auto maxnm = min (_outq.size(), MAX_MSGS_PER_SEND);
+	while (nm < maxnm && !_outq[nm].has_fd())
 	    ++nm;
 
 	// Create iovecs for output
-	iovec iov [2*nm];	// two iovecs per message, header and body
+	iovec iov [2*MAX_MSGS_PER_SEND];
 	mh.msg_iov = iov;
-	mh.msg_iovlen = 2*nm;
+	mh.msg_iovlen = 2*nm;	// two iovecs per message, header and body
 	for (auto m = 0u, bw = _bwritten; m < nm; ++m, bw = 0)
 	    _outq[m].write_iovecs (&iov[2*m], bw);
 
