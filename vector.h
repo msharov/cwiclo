@@ -111,12 +111,12 @@ public:
     inline constexpr void	link (const vector& v)			{ _data.link (v); }
     inline constexpr void	link (pointer f, pointer l)		{ link (f, l-f); }
     void			read (istream& is) {
-				    size_type n; is >> n;
-				    if constexpr (stream_align<T>::value > stream_align<size_type>::value)
-					is >> ios::talign<T>();
-				    if constexpr (is_trivially_copyable<T>::value) {
+				    auto n = is.read<uint32_t>();
+				    if constexpr (stream_align<T>::value > 4)
+					is.align (stream_align<T>::value);
+				    if constexpr (is_trivially_copyable<T>::value && !has_member_function_stream_read<T>::value) {
 					assert (is.remaining() >= n*sizeof(T));
-					const T* d = is.ptr<T>();
+					auto d = is.ptr<T>();
 					assign (d, d+n);
 					is.skip (n*sizeof(T));
 				    } else {
@@ -124,8 +124,8 @@ public:
 					for (auto& i : *this)
 					    is >> i;
 				    }
-				    if constexpr (stream_align<T>::value < stream_align<size_type>::value)
-					is >> ios::talign<size_type>();
+				    if constexpr (stream_align<T>::value < 4)
+					is.align (4);
 				}
     template <typename Stm = sstream>
     inline constexpr void	write (Stm& os) const { os.write_array (data(), size()); }

@@ -32,10 +32,10 @@ protected:
 	EditText,
 	Last
     };
-    struct CmdHeader {
-	uint16_t	argsz;
+    struct alignas(4) CmdHeader {
 	uint8_t		cmd;
 	uint8_t		a1;
+	uint16_t	asz;
     };
     //}}}---------------------------------------------------------------
 public:
@@ -83,19 +83,17 @@ public:
 	constexpr void		operator= (const Writer& w) = delete;
 	//{{{2 command writer templates --------------------------------
     private:
-	inline constexpr void	write_cmd_header (Cmd cmd, uint16_t argsz = 0, uint8_t a1 = 0) {
-				    assert (_stm.aligned(4) && "Drawlist commands must be 4-aligned");
-				    _stm << CmdHeader { argsz, uint8_t(cmd), a1 };
-				}
+	inline constexpr void	write_cmd_header (Cmd cmd, uint8_t a1 = 0, uint16_t asz = 0)
+				    { _stm << CmdHeader { uint8_t(cmd), a1, asz }; }
     protected:
-	inline constexpr void	write (Cmd cmd, uint8_t a1 = 0) { write_cmd_header (cmd, 0, a1); }
+	inline constexpr void	write (Cmd cmd, uint8_t a1 = 0) { write_cmd_header (cmd, a1); }
 	template <typename... Arg>
 	inline constexpr void	write (Cmd cmd, uint8_t a1, const Arg&... args) {
-				    auto argsz = divide_ceil (variadic_stream_size (args...), 4);
-				    assert (argsz <= UINT16_MAX && "Drawlist command size exceeded");
-				    if (argsz > UINT16_MAX)
+				    auto asz = divide_ceil (variadic_stream_size (args...), 4);
+				    assert (asz <= UINT16_MAX && "Drawlist command size exceeded");
+				    if (asz > UINT16_MAX)
 					return;
-				    write_cmd_header (cmd, argsz, a1);
+				    write_cmd_header (cmd, a1, asz);
 				    (_stm << ... << args);
 				    assert (_stm.aligned(4) && "Drawlist command size must be a multiple of 4");
 				}
@@ -169,13 +167,13 @@ protected:
 	streamsize r = 0;
 	while (dls.remaining() >= 4) {
 	    auto h = dls.read<CmdHeader>();
-	    auto argbytes = 4u*h.argsz;
-	    if (argbytes > dls.remaining())
+	    auto absz = 4u*h.asz;
+	    if (absz > dls.remaining())
 		break;	// invalid command
-	    if (argbytes != vfunc (h.cmd, istream (dls.ptr(), argbytes)))
+	    if (absz != vfunc (h.cmd, istream (dls.ptr(), absz)))
 		break;
-	    r += 4+argbytes;
-	    dls.skip (argbytes);
+	    r += 4+absz;
+	    dls.skip (absz);
 	}
 	return r;
     }
@@ -219,11 +217,11 @@ protected:
     inline static constexpr void dispatch_with_func (Impl* impl, istream dls, DFunc dfunc) {
 	while (dls.remaining() >= 4) {
 	    auto h = dls.read<CmdHeader>();
-	    auto argbytes = 4u*h.argsz;
-	    if (argbytes > dls.remaining())
+	    auto absz = 4u*h.asz;
+	    if (absz > dls.remaining())
 		break;	// invalid command
-	    dfunc (impl, h, istream (dls.ptr(), argbytes));
-	    dls.skip (argbytes);
+	    dfunc (impl, h, istream (dls.ptr(), absz));
+	    dls.skip (absz);
 	}
     }
     // dispatch_cmd unmarshals and dispatches each command

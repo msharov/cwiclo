@@ -46,23 +46,23 @@ public:
     inline constexpr auto	end (void) const __restrict__		{ return _e; }
     inline constexpr streamsize	size (void) const __restrict__		{ return end()-begin(); }
     inline constexpr auto	remaining (void) const __restrict__	{ return size(); }
-    inline constexpr auto	iat (streampos n) const __restrict__	{ return begin()+n; }
+    inline constexpr auto	iat (streampos n) const __restrict__	{ assert (n <= size()); return begin()+n; }
     template <typename T = char>
-    inline constexpr auto	ptr (void) const __restrict__		{ return pointer_cast<T>(begin()); }
+    inline constexpr auto	ptr (void) const __restrict__		{ assert (aligned (alignof(T))); return pointer_cast<T>(begin()); }
     inline constexpr void	seek (const_pointer p) __restrict__	{ assert (p <= end()); _p = p; }
     inline constexpr void	skip (streamsize sz) __restrict__	{ seek (iat(sz)); }
     inline constexpr void	unread (streamsize sz) __restrict__	{ seek (begin() - sz); }
     inline constexpr void	align (streamsize g) __restrict__	{ seek (alignptr(g)); }
-    inline constexpr streamsize	alignsz (streamsize g) const		{ return alignptr(g) - begin(); }
-    inline constexpr bool	can_align (streamsize g) const		{ return alignptr(g) <= end(); }
-    inline constexpr bool	aligned (streamsize g) const		{ return divisible_by(_p, g); }
+    inline constexpr streamsize	alignsz (streamsize g) const __restrict__	{ return alignptr(g) - begin(); }
+    inline constexpr bool	can_align (streamsize g) const __restrict__	{ return alignptr(g) <= end(); }
+    inline constexpr bool	aligned (streamsize g) const __restrict__	{ return divisible_by(_p, g); }
     inline void			read (void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
-				    copy_n (begin(), sz, pointer_cast<char>(p));
+				    copy_n (begin(), sz, static_cast<pointer>(p));
 				    skip (sz);
 				}
     inline constexpr auto	read_strz (void) {
-				    const char* __restrict__ v = ptr<char>();
+				    auto v = ptr();
 				    auto se = static_cast<const_pointer>(__builtin_memchr (v, 0, remaining()));
 				    if (!se)
 					return v = nullptr;
@@ -70,11 +70,7 @@ public:
 				    return v;
 				}
     template <typename T>
-    inline constexpr auto&	readt (void) __restrict__ {
-				    const T* __restrict__ p = ptr<T>();
-				    skip (sizeof(T));
-				    return *p;
-				}
+    inline constexpr auto&	readt (void) __restrict__ { auto p = ptr<T>(); skip (sizeof(T)); return *p; }
     template <typename T>
     inline constexpr void	readt (T& v) __restrict__ { v = readt<T>(); }
     template <typename T>
@@ -94,7 +90,11 @@ public:
 				}
     template <typename T>
     #if __x86__			// x86 can do direct unaligned reads, albeit slower
-    inline void			readtu (T& v) __restrict__ { readt (v); }
+    inline void			readtu (T& v) __restrict__ {
+				    auto p = pointer_cast<T>(begin());
+				    skip (sizeof(T));
+				    v = *p;
+				}
     #else
     inline void			readtu (T& v) __restrict__ { read (&v, sizeof(v)); }
     #endif
@@ -150,7 +150,7 @@ public:
     inline constexpr streamsize	size (void) const __restrict__		{ return end()-begin(); }
     inline constexpr auto	remaining (void) const __restrict__	{ return size(); }
     template <typename T = char>
-    inline constexpr auto	ptr (void) __restrict__			{ return pointer_cast<T>(begin()); }
+    inline constexpr auto	ptr (void) __restrict__			{ assert (aligned (alignof(T))); return pointer_cast<T>(begin()); }
     inline constexpr void	seek (pointer p) __restrict__		{ assert (p <= end()); _p = p; }
     inline constexpr void	skip (streamsize sz) __restrict__	{ seek (begin()+sz); }
     inline constexpr void	zero (streamsize sz) __restrict__	{ seek (zero_fill_n (begin(), sz)); }
@@ -166,14 +166,14 @@ public:
     inline constexpr bool	aligned (streamsize g) const __restrict__	{ return divisible_by (_p, g); }
     inline void			write (const void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
-				    seek (copy_n (pointer_cast<char>(p), sz, begin()));
+				    seek (copy_n (static_cast<const_pointer>(p), sz, begin()));
 				}
     inline void			write_strz (const char* s) __restrict__	{ write (s, __builtin_strlen(s)+1); }
     template <typename T>
     inline constexpr void	writet (const T& v) __restrict__ {
 				    assert (remaining() >= sizeof(T));
-				    T* __restrict__ p = ptr<T>(); *p = v;
-				    _p += sizeof(T);
+				    *ptr<T>() = v;
+				    skip (sizeof(T));
 				}
     template <typename T>
     inline constexpr void	write (const T& v) {
@@ -184,7 +184,11 @@ public:
 				}
     template <typename T>
     #if __x86__			// x86 can do direct unaligned writes, albeit slower
-    inline void			writetu (const T& v) __restrict__ { writet (v); }
+    inline void			writetu (const T& v) __restrict__ {
+				    assert (remaining() >= sizeof(T));
+				    *pointer_cast<T>(begin()) = v;
+				    skip (sizeof(T));
+				}
     #else
     inline void			writetu (const T& v) __restrict__ { write (&v, sizeof(v)); }
     #endif
@@ -366,7 +370,7 @@ constexpr void ostream::write_array (const T* __restrict__ a, uint32_t n)
     write (n);
     if constexpr (stream_align<T>::value > 4)
 	align (stream_align<T>::value);
-    if constexpr (is_trivially_copyable<T>::value)
+    if constexpr (is_trivially_copyable<T>::value && !has_member_function_stream_read<T>::value)
 	seek (pointer_cast<value_type> (copy_n (a, n, ptr<T>())));
     else for (auto i = 0u; i < n; ++i)
 	write (a[i]);
@@ -380,7 +384,7 @@ constexpr void sstream::write_array (const T* a [[maybe_unused]], uint32_t n)
     write (n);
     if constexpr (stream_align<T>::value > 4)
 	align (stream_align<T>::value);
-    if constexpr (is_trivially_copyable<T>::value)
+    if constexpr (is_trivially_copyable<T>::value && !has_member_function_stream_read<T>::value)
 	skip (n*sizeof(T));
     else for (auto i = 0u; i < n; ++i)
 	write (a[i]);
