@@ -633,8 +633,9 @@ void TerminalScreenWindow::Draw_fill_color (icolor_t c)
 auto TerminalScreenWindow::cell_from_char (char32_t c) const -> Cell
 {
     Cell cc (_attr);
-    static const char c_acs_sym[] = "lmkjtuwvqxnoprs,+-.0hazy|g~f`i{}";
-    if (unsigned acsi = c - char32_t(Drawlist::GChar::ULCorner); acsi < size(c_acs_sym)) {
+    static constexpr const char c_acs_sym[] = "+,-.0`afghijklmnopqrstuvwxyz{|}~";
+    static_assert (size(c_acs_sym)-1 == uint8_t(Drawlist::GChar::N), "c_acs_sym must parallel Drawlist::GChar");
+    if (unsigned acsi = c - char32_t(Drawlist::GChar::First); acsi < size(c_acs_sym)) {
 	c = c_acs_sym [acsi];	// ACS char, substitute
 	set_bit (cc.attr, Surface::Attr::Altcharset);
     } else if (c < ' ' || c > '~') {

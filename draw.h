@@ -42,14 +42,15 @@ public:
     //{{{ GChar --------------------------------------------------------
     // Graphical characters for line drawing on text terminals.
     enum class GChar : uint8_t {
-	ULCorner = 0x80, LLCorner, URCorner, LRCorner,
-	LeftT, RightT, TopT, BottomT,
-	HLine, VLine, Plus, HLine1,
-	HLine3, HLine7, HLine9, LeftArrow,
-	RightArrow, UpArrow, DownArrow, Block,
-	Board, Checkerboard, GreaterEqual, LessEqual,
-	NotEqual, PlusMinus, Bullet, Degree,
-	Diamond, Lantern, Pi, Sterling
+	First = 0x80,
+	RightArrow = First, LeftArrow, UpArrow, DownArrow, Block,
+	Diamond, Checkerboard, Degree, PlusMinus, Board,
+	Lantern, LRCorner, URCorner, ULCorner, LLCorner,
+	Plus, HLine1, HLine3, HLine, HLine7,
+	HLine9, LeftT, RightT, BottomT, TopT,
+	VLine, LessEqual, GreaterEqual, Pi, NotEqual,
+	Sterling, Bullet,
+	Last, N = Last-First
     };
     //}}}---------------------------------------------------------------
     //{{{ Features for Cmd::Enable/Disable
