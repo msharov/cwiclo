@@ -118,19 +118,11 @@ public:
 
 //}}}2
 
-enum class HAlign : uint8_t { Left, Center, Right };
-enum class VAlign : uint8_t { Top, Center, Bottom };
+enum class HAlign : uint8_t { Left, Center, Right, Fill };
+enum class VAlign : uint8_t { Top, Center, Bottom, Fill };
 
 enum class ScreenType : uint8_t { Text, Graphics, OpenGL, HTML, Printer };
 enum class MSAA : uint8_t { OFF, X2, X4, X8, X16, MAX = X16 };
-
-//----------------------------------------------------------------------
-
-// Various types of custom-drawn UI elements
-enum class PanelType : uint8_t {
-    Raised, Sunken, Listbox, Editbox,
-    Selection, Button, PressedButton, StatusBar
-};
 
 //----------------------------------------------------------------------
 
@@ -159,70 +151,12 @@ struct IColor {
     };
 };
 
-//}}}-------------------------------------------------------------------
-//{{{ Widget layout types
-
 using widgetid_t = uint16_t;
 enum : widgetid_t {
     wid_None,
     wid_First,
     wid_Last = numeric_limits<widgetid_t>::max()
 };
-
-class WidgetLayout {
-public:
-    enum class Type : uint8_t {
-	None,
-	HBox,
-	VBox,
-	Label,
-	Button,
-	Listbox,
-	Editbox,
-	HSplitter,
-	VSplitter,
-	GroupFrame,
-	StatusLine
-    };
-public:
-    constexpr		WidgetLayout (uint8_t l, Type t, widgetid_t id = wid_None, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
-			    : _level(l),_halign(uint8_t(ha)),_valign(uint8_t(va)),_type(t),_id(id) {}
-    constexpr		WidgetLayout (uint8_t l, Type t, HAlign ha, VAlign va = VAlign::Top)
-			    : WidgetLayout (l,t,wid_None,ha,va) {}
-    constexpr		WidgetLayout (uint8_t l, Type t, VAlign va)
-			    : WidgetLayout (l,t,HAlign::Left,va) {}
-    constexpr auto	level (void) const	{ return _level; }
-    constexpr auto	type (void) const	{ return _type; }
-    constexpr auto	id (void) const		{ return _id; }
-    constexpr auto	halign (void) const	{ return HAlign(_halign); }
-    constexpr auto	valign (void) const	{ return VAlign(_valign); }
-private:
-    uint8_t		_level:4;
-    uint8_t		_halign:2;
-    uint8_t		_valign:2;
-    Type		_type;
-    widgetid_t		_id;
-};
-#define SIGNATURE_ui_WidgetLayout	"(yyq)"
-
-//{{{2 WL_ macros ---------------------------------------------------------
-#define WL_L(l,tn,...)	::cwiclo::ui::WidgetLayout (l, ::cwiclo::ui::WidgetLayout::Type::tn, ## __VA_ARGS__)
-#define WL_(tn,...)				WL_L( 1,tn, ## __VA_ARGS__)
-#define WL___(tn,...)				WL_L( 2,tn, ## __VA_ARGS__)
-#define WL_____(tn,...)				WL_L( 3,tn, ## __VA_ARGS__)
-#define WL_______(tn,...)			WL_L( 4,tn, ## __VA_ARGS__)
-#define WL_________(tn,...)			WL_L( 5,tn, ## __VA_ARGS__)
-#define WL___________(tn,...)			WL_L( 6,tn, ## __VA_ARGS__)
-#define WL_____________(tn,...)			WL_L( 7,tn, ## __VA_ARGS__)
-#define WL_______________(tn,...)		WL_L( 8,tn, ## __VA_ARGS__)
-#define WL_________________(tn,...)		WL_L( 9,tn, ## __VA_ARGS__)
-#define WL___________________(tn,...)		WL_L(10,tn, ## __VA_ARGS__)
-#define WL_____________________(tn,...)		WL_L(11,tn, ## __VA_ARGS__)
-#define WL_______________________(tn,...)	WL_L(12,tn, ## __VA_ARGS__)
-#define WL_________________________(tn,...)	WL_L(13,tn, ## __VA_ARGS__)
-#define WL___________________________(tn,...)	WL_L(14,tn, ## __VA_ARGS__)
-#define WL_____________________________(tn,...)	WL_L(15,tn, ## __VA_ARGS__)
-//}}}2---------------------------------------------------------------------
 
 //}}}-------------------------------------------------------------------
 //{{{ Event

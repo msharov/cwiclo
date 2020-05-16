@@ -73,6 +73,16 @@ void Window::focus_prev (void)
 	focus_widget (_widgets->prev_focus (focused_widget_id()));
 }
 
+// Change enabled page in a Stack widget
+void Window::set_stack_selection (widgetid_t id, dim_t s)
+{
+    if (auto w = widget_by_id (id); w) {
+	w->set_stack_selection (s);
+	if (w->focused())
+	    focus_next();
+    }
+}
+
 //}}}-------------------------------------------------------------------
 //{{{ Layout
 

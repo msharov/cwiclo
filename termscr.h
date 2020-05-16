@@ -4,7 +4,7 @@
 // This file is free software, distributed under the ISC License.
 
 #pragma once
-#include "uidefs.h"
+#include "draw.h"
 #include "app.h"
 
 namespace cwiclo {
@@ -100,8 +100,9 @@ private:
 
 class TerminalScreenWindow : public Msger {
 public:
-    using Surface = TerminalScreen::Surface;
-    using Cell = Surface::Cell;
+    using Surface	= TerminalScreen::Surface;
+    using Cell		= Surface::Cell;
+    using PanelType	= Drawlist::PanelType;
     enum { f_DrawInProgress = Msger::f_Last, f_DrawPending, f_Last };
 public:
 		TerminalScreenWindow (const Msg::Link& l);
@@ -128,7 +129,7 @@ private:
     Rect	interior_area (void) const	{ return Rect (area().size()); }
     Rect	clip_to_screen (void) const	{ return TerminalScreen::instance().position_window (area()); }
     icolor_t	clip_color (icolor_t c, Surface::Attr::EAttr fattr);
-    Cell	cell_from_char (char32_t c) const;
+    auto	cell_from_char (char32_t c) const { Cell cc (_attr); cc.c = c; return cc; }
     inline void	Draw_reset (void);
     void	Draw_clear (void);
     inline void	Draw_enable (uint8_t feature);

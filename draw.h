@@ -39,8 +39,19 @@ protected:
     };
     //}}}---------------------------------------------------------------
 public:
-    //{{{ GChar --------------------------------------------------------
-    // Graphical characters for line drawing on text terminals.
+    //{{{ Features for Cmd::Enable/Disable -----------------------------
+    struct Feature {
+	enum : uint8_t {
+	    BoldText,
+	    ItalicText,
+	    UnderlineText,
+	    BlinkText,
+	    ReverseColors,
+	    Last
+	};
+    };
+    //}}}---------------------------------------------------------------
+    //{{{ GChar - Graphical characters for text terminals
     enum class GChar : uint8_t {
 	First = 0x80,
 	RightArrow = First, LeftArrow, UpArrow, DownArrow, Block,
@@ -53,16 +64,12 @@ public:
 	Last, N = Last-First
     };
     //}}}---------------------------------------------------------------
-    //{{{ Features for Cmd::Enable/Disable
-    struct Feature {
-	enum : uint8_t {
-	    BoldText,
-	    ItalicText,
-	    UnderlineText,
-	    BlinkText,
-	    ReverseColors,
-	    Last
-	};
+    //{{{ PanelType - custom-drawn UI elements
+    enum class PanelType : uint8_t {
+	Raised, Sunken, Selection, MoreLeft, MoreRight,
+	MoreUp, MoreDown, Button, ButtonOn, Checkbox,
+	CheckboxOn, Radio, RadioOn, Editbox, Selbox,
+	Listbox, Statusbar, Scrollbar, Progress, ProgressOn
     };
     //}}}---------------------------------------------------------------
     //{{{ Writer

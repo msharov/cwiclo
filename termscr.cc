@@ -4,7 +4,6 @@
 // This file is free software, distributed under the ISC License.
 
 #include "termscr.h"
-#include "draw.h"
 #include "app.h"
 #include <signal.h>
 #include <termio.h>
@@ -29,9 +28,9 @@ static struct termios s_old_termios = {};
 #define T_SET_DEFAULT_ATTRS	"\017" T_CSI "0;39;49m"
 #define T_CARET_ON		T_CSI "?25h"
 #define T_CARET_OFF		T_CSI "?25l"
-#define T_SKIP_N		T_CSI "%huC"
+#define T_SKIP_N		T_CSI "%uC"
 #define T_MOVE_TO_ORIGIN	T_CSI "H"
-#define T_MOVE_TO		T_CSI "%hu;%huH"
+#define T_MOVE_TO		T_CSI "%u;%uH"
 #define T_CLEAR_TO_BOTTOM	T_CSI "J"
 #define T_CLEAR_SCREEN		T_MOVE_TO_ORIGIN T_CLEAR_TO_BOTTOM
 
@@ -233,6 +232,21 @@ void TerminalScreen::draw_window (const TerminalScreenWindow* w)
 	assert (oci < _surface.end() && "position_window must clip each window to screen area");
 	// Skip writing if nothing changed
 	if (*oci != *ici) {
+	    auto curcell = *ici;
+
+	    // Convert GChars to ACS chars
+	    static constexpr const char c_acs_sym[] = "+,-.0`afghijklmnopqrstuvwxyz{|}~";
+	    static_assert (size(c_acs_sym)-1 == uint8_t(Drawlist::GChar::N), "c_acs_sym must parallel Drawlist::GChar");
+	    if (unsigned acsi = uint8_t(curcell.c) - uint8_t(Drawlist::GChar::First); acsi < size(c_acs_sym)) {
+		curcell.c = c_acs_sym [acsi];	// ACS char, substitute
+		set_bit (curcell.attr, Surface::Attr::Altcharset);
+	    } else if (curcell.c < ' ' || curcell.c > '~') {
+		curcell.c = '?';		// unprintable character
+		set_bit (curcell.attr, Surface::Attr::Blink);
+		curcell.fg = IColor::Gray;
+		curcell.bg = IColor::Red;
+	    }
+
 	    // Collect numbers for the term sgr command
 	    uint8_t sgr[11], nsgr = 0;
 
@@ -244,38 +258,38 @@ void TerminalScreen::draw_window (const TerminalScreenWindow* w)
 		{25,5},	// Blink
 		{27,7}	// Reverse
 	    };
-	    auto chattr = _lastcell.attr ^ ici->attr;
+	    auto chattr = _lastcell.attr ^ curcell.attr;
 	    if (chattr)
 		for (auto a = 0u; a < size(c_attr_tseq); ++a)
 		    if (get_bit (chattr, a))
-			sgr[nsgr++] = c_attr_tseq[a][get_bit(ici->attr,a)];
+			sgr[nsgr++] = c_attr_tseq[a][get_bit(curcell.attr,a)];
 
 	    // Set colors
-	    if (ici->bg != _lastcell.bg) {
-		if (ici->bg < 8)
-		    sgr[nsgr] = 40+ici->bg;
-		else if (ici->bg < 16)
-		    sgr[nsgr] = 100+ici->bg;
-		else if (ici->bg == IColor::Default)
+	    if (curcell.bg != _lastcell.bg) {
+		if (curcell.bg < 8)
+		    sgr[nsgr] = 40+curcell.bg;
+		else if (curcell.bg < 16)
+		    sgr[nsgr] = 100+curcell.bg;
+		else if (curcell.bg == IColor::Default)
 		    sgr[nsgr] = 49;
 		else {
 		    sgr[nsgr++] = 48;
 		    sgr[nsgr++] = 5;
-		    sgr[nsgr] = ici->bg;
+		    sgr[nsgr] = curcell.bg;
 		}
 		++nsgr;
 	    }
-	    if (ici->fg != _lastcell.fg) {
-		if (ici->fg < 8)
-		    sgr[nsgr] = 30+ici->fg;
-		else if (ici->fg < 16)
-		    sgr[nsgr] = 90+ici->fg;
-		else if (ici->fg == IColor::Default)
+	    if (curcell.fg != _lastcell.fg) {
+		if (curcell.fg < 8)
+		    sgr[nsgr] = 30+curcell.fg;
+		else if (curcell.fg < 16)
+		    sgr[nsgr] = 90+curcell.fg;
+		else if (curcell.fg == IColor::Default)
 		    sgr[nsgr] = 39;
 		else {
 		    sgr[nsgr++] = 38;
 		    sgr[nsgr++] = 5;
-		    sgr[nsgr] = ici->fg;
+		    sgr[nsgr] = curcell.fg;
 		}
 		++nsgr;
 	    }
@@ -310,18 +324,18 @@ void TerminalScreen::draw_window (const TerminalScreenWindow* w)
 
 	    // Enable (14) or disable (15) altcharset if changed
 	    if (get_bit (chattr, Surface::Attr::Altcharset))
-		_tout += char(15-get_bit (ici->attr, Surface::Attr::Altcharset));
+		_tout += char(15-get_bit (curcell.attr, Surface::Attr::Altcharset));
 
 	    // Write the character
-	    _tout += ici->c;
+	    _tout += curcell.c;
 
 	    // Adjust tracking variables
-	    if (++_curwpos.x >= _scrinfo.size().w) {
+	    if (++_curwpos.x > _scrinfo.size().w) {
 		_curwpos.x = 0;
 		if (_curwpos.y < _scrinfo.size().h)
 		    ++_curwpos.y;
 	    }
-	    _lastcell = *ici;
+	    _lastcell = curcell;
 	    *oci = *ici;
 	}
 
@@ -630,24 +644,6 @@ void TerminalScreenWindow::Draw_draw_color (icolor_t c)
 void TerminalScreenWindow::Draw_fill_color (icolor_t c)
     { _attr.bg = clip_color (c, Surface::Attr::Blink); }
 
-auto TerminalScreenWindow::cell_from_char (char32_t c) const -> Cell
-{
-    Cell cc (_attr);
-    static constexpr const char c_acs_sym[] = "+,-.0`afghijklmnopqrstuvwxyz{|}~";
-    static_assert (size(c_acs_sym)-1 == uint8_t(Drawlist::GChar::N), "c_acs_sym must parallel Drawlist::GChar");
-    if (unsigned acsi = c - char32_t(Drawlist::GChar::First); acsi < size(c_acs_sym)) {
-	c = c_acs_sym [acsi];	// ACS char, substitute
-	set_bit (cc.attr, Surface::Attr::Altcharset);
-    } else if (c < ' ' || c > '~') {
-	c = '?';		// unprintable character
-	set_bit (cc.attr, Surface::Attr::Blink);
-	cc.fg = IColor::Gray;
-	cc.bg = IColor::Red;
-    }
-    cc.c = c;
-    return cc;
-}
-
 void TerminalScreenWindow::Draw_char (char32_t c, HAlign, VAlign)
 {
     if (_viewport.contains (_pos))
@@ -657,7 +653,7 @@ void TerminalScreenWindow::Draw_char (char32_t c, HAlign, VAlign)
 
 void TerminalScreenWindow::Draw_char_bar (const Size& wh, char32_t c)
 {
-    auto orect = interior_area().clip (Rect (_pos, wh));
+    auto orect = _viewport.clip (Rect (_pos, wh));
     if (orect.empty())
 	return;
     auto o = _surface.iat (orect.pos());
@@ -823,27 +819,37 @@ void TerminalScreenWindow::Draw_bar (const Size& wh)
 
 void TerminalScreenWindow::Draw_panel (const Size& wh, PanelType t)
 {
-    auto oldpos = _pos; // panel preserves pos
     auto oldattr = _attr.attr;
-    if (t == PanelType::Raised || t == PanelType::Button) {
+    if (t == PanelType::Raised || t == PanelType::Button || t == PanelType::ButtonOn) {
 	Draw_bar (wh);
 	Draw_char ('[');
 	_pos.x += wh.w-2;
 	Draw_char (']');
-    } else if (t == PanelType::PressedButton) {
-	Draw_bar (wh);
-	Draw_char ('>');
-	_pos.x += wh.w-2;
-	Draw_char ('<');
+	_pos.x -= wh.w-2;
     } else if (t == PanelType::Sunken || t == PanelType::Editbox) {
 	set_bit (_attr.attr, Surface::Attr::Underline);
 	Draw_bar (wh);
-    } else if (t == PanelType::Selection || t == PanelType::StatusBar) {
+    } else if (t == PanelType::Selection || t == PanelType::Statusbar) {
 	set_bit (_attr.attr, Surface::Attr::Reverse);
 	Draw_bar (wh);
-    }
+    } else if (t == PanelType::Checkbox)
+	Draw_text ("[ ] ");
+    else if (t == PanelType::CheckboxOn)
+	Draw_text ("[x] ");
+    else if (t == PanelType::Radio)
+	Draw_text ("( ) ");
+    else if (t == PanelType::RadioOn)
+	Draw_text ("(*) ");
+    else if (t == PanelType::MoreLeft)
+	Draw_char ('<');
+    else if (t == PanelType::MoreRight)
+	Draw_char ('>');
+    else if (t == PanelType::ProgressOn) {
+	set_bit (_attr.attr, Surface::Attr::Reverse);
+	Draw_char_bar (wh, ' ');
+    } else if (t == PanelType::Progress)
+	Draw_char_bar (wh, char32_t(Drawlist::GChar::Checkerboard));
     _attr.attr = oldattr;
-    _pos = oldpos;
 }
 
 void TerminalScreenWindow::Screen_draw (const cmemlink& dl)

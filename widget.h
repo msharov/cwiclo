@@ -45,11 +45,43 @@ class Window;
 class Widget {
 public:
     using key_t		= Event::key_t;
-    using Layout	= WidgetLayout;
-    using Type		= Layout::Type;
+    //{{{ Type - one of standard widgets
+    enum class Type : uint8_t {
+	None, HBox, VBox, Stack, GroupFrame,
+	Label, Button, Checkbox, Radiobox, Editbox,
+	Selbox, Listbox, HSplitter, VSplitter, StatusLine,
+	ProgressBar,
+	Custom0, Custom1, Custom2, Custom3, Custom4,
+	Custom5, Custom6, Custom7, Custom8, Custom9
+    };
+    //}}}
+    //{{{ Layout - widget structural information
+    class Layout {
+    public:
+    public:
+	constexpr	Layout (uint8_t l, Type t, widgetid_t id = wid_None, HAlign ha = HAlign::Left, VAlign va = VAlign::Top)
+			    : _level(l),_halign(uint8_t(ha)),_valign(uint8_t(va)),_type(t),_id(id) {}
+	constexpr	Layout (uint8_t l, Type t, HAlign ha, VAlign va = VAlign::Top) : Layout (l,t,wid_None,ha,va) {}
+	constexpr	Layout (uint8_t l, Type t, VAlign va) : Layout (l,t,HAlign::Left,va) {}
+	constexpr auto	level (void) const	{ return _level; }
+	constexpr auto	type (void) const	{ return _type; }
+	constexpr auto	id (void) const		{ return _id; }
+	constexpr auto	halign (void) const	{ return HAlign(_halign); }
+	constexpr auto	valign (void) const	{ return VAlign(_valign); }
+    private:
+	uint8_t		_level:4;
+	uint8_t		_halign:2;
+	uint8_t		_valign:2;
+	Type		_type;
+	widgetid_t		_id;
+    };
+    #define SIGNATURE_ui_Widget_Layout	"(yyq)"
+    //}}}
+    using PanelType	= Drawlist::PanelType;
     using drawlist_t	= PScreen::drawlist_t;
     using widgetvec_t	= vector<unique_ptr<Widget>>;
     using widget_factory_t	= Widget* (*)(Window* w, const Layout& l);
+    enum { ProgressMax = 1024 };
     enum { f_Focused, f_CanFocus, f_Disabled, f_Modified, f_ForcedSizeHints, f_Last };
     struct alignas(2) BytePoint { uint8_t x,y; };
 private:
@@ -76,6 +108,7 @@ public:
     auto&		selection (void) const			{ return _selection; }
     auto		selection_start (void) const		{ return selection().w; }
     auto		selection_end (void) const		{ return selection().h; }
+    void		set_stack_selection (dim_t s)		{ if (s < _widgets.size()) set_selection (s, _widgets[s]->widget_id()); }
     const Widget*	widget_by_id (widgetid_t id) const PURE;
     Widget*		widget_by_id (widgetid_t id)		{ return UNCONST_MEMBER_FN (widget_by_id,id); }
     const Layout*	add_widgets (const Layout* f, const Layout* l);
@@ -97,6 +130,7 @@ public:
     auto&		text (void) const			{ return _text; }
     void		set_text (const string_view& t)		{ _text = t; on_set_text(); }
     void		set_text (const char* t)		{ _text = t; on_set_text(); }
+    void		set_text (const char* t, unsigned n)	{ _text.assign (t,n); on_set_text(); }
     void		focus (widgetid_t id);
     auto		next_focus (widgetid_t wid) const	{ return get_focus_neighbors_for (wid).next; }
     auto		prev_focus (widgetid_t wid) const	{ return get_focus_neighbors_for (wid).prev; }
@@ -171,6 +205,26 @@ private:
     namespace cwiclo { namespace ui { Widget::widget_factory_t Widget::s_factory = name; }}
 
 //}}}-------------------------------------------------------------------
+//{{{ WL_ macros
+
+#define WL_L(l,tn,...)	::cwiclo::ui::Widget::Layout (l, ::cwiclo::ui::Widget::Type::tn, ## __VA_ARGS__)
+#define WL_(tn,...)				WL_L( 1,tn, ## __VA_ARGS__)
+#define WL___(tn,...)				WL_L( 2,tn, ## __VA_ARGS__)
+#define WL_____(tn,...)				WL_L( 3,tn, ## __VA_ARGS__)
+#define WL_______(tn,...)			WL_L( 4,tn, ## __VA_ARGS__)
+#define WL_________(tn,...)			WL_L( 5,tn, ## __VA_ARGS__)
+#define WL___________(tn,...)			WL_L( 6,tn, ## __VA_ARGS__)
+#define WL_____________(tn,...)			WL_L( 7,tn, ## __VA_ARGS__)
+#define WL_______________(tn,...)		WL_L( 8,tn, ## __VA_ARGS__)
+#define WL_________________(tn,...)		WL_L( 9,tn, ## __VA_ARGS__)
+#define WL___________________(tn,...)		WL_L(10,tn, ## __VA_ARGS__)
+#define WL_____________________(tn,...)		WL_L(11,tn, ## __VA_ARGS__)
+#define WL_______________________(tn,...)	WL_L(12,tn, ## __VA_ARGS__)
+#define WL_________________________(tn,...)	WL_L(13,tn, ## __VA_ARGS__)
+#define WL___________________________(tn,...)	WL_L(14,tn, ## __VA_ARGS__)
+#define WL_____________________________(tn,...)	WL_L(15,tn, ## __VA_ARGS__)
+
+//}}}----------------------------------------------------------------------
 
 } // namespace ui
 } // namespace cwiclo

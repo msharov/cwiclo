@@ -32,22 +32,17 @@ private:
     DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
 };
 //}}}---------------------------------------------------------------
-//{{{ Listbox
+//{{{ Checkbox
 
-class Listbox : public Widget {
+class Checkbox : public Widget {
 public:
-		Listbox (Window* w, const Layout& lay)
-			: Widget(w,lay),_n(),_top() { set_flag (f_CanFocus); }
+		Checkbox (Window* w, const Layout& lay)
+			: Widget(w,lay) { set_flag (f_CanFocus); }
     void	on_key (key_t k) override;
 protected:
     void	on_set_text (void) override;
 private:
-    void	clip_sel (void)	{ set_selection (min (selection_start(), _n-1)); }
-    void	set_n (dim_t n)	{ _n = n; clip_sel(); }
     DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
-private:
-    dim_t	_n;
-    dim_t	_top;
 };
 //}}}---------------------------------------------------------------
 //{{{ Editbox
@@ -65,6 +60,43 @@ private:
 private:
     coord_t	_cpos;
     u_short	_fc;
+};
+
+//}}}---------------------------------------------------------------
+//{{{ Selbox
+
+class Selbox : public Widget {
+public:
+		Selbox (Window* w, const Layout& lay)
+		    : Widget(w,lay),_n() { set_flag (f_CanFocus); }
+    void	on_key (key_t k) override;
+protected:
+    void	on_set_text (void) override;
+private:
+    void	clip_sel (void)	{ set_selection (min (selection_start(), _n-1)); }
+    void	set_n (dim_t n)	{ _n = n; clip_sel(); }
+    DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
+private:
+    dim_t	_n;
+};
+
+//}}}---------------------------------------------------------------
+//{{{ Listbox
+
+class Listbox : public Widget {
+public:
+		Listbox (Window* w, const Layout& lay)
+		    : Widget(w,lay),_n(),_top() { set_flag (f_CanFocus); }
+    void	on_key (key_t k) override;
+protected:
+    void	on_set_text (void) override;
+private:
+    void	clip_sel (void)	{ set_selection (min (selection_start(), _n-1)); }
+    void	set_n (dim_t n)	{ _n = n; clip_sel(); }
+    DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
+private:
+    dim_t	_n;
+    dim_t	_top;
 };
 //}}}---------------------------------------------------------------
 //{{{ HSplitter
@@ -104,6 +136,16 @@ public:
     enum { f_Modified = Widget::f_Last, f_Last };
 public:
 		StatusLine (Window* w, const Layout& lay)
+		    : Widget(w,lay) { set_size_hints (0, 1); }
+private:
+    DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);
+};
+//}}}---------------------------------------------------------------
+//{{{ ProgressBar
+
+class ProgressBar : public Widget {
+public:
+		ProgressBar (Window* w, const Layout& lay)
 		    : Widget(w,lay) { set_size_hints (0, 1); }
 private:
     DECLARE_WIDGET_WRITE_DRAWLIST (Drawlist);

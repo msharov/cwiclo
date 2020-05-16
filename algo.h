@@ -57,12 +57,18 @@ public:
 			    }
 			    return n;
 			}
+    template <typename C>
+    static index_type	nstrs (C& c)
+			    { return nstrs (begin(c), size(c)); }
     static const_pointer at (index_type i, const_pointer p, difference_type n) NONNULL();
     static pointer	at (index_type i, pointer p, difference_type n) NONNULL()
 			    { return const_cast<pointer> (at (i,const_cast<const_pointer>(p),n)); }
     template <typename I, difference_type N>
     static const_pointer at (I i, const value_type (&a)[N])
 			    { return at (index_type(i), begin(a), size(a)); }
+    template <typename I, typename C>
+    static auto		at (I i, C& c)
+			    { return at (index_type(i), begin(c), size(c)); }
     static index_type	index (const_pointer k, const_pointer p, difference_type n, index_type nf) NONNULL();
     template <typename I, difference_type N>
     static I		index (const_pointer k, const value_type (&a)[N], I nf)

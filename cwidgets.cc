@@ -36,7 +36,6 @@ DEFINE_WIDGET_WRITE_DRAWLIST (Button, Drawlist, drw)
 	drw.enable (Drawlist::Feature::ReverseColors);
     drw.panel (area().size(), PanelType::Button);
     if (!text().empty()) {
-	drw.move_by (2, 0);
 	drw.enable (Drawlist::Feature::BoldText);
 	drw.text (text()[0]);
 	drw.disable (Drawlist::Feature::BoldText);
@@ -47,53 +46,35 @@ DEFINE_WIDGET_WRITE_DRAWLIST (Button, Drawlist, drw)
 }
 
 //}}}-------------------------------------------------------------------
-//{{{ Listbox
+//{{{ Checkbox
 
-void Listbox::on_set_text (void)
+void Checkbox::on_set_text (void)
 {
     Widget::on_set_text();
-    Size szh;
-    for (zstr::cii li (text().c_str(), text().size()); li; ++szh.h) {
-	auto lt = *li;
-	auto tlen = *++li - lt - 1;
-	szh.w = max (szh.w, tlen);
-    }
-    set_n (szh.h);
-    set_size_hints (szh);
+    auto th = measure_text (text());
+    set_size_hints (strlen("[x]  ") + th.w, th.h);
 }
 
-void Listbox::on_key (key_t k)
+void Checkbox::on_key (key_t k)
 {
-    if ((k == 'k' || k == Key::Up) && selection_start())
-	set_selection (selection_start()-1);
-    else if ((k == 'j' || k == Key::Down) && selection_start()+1 < _n)
-	set_selection (selection_start()+1);
-    else
+    if (k != Key::Enter && k != Key::Space)
 	return Widget::on_key (k);
-    report_selection();
+    if (bool on = !selection_start() || layinfo().type() == Type::Radiobox; selection_start() != on) {
+	set_selection (on);
+	report_selection();
+    }
 }
 
-DEFINE_WIDGET_WRITE_DRAWLIST (Listbox, Drawlist, drw)
+DEFINE_WIDGET_WRITE_DRAWLIST (Checkbox, Drawlist, drw)
 {
-    if (area().w < 1)
-	return;
-    drw.panel (area().size(), PanelType::Listbox);
-    coord_t y = 0;
-    for (zstr::cii li (text().c_str(), text().size()); li; ++y) {
-	auto lt = *li;
-	auto tlen = *++li - lt - 1;
-	if (y < _top)
-	    continue;
-	drw.move_to (0, y-_top);
-	if (y == selection_start() && focused())
-	    drw.panel (area().w, 1, PanelType::Selection);
-	auto vislen = tlen;
-	if (tlen > area().w)
-	    vislen = area().w-1;
-	drw.text (lt, vislen);
-	if (tlen > area().w)
-	    drw.text ('>');
-    }
+    if (focused())
+	drw.panel (area().size(), PanelType::Selection);
+    static const PanelType c_pt[2][2] = {
+	{ PanelType::CheckboxOn, PanelType::Checkbox },
+	{ PanelType::RadioOn, PanelType::Radio }
+    };
+    drw.panel (area().size(), c_pt[layinfo().type() == Type::Radiobox][!selection_start()]);
+    drw.text (text(), HAlign::Left, VAlign::Center);
 }
 
 //}}}-------------------------------------------------------------------
@@ -186,6 +167,103 @@ DEFINE_WIDGET_WRITE_DRAWLIST (Editbox, Drawlist, drw)
 }
 
 //}}}-------------------------------------------------------------------
+//{{{ Selbox
+
+void Selbox::on_set_text (void)
+{
+    Widget::on_set_text();
+    Size szh;
+    for (zstr::cii li (text().c_str(), text().size()); li; ++szh.h) {
+	auto lt = *li;
+	auto tlen = *++li - lt - 1;
+	szh.w = max (szh.w, tlen);
+    }
+    set_n (szh.h);
+    set_size_hints (strlen("< ") + szh.w + strlen(" >"), 1);
+}
+
+void Selbox::on_key (key_t k)
+{
+    if ((k == 'h' || k == Key::Left) && selection_start())
+	set_selection (selection_start()-1);
+    else if ((k == 'l' || k == Key::Right) && selection_start()+1 < _n)
+	set_selection (selection_start()+1);
+    else
+	return Widget::on_key (k);
+    report_selection();
+}
+
+DEFINE_WIDGET_WRITE_DRAWLIST (Selbox, Drawlist, drw)
+{
+    if (focused())
+	drw.panel (area().size(), PanelType::Selection);
+    drw.panel (area().size(), PanelType::Selbox);
+    if (selection_start() < _n) {
+	auto stxt = zstr::at (selection_start(), text());
+	drw.move_to (area().w/2, area().h/2);
+	drw.text (stxt, HAlign::Center, VAlign::Center);
+    }
+    if (selection_start() > 0) {
+	drw.move_to (0, area().h/2);
+	drw.text ('<', HAlign::Left, VAlign::Center);
+    }
+    if (selection_start()+1 < _n) {
+	drw.move_to (area().w, area().h/2);
+	drw.text ('>', HAlign::Right, VAlign::Center);
+    }
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ Listbox
+
+void Listbox::on_set_text (void)
+{
+    Widget::on_set_text();
+    Size szh;
+    for (zstr::cii li (text().c_str(), text().size()); li; ++szh.h) {
+	auto lt = *li;
+	auto tlen = *++li - lt - 1;
+	szh.w = max (szh.w, tlen);
+    }
+    set_n (szh.h);
+    set_size_hints (szh);
+}
+
+void Listbox::on_key (key_t k)
+{
+    if ((k == 'k' || k == Key::Up) && selection_start())
+	set_selection (selection_start()-1);
+    else if ((k == 'j' || k == Key::Down) && selection_start()+1 < _n)
+	set_selection (selection_start()+1);
+    else
+	return Widget::on_key (k);
+    report_selection();
+}
+
+DEFINE_WIDGET_WRITE_DRAWLIST (Listbox, Drawlist, drw)
+{
+    if (area().w < 1)
+	return;
+    drw.panel (area().size(), PanelType::Listbox);
+    coord_t y = 0;
+    for (zstr::cii li (text().c_str(), text().size()); li; ++y) {
+	auto lt = *li;
+	auto tlen = *++li - lt - 1;
+	if (y < _top)
+	    continue;
+	drw.move_to (0, y-_top);
+	if (y == selection_start() && focused())
+	    drw.panel (area().w, 1, PanelType::Selection);
+	auto vislen = tlen;
+	if (tlen > area().w)
+	    vislen = area().w-1;
+	drw.text (lt, vislen);
+	if (tlen > area().w)
+	    drw.text ('>');
+    }
+}
+
+//}}}-------------------------------------------------------------------
 //{{{ HSplitter
 
 DEFINE_WIDGET_WRITE_DRAWLIST (HSplitter, Drawlist, drw)
@@ -217,7 +295,7 @@ DEFINE_WIDGET_WRITE_DRAWLIST (GroupFrame, Drawlist, drw)
 
 DEFINE_WIDGET_WRITE_DRAWLIST (StatusLine, Drawlist, drw)
 {
-    drw.panel (area().size(), PanelType::StatusBar);
+    drw.panel (area().size(), PanelType::Statusbar);
     drw.move_by (1, 0);
     drw.text (text());
     if (is_modified()) {
@@ -227,17 +305,30 @@ DEFINE_WIDGET_WRITE_DRAWLIST (StatusLine, Drawlist, drw)
 }
 
 //}}}-------------------------------------------------------------------
+//{{{ ProgressBar
+
+DEFINE_WIDGET_WRITE_DRAWLIST (ProgressBar, Drawlist, drw)
+{
+    drw.panel (area().size(), PanelType::Progress);
+    drw.panel (area().w*selection_start()/Widget::ProgressMax, area().h, PanelType::ProgressOn);
+}
+
+//}}}-------------------------------------------------------------------
 //{{{ Default widget factory
 
 BEGIN_WIDGET_FACTORY (Widget::default_factory)
+    WIDGET_TYPE_IMPLEMENT (GroupFrame, GroupFrame)
     WIDGET_TYPE_IMPLEMENT (Label, Label)
     WIDGET_TYPE_IMPLEMENT (Button, Button)
-    WIDGET_TYPE_IMPLEMENT (Listbox, Listbox)
+    WIDGET_TYPE_IMPLEMENT (Checkbox, Checkbox)
+    WIDGET_TYPE_IMPLEMENT (Radiobox, Checkbox)
     WIDGET_TYPE_IMPLEMENT (Editbox, Editbox)
+    WIDGET_TYPE_IMPLEMENT (Selbox, Selbox)
+    WIDGET_TYPE_IMPLEMENT (Listbox, Listbox)
     WIDGET_TYPE_IMPLEMENT (HSplitter, HSplitter)
     WIDGET_TYPE_IMPLEMENT (VSplitter, VSplitter)
-    WIDGET_TYPE_IMPLEMENT (GroupFrame, GroupFrame)
     WIDGET_TYPE_IMPLEMENT (StatusLine, StatusLine)
+    WIDGET_TYPE_IMPLEMENT (ProgressBar, ProgressBar)
 END_WIDGET_FACTORY
 
 //}}}-------------------------------------------------------------------

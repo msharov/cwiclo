@@ -14,7 +14,7 @@ class Widget;
 class Window : public Msger {
 public:
     using key_t		= Event::key_t;
-    using Layout	= WidgetLayout;
+    using Layout	= Widget::Layout;
     using Info		= WindowInfo;
     using drawlist_t	= PScreen::drawlist_t;
     enum { f_DrawInProgress = Msger::f_Last, f_DrawPending, f_Last };
@@ -55,20 +55,20 @@ protected:
     void		destroy_widgets (void)			{ _widgets.reset(); }
     auto		widget_by_id (widgetid_t id) const	{ return _widgets->widget_by_id(id); }
     auto		widget_by_id (widgetid_t id)		{ return _widgets->widget_by_id(id); }
-    void		set_widget_text (widgetid_t id, const char* t)
-			    { if (auto w = widget_by_id (id); w) w->set_text (t); }
-    void		set_widget_text (widgetid_t id, const string& t)
-			    { if (auto w = widget_by_id (id); w) w->set_text (t); }
-    void		set_widget_size_hints (widgetid_t id, const Size& s)
-			    { if (auto w = widget_by_id (id); w) w->set_size_hints (s); }
-    void		set_widget_size_hints (widgetid_t id, dim_t ww, dim_t hh)
-			    { if (auto w = widget_by_id (id); w) w->set_size_hints (ww,hh); }
-    void		set_widget_selection (widgetid_t id, const Size& s)
-			    { if (auto w = widget_by_id (id); w) w->set_selection (s); }
-    void		set_widget_selection (widgetid_t id, dim_t f, dim_t t)
-			    { if (auto w = widget_by_id (id); w) w->set_selection (f,t); }
-    void		set_widget_selection (widgetid_t id, dim_t f)
-			    { if (auto w = widget_by_id (id); w) w->set_selection (f); }
+    void		set_widget_text (widgetid_t id, const char* t)			{ if (auto w = widget_by_id (id); w) w->set_text (t); }
+    void		set_widget_text (widgetid_t id, const string& t)		{ if (auto w = widget_by_id (id); w) w->set_text (t); }
+    void		set_widget_text (widgetid_t id, const char* t, unsigned n)	{ if (auto w = widget_by_id (id); w) w->set_text (t,n); }
+    void		set_widget_size_hints (widgetid_t id, const Size& s)		{ if (auto w = widget_by_id (id); w) w->set_size_hints (s); }
+    void		set_widget_size_hints (widgetid_t id, dim_t ww, dim_t hh)	{ if (auto w = widget_by_id (id); w) w->set_size_hints (ww,hh); }
+    void		set_widget_selection (widgetid_t id, const Size& s)		{ if (auto w = widget_by_id (id); w) w->set_selection (s); }
+    void		set_widget_selection (widgetid_t id, dim_t f, dim_t t)		{ if (auto w = widget_by_id (id); w) w->set_selection (f,t); }
+    void		set_widget_selection (widgetid_t id, dim_t f)			{ if (auto w = widget_by_id (id); w) w->set_selection (f); }
+    void		set_radiobox_selection (widgetid_t id, const widgetid_t* rb, unsigned nrb)
+			    { for (auto i = 0u; i < nrb; ++i) set_widget_selection (rb[i], rb[i] == id); }
+    template <unsigned N>
+    inline void		set_radiobox_selection (widgetid_t id, const widgetid_t (&rb)[N])
+			    { set_radiobox_selection (id, ARRAY_BLOCK(rb)); }
+    void		set_stack_selection (widgetid_t id, dim_t s);
     void		focus_widget (widgetid_t id);
     auto		focused_widget_id (void) const	{ return _focused; }
     const Widget*	focused_widget (void) const

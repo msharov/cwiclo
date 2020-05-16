@@ -96,14 +96,16 @@ Rect Widget::compute_size_hints (void)
 	if (sh.y || !sh.h)
 	    ++rsh.y;
 
-	// Packers add up widget sizes in one direction, expand to fit them in the other
-	if (layinfo().type() == Type::HBox) {
+	// Packers add up widget sizes in one direction, expand to fit them in
+	// the other. The fallback is Stack, which makes all widgets the same.
+	if (layinfo().type() == Type::HBox)
 	    rsh.w += sh.w;
-	    rsh.h = max (rsh.h, sh.h);
-	} else {
+	else
 	    rsh.w = max (rsh.w, sh.w);
+	if (layinfo().type() == Type::VBox)
 	    rsh.h += sh.h;
-	}
+	else
+	    rsh.h = max (rsh.h, sh.h);
     }
     // Frames add border thickness after all the subwidgets have been collected
     if (layinfo().type() == Type::GroupFrame) {
@@ -162,16 +164,16 @@ void Widget::resize (const Rect& inarea)
     unsigned nexpx = _nexp.x, nexpy = _nexp.y;
     for (auto& w : _widgets) {
 	// Widget position already computed
-	auto warea = Rect (subpos, w->size_hints());
+	auto wszh = w->size_hints();
+	auto warea = Rect (subpos, subsz);
 	// See if this subwidget gets extra space
-	bool xexp = w->expandables().x || !warea.w;
-	bool yexp = w->expandables().y || !warea.h;
+	bool xexp = w->expandables().x || !wszh.w;
+	bool yexp = w->expandables().y || !wszh.h;
 
 	// Packer-type dependent area computation and subpos adjustment
 	if (layinfo().type() == Type::HBox) {
-	    auto sw = min (subsz.w, warea.w);
-	    // Add extra space, if available
-	    if (xexp && nexpx) {
+	    auto sw = min (subsz.w, wszh.w);
+	    if (xexp && nexpx) {		// Add extra space, if available
 		auto ew = extra.w/nexpx--;	// divided equally between expandable subwidgets
 		extra.w -= ew;
 		sw += ew;
@@ -179,10 +181,9 @@ void Widget::resize (const Rect& inarea)
 	    subpos.x += sw;
 	    subsz.w -= sw;
 	    warea.w = sw;
-	    warea.h = subsz.h;
-	} else {
-	    warea.w = subsz.w;
-	    auto sh = min (subsz.h, warea.h);
+	}
+	if (layinfo().type() == Type::VBox) {
+	    auto sh = min (subsz.h, wszh.h);
 	    if (yexp && nexpy) {
 		auto eh = extra.h/nexpy--;
 		extra.h -= eh;
@@ -211,8 +212,11 @@ void Widget::report_modified (void) const
 void Widget::draw (drawlist_t& dl) const
 {
     on_draw (dl);
-    for (auto& w : _widgets)
-	w->draw (dl);
+    for (auto i = 0u; i < _widgets.size(); ++i) {
+	if (unlikely (layinfo().type() == Type::Stack && selection_start() != i))
+	    continue; // Stack only enables one child
+	_widgets[i]->draw (dl);
+    }
 }
 
 //}}}-------------------------------------------------------------------
@@ -229,8 +233,11 @@ void Widget::get_focus_neighbors_for (widgetid_t wid, FocusNeighbors& n) const
 	if (widget_id() < wid && widget_id() > n.prev)
 	    n.prev = widget_id();
     }
-    for (auto& w : _widgets)
-	w->get_focus_neighbors_for (wid, n);
+    for (auto i = 0u; i < _widgets.size(); ++i) {
+	if (unlikely (layinfo().type() == Type::Stack && selection_start() != i))
+	    continue;
+	_widgets[i]->get_focus_neighbors_for (wid, n);
+    }
 }
 
 auto Widget::get_focus_neighbors_for (widgetid_t wid) const -> FocusNeighbors
@@ -250,10 +257,11 @@ auto Widget::get_focus_neighbors_for (widgetid_t wid) const -> FocusNeighbors
 
 void Widget::focus (widgetid_t id)
 {
+    // Focus is given to widget id and all its parent containers.
     bool f = (widget_id() == id && flag (f_CanFocus));
-    for (auto& w : _widgets) {
-	w->focus (id);
-	if (w->flag (f_Focused))
+    for (auto i = 0u; i < _widgets.size(); ++i) {
+	_widgets[i]->focus (id);
+	if (_widgets[i]->flag (f_Focused))
 	    f = true;
     }
     set_flag (f_Focused, f);
@@ -264,8 +272,8 @@ void Widget::focus (widgetid_t id)
 
 void Widget::on_event (const Event& ev)
 {
-    // KeyDown events go only to the focused widget
-    if (ev.type() == Event::Type::KeyDown) {
+    // Key events go only to the focused widget
+    if (ev.type() == Event::Type::KeyDown || ev.type() == Event::Type::KeyUp) {
 	// on_key handlers are called in leaves and in focusable containers
 	if (flag (f_CanFocus))	// only call if the widget is able to handle it
 	    on_key (ev.key());
@@ -274,9 +282,8 @@ void Widget::on_event (const Event& ev)
 	auto focusw = linear_search_if (_widgets, [](auto& w) { return w->focused(); });
 	if (focusw)
 	    (*focusw)->on_event (ev);
-    } else
-	for (auto& w : _widgets)
-	    w->on_event (ev);
+    } else for (auto& w : _widgets)
+	w->on_event (ev);
 }
 
 void Widget::on_key (key_t k)
