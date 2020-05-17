@@ -18,7 +18,7 @@ public:
     inline constexpr	string (pointer s, size_type len, size_type cap): memblock (s,len,cap,true) {}
     inline		string (const_pointer s, size_type len)		: memblock (s,len,true) {}
     inline		string (const_pointer s1, const_pointer s2)	: string (s1,s2-s1) {}
-    inline constexpr	string (const_pointer s)			: string (s,__builtin_strlen(s),0u) {}
+    inline		string (const_pointer s)			: string (s,__builtin_strlen(s)) {}
     inline constexpr	string (string&& s)				: memblock (move(s)) {}
     inline		string (const string& s)			: string (s.data(), s.size()) {}
     inline		string (const cmemlink& s)			: string (s.data(), s.size()) {}
