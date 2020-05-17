@@ -1,24 +1,24 @@
 ################ Source files ##########################################
 
-test/SRCS	:= $(wildcard test/*.cc)
-test/TSRCS	:= $(wildcard test/?????.cc)
-test/TESTS	:= $(addprefix $O,$(test/TSRCS:.cc=))
-test/OBJS	:= $(addprefix $O,$(test/SRCS:.cc=.o))
-test/DEPS	:= ${test/OBJS:.o=.d}
-test/OUTS	:= ${test/TESTS:=.out}
+test/srcs	:= $(wildcard test/*.cc)
+test/tsrcs	:= $(wildcard test/?????.cc)
+test/tests	:= $(addprefix $O,$(test/tsrcs:.cc=))
+test/objs	:= $(addprefix $O,$(test/srcs:.cc=.o))
+test/deps	:= ${test/objs:.o=.d}
+test/outs	:= ${test/tests:=.out}
 
 ################ Compilation ###########################################
 
-.PHONY:	test/all test/run test/clean test/check
+.PHONY:	test/all check test/check test/clean
 
-test/all:	${test/TESTS}
+test/all:	${test/tests}
 
 # The correct output of a test is stored in testXX.std
 # When the test runs, its output is compared to .std
 #
 check:		test/check
-test/check:	${test/TESTS}
-	@for i in ${test/TESTS}; do \
+test/check:	${test/tests}
+	@for i in ${test/tests}; do \
 	    TEST="test/$$(basename $$i)";\
 	    echo "Running $$TEST";\
 	    PATH="$Otest" TERM="xterm" LINES="47" COLUMNS="160" $$i < $$TEST.cc > $$i.out 2>&1;\
@@ -28,23 +28,23 @@ test/check:	${test/TESTS}
 $Otest/fwork:	$Otest/ping.o
 $Otest/ipcom:	$Otest/ping.o | $Otest/ipcomsrv
 
-${test/TESTS}: $Otest/%: $Otest/%.o ${LIBA}
+${test/tests}: $Otest/%: $Otest/%.o ${liba}
 	@echo "Linking $@ ..."
-	@${CC} ${LDFLAGS} -o $@ $^
+	@${CC} ${ldflags} -o $@ $^
 
-$Otest/ipcomsrv:	$Otest/ipcomsrv.o $Otest/ping.o ${LIBA}
+$Otest/ipcomsrv:	$Otest/ipcomsrv.o $Otest/ping.o ${liba}
 	@echo "Linking $@ ..."
-	@${CC} ${LDFLAGS} -o $@ $^
+	@${CC} ${ldflags} -o $@ $^
 
 ################ Maintenance ###########################################
 
 clean:	test/clean
 test/clean:
 	@if [ -d $Otest ]; then\
-	    rm -f ${test/TESTS} $Otest/ipcomsrv ${test/OBJS} ${test/DEPS} ${test/OUTS} $Otest/.d;\
-	    rmdir ${BUILDDIR}/test;\
+	    rm -f ${test/tests} $Otest/ipcomsrv ${test/objs} ${test/deps} ${test/outs} $Otest/.d;\
+	    rmdir ${builddir}/test;\
 	fi
 
-${test/OBJS}: Makefile test/Module.mk ${CONFS} $Otest/.d
+${test/objs}: Makefile test/Module.mk ${confs} $Otest/.d
 
--include ${test/DEPS}
+-include ${test/deps}

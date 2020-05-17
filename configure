@@ -3,19 +3,19 @@
 # Project Configuration						     #
 ######################################################################
 
-PKG_NAME="cwiclo"
-PKG_VERSTR="v1.0"
-PKG_BUGREPORT="Mike Sharov <msharov@users.sourceforge.net>"
+pkg_name="cwiclo"
+pkg_verstr="v1.0"
+pkg_bugreport="Mike Sharov <msharov@users.sourceforge.net>"
 
 # Files that get created by this script
-FILES="Config.mk config.h $PKG_NAME.pc"
+files="Config.mk config.h $pkg_name.pc"
 
 # Package options
-COMPONENTS='
+components='
 {
 name=[with-debug]
 desc=[	Compile for debugging]
-seds=[s/^#\(DEBUG\)/\1/]
+seds=[s/^#\(debug\)/\1/]
 }{
 name=[with-native]
 desc=[	Use -march=native]
@@ -23,23 +23,23 @@ seds=[s/ -std=c/ -march=native -std=c/]
 }';
 
 # First pair is used if nothing matches
-PROGS="CC=gcc CC=clang CXX=g++ CXX=clang++ AR=ar RANLIB=ranlib RANLIB=touch INSTALL=install"
+progs="CC=gcc CC=clang CXX=g++ CXX=clang++ AR=ar RANLIB=ranlib RANLIB=touch INSTALL=install"
 
 # Automatic vars
-[ -d .git ] && PKG_VERSTR=`git describe --always`
-PKG_MAJOR=`expr "$PKG_VERSTR" : 'v\([0-9]*\)\.[0-9]*'`
-PKG_MINOR=`expr "$PKG_VERSTR" : 'v[0-9]*\.\([0-9]*\)'`
-PKG_STRING="$PKG_NAME $PKG_VERSTR"
+[ -d .git ] && pkg_verstr=`git describe --always`
+pkg_major=`expr "$pkg_verstr" : 'v\([0-9]*\)\.[0-9]*'`
+pkg_minor=`expr "$pkg_verstr" : 'v[0-9]*\.\([0-9]*\)'`
+pkg_string="$pkg_name $pkg_verstr"
 
 # Miscellaneous substitutions
-CUSTSUBS="s/@PKG_NAME@/$PKG_NAME/g
-s/@PKG_VERSION@/"0x$PKG_MAJOR${PKG_MINOR}"/g
-s/@PKG_VERSTR@/$PKG_VERSTR/g
-s/@PKG_STRING@/$PKG_STRING/g
-s/@PKG_UNAME@/`echo $PKG_NAME|tr a-z A-Z`/g
-s/@PKG_BUGREPORT@/$PKG_BUGREPORT/g
-s/@PKG_MAJOR@/$PKG_MAJOR/g
-s/@PKG_MINOR@/$PKG_MINOR/g"
+custsubs="s/@pkg_name@/$pkg_name/g
+s/@pkg_version@/0x$pkg_major${pkg_minor}/g
+s/@pkg_verstr@/$pkg_verstr/g
+s/@pkg_string@/$pkg_string/g
+s/@pkg_uname@/`echo $pkg_name|tr a-z A-Z`/g
+s/@pkg_bugreport@/$pkg_bugreport/g
+s/@pkg_major@/$pkg_major/g
+s/@pkg_minor@/$pkg_minor/g"
 
 ######################################################################
 #### The rest of the file is configuration code. Leave it alone. #####
@@ -49,25 +49,11 @@ die() { rm -f config.sed; exit; }
 sub() { printf "%s\n" "$1">>config.sed; }
 escpath() { echo $1 | sed 's/\//\\\//g'; }
 
-#### Set host-dependent options ######################################
-
-SYSNAME=`uname|tr A-Z a-z`
-case "$SYSNAME" in
-    *solaris*| *sun*)	SYSNAME="sun";;
-    *darwin*| *osx*)	SYSNAME="mac";;
-    *bsd*)		SYSNAME="bsd";;
-    *)			SYSNAME="linux";;
-esac
-
-if [ "$SYSNAME" != "linux" ]; then
-    sub "s/-p --ignore-fail-on-non-empty//"
-fi
-
 #### Printing helper functions #######################################
 
-PrintComponents() {
+print_components() {
     local cc name desc
-    cc=$COMPONENTS
+    cc=$components
     echo "Options:"
     while [ ! -z "$cc" ]; do
 	name=`expr "$cc" : '[^}]*name=\[\([^]]*\)\]'`
@@ -78,42 +64,41 @@ PrintComponents() {
     echo
 }
 
-PrintHelp() {
-    echo "This program configures $PKG_STRING to adapt to many kinds of systems.
+print_help() {
+    echo "This program configures $pkg_string build system.
 
-Usage: configure [OPTION]...
+Usage: configure [option]...
 
 Configuration:
   -h, --help		display this help and exit
   -V, --version		display version information and exit
 
 Installation directories:
-  --prefix=PREFIX	architecture-independent files [/usr/local]
-  --libdir=DIR		object code libraries [PREFIX/lib]
-  --includedir=DIR	C header files [PREFIX/include]
-  --docdir=DIR		documentation directory [PREFIX/share/doc]
-  --customincdir=DIR	Additional include directory
-  --customlibdir=DIR	Additional library directory
-  --builddir=DIR	location for compiled objects [$TMPDIR/make]
+  --prefix=dir		architecture-independent root [/usr/local]
+  --datadir=dir		architecture-independent data dir [prefix/share]
+  --libdir=dir		object code libraries [prefix/lib]
+  --includedir=dir	C header files [prefix/include]
+  --pkgconfigdir=dir	pkg-config configuration [libdir/pkgconfig]
+  --builddir=dir	location for compiled objects [\$TMPDIR/make]
 "
-    PrintComponents
-    echo "Report bugs to $PKG_BUGREPORT."
+    print_components
+    echo "Report bugs to $pkg_bugreport"
 }
 
-PrintVersion() {
-    echo "$PKG_NAME configure $PKG_VERSTR"
+print_version() {
+    echo "$pkg_name configure $pkg_verstr"
 }
 
-SubVar() {
+sub_var() {
     local esc2
     esc2=`escpath $2`
     eval ac_var_$1='$esc2';
     sub "s/@$1@/$esc2/g"
 }
 
-SubComp() {
+sub_comp() {
     local cc name seds
-    cc=$COMPONENTS
+    cc=$components
     while [ ! -z "$cc" ]; do
 	name=`expr "$cc" : '[^}]*name=\[\([^]]*\)\]'`
 	seds=`expr "$cc" : '[^}]*seds=\[\([^]]*\)\]'`
@@ -125,10 +110,10 @@ SubComp() {
 for i in $*; do
     case $i in
 	--)		break;;
-	--version |-V)	PrintVersion && die;;
-	--help |-h |-?)	PrintHelp && die;;
-	--*=*)		SubVar `expr "$i" : '--\([^=]*\)='` `expr "$i" : '[^=]*=\(.*\)'`;;
-	--*)		SubComp `expr "$i" : '--\(.*\)'`;;
+	--version |-V)	print_version && die;;
+	--help |-h |-?)	print_help && die;;
+	--*=*)		sub_var `expr "$i" : '--\([^=]*\)='` `expr "$i" : '[^=]*=\(.*\)'`;;
+	--*)		sub_comp `expr "$i" : '--\(.*\)'`;;
 	*)		echo "Error: unrecognized option \"$i\"" && die;;
     esac
 done
@@ -136,42 +121,17 @@ done
 #### Set directory prefixes ##########################################
 
 sub "s/@prefix@/${ac_var_prefix:=\/usr\/local}/g
-s/@bindir@/${ac_var_bindir:=$ac_var_prefix\/bin}/g
-s/@docdir@/${ac_var_docdir:=$ac_var_prefix\/share\/doc}/g
-s/@includedir@/${ac_var_includedir:=$ac_var_prefix\/include}/g
-s/@libdir@/${ac_var_libdir:=$ac_var_prefix\/lib}/g
-s/@builddir@/$(escpath ${TMPDIR:-/tmp})\/make/g
-s/@pkgconfigdir@/${ac_var_pkgconfigdir:=$ac_var_libdir\/pkgconfig}/g
-s/@customincdir@/${ac_var_customincdir:=$ac_var_prefix\/include}/g
-s/@customlibdir@/${ac_var_customlibdir:=$ac_var_prefix\/lib}/g"
-
-# Replace prefix variables, where available
-if [ "$ac_var_includedir" = "$ac_var_prefix\/include" ]; then
-    sub "s/$ac_var_includedir/\${prefix}\/include/";
-fi
-if [ "$ac_var_pkgconfigdir" = "$ac_var_libdir\/pkgconfig" ]; then
-    sub "s/$ac_var_pkgconfigdir/\${LIBDIR}\/pkgconfig/";
-fi
-if [ "$ac_var_libdir" = "$ac_var_prefix\/lib" ]; then
-    sub "s/$ac_var_libdir/\${prefix}\/lib/";
-fi
-if [ "$ac_var_bindir" = "$ac_var_prefix\/bin" ]; then
-    sub "s/$ac_var_bindir/\${prefix}\/bin/";
-fi
-if [ "$ac_var_docdir" = "$ac_var_prefix\/share\/doc" ]; then
-    sub "s/$ac_var_docdir/\${prefix}\/share\/doc/";
-fi
-if [ "$ac_var_libdir" = "\/usr\/local\/lib" -o "$ac_var_libdir" = "\/usr\/lib" ]; then
-    sub "s/ -L\${libdir}//";
-fi
-if [ "$ac_var_includedir" = "\/usr\/local\/include" -o "$ac_var_includedir" = "\/usr\/include" ]; then
-    sub "s/ -I\${includedir}//";
-fi
+s/@datadir@/${ac_var_datadir:=\$\{prefix\}\/share}/g
+s/@includedir@/${ac_var_includedir:=\$\{prefix\}\/include}/g
+s/@libdir@/${ac_var_libdir:=\$\{prefix\}\/lib}/g
+s/@TMPDIR@/$(escpath ${TMPDIR:-/tmp})/g
+s/@builddir@/\$\{TMPDIR\}\/make/g
+s/@pkgconfigdir@/${ac_var_pkgconfigdir:=\$\{libdir\}\/pkgconfig}/g"
 
 #### Find headers, libs, programs, and subs ##########################
 
 # Programs found using which
-for i in $PROGS; do
+for i in $progs; do
     pname=`expr "$i" : '\([^=]*\)=[^=]*'`
     pcall=`expr "$i" : '[^=]*=\([^=]*\)'`
     ppath=`eval echo \$\{$pname\}`
@@ -181,25 +141,18 @@ for i in $PROGS; do
     # Check if the program exists
     [ -x `which $pcall 2>/dev/null` ] && sub "s/@$pname@/$pcall/g"
 done
-# If nothing found in first loop, set the first pair anyway.
-for i in $PROGS; do
+# If nothing found in first loop, set the first pair anyway
+for i in $progs; do
     pname=`expr "$i" : '\([^=]*\)=[^=]*'`
     pcall=`expr "$i" : '[^=]*=\([^=]*\)'`
     sub "s/@$pname@/$pcall/g"
 done
-# And, finally, the environment variables
-for i in $ENVIRONS; do
-    esciv="`eval echo '"'\$\{$i\}'"'|sed 's/\//\\\&/g'`"
-    ppath=`eval echo \$\{$pname\}`
-    ppath=`escpath "$ppath"`
-    [ ! -z "$ppath" ] && ppath=" $ppath"
-    sub "s/ @$i@/$ppath/g"
-done
-sub "$CUSTSUBS"
+# Miscellaneous custom substitutions
+sub "$custsubs"
 
 #### Apply substitutions to all files ################################
 
-for i in $FILES; do
+for i in $files; do
     sed -f config.sed $i.in > $i
 done
 

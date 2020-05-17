@@ -1,10 +1,4 @@
-################ Build options #######################################
-
-NAME		:= @PKG_NAME@
-MAJOR		:= @PKG_MAJOR@
-MINOR		:= @PKG_MINOR@
-
-#DEBUG		:= 1
+name		:= @pkg_name@
 
 ################ Programs ############################################
 
@@ -13,33 +7,29 @@ CC		:= @CC@
 AR		:= @AR@
 RANLIB		:= @RANLIB@
 INSTALL		:= @INSTALL@
-
-INSTALLEXE	:= ${INSTALL} -D -p -m 700 -s
-INSTALLDATA	:= ${INSTALL} -D -p -m 644
-INSTALLLIB	:= ${INSTALLDATA}
-RMPATH		:= rmdir -p --ignore-fail-on-non-empty
+INSTALL_DATA	:= ${INSTALL} -m 644
 
 ################ Destination #########################################
 
 prefix		:= @prefix@
-BINDIR		:= @bindir@
-INCDIR		:= @includedir@
-LIBDIR		:= @libdir@
-DOCDIR		:= @docdir@
-PKCDIR		:= @pkgconfigdir@
+datadir		:= @datadir@
+includedir	:= @includedir@
+libdir		:= @libdir@
+pkgconfigdir	:= @pkgconfigdir@
+TMPDIR		:= @TMPDIR@
+builddir	:= @builddir@/${name}
+O		:= .o/
 
 ################ Compiler options ####################################
 
-CXXFLAGS	:= -Wall -Wextra -Wredundant-decls -Wshadow \
-		-std=c++17 -fno-exceptions -fno-rtti \
-		-ffunction-sections -fdata-sections \
-		-fno-threadsafe-statics -fno-stack-protector
-ifdef DEBUG
-    CXXFLAGS	+= -O0 -ggdb3
-    LDFLAGS	+= -g -rdynamic -no-pie
+#debug		:= 1
+ifdef debug
+    cxxflags	:= -O0 -ggdb3
+    ldflags	:= -g -rdynamic ${LDFLAGS}
 else
-    CXXFLAGS	+= -Os -g0 -DNDEBUG=1
-    LDFLAGS	+= -s -no-pie -Wl,-O1,-gc-sections
+    cxxflags	:= -Os -g0 -DNDEBUG=1
+    ldflags	:= -s -Wl,-O1,-gc-sections ${LDFLAGS}
 endif
-BUILDDIR	:= @builddir@/${NAME}
-O		:= .o/
+CXXFLAGS	:= -Wall -Wextra -Wredundant-decls -Wshadow
+cxxflags	+= -std=c++17 -fno-exceptions -fno-rtti \
+		   -ffunction-sections -fdata-sections ${CXXFLAGS}

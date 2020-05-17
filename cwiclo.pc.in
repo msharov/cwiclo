@@ -2,8 +2,8 @@ prefix=@prefix@
 libdir=@libdir@
 includedir=@includedir@
 
-Name: @PKG_NAME@
+Name: @pkg_name@
 Description: Asynchronous component object library
-Version: @PKG_MAJOR@.@PKG_MINOR@
-Libs: -L${libdir} -Wl,-gc-sections -l@PKG_NAME@
-Cflags: -I${includedir}
+Version: @pkg_major@.@pkg_minor@
+Libs: -L${libdir} -Wl,-gc-sections -l@pkg_name@
+Cflags: -I${includedir} -ffunction-sections -fdata-sections
