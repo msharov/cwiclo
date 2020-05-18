@@ -29,7 +29,7 @@ public:
 	Read		= POLLIN,
 	Write		= POLLOUT,
 	ReadWrite	= Read| Write,
-	Timer		= POLLMSG,
+	Timer		= POLLPRI,
 	ReadTimer	= Read| Timer,
 	WriteTimer	= Write| Timer,
 	ReadWriteTimer	= ReadWrite| Timer

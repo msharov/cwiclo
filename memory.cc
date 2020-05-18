@@ -4,7 +4,9 @@
 // This file is free software, distributed under the ISC License.
 
 #include "memory.h"
-#include <alloca.h>
+#if __has_include(<alloca.h>)
+    #include <alloca.h>
+#endif
 #if __has_include(<execinfo.h>)
     #include <execinfo.h>
 #endif

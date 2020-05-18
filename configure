@@ -112,8 +112,8 @@ for i in $*; do
 	--)		break;;
 	--version |-V)	print_version && die;;
 	--help |-h |-?)	print_help && die;;
-	--*=*)		sub_var `expr "$i" : '--\([^=]*\)='` `expr "$i" : '[^=]*=\(.*\)'`;;
-	--*)		sub_comp `expr "$i" : '--\(.*\)'`;;
+	--*=*)		sub_var `expr -- "$i" : '--\([^=]*\)='` `expr -- "$i" : '[^=]*=\(.*\)'`;;
+	--*)		sub_comp `expr -- "$i" : '--\(.*\)'`;;
 	*)		echo "Error: unrecognized option \"$i\"" && die;;
     esac
 done
@@ -139,7 +139,8 @@ for i in $progs; do
     # First check if an environment variable is set
     [ ! -z "$ppath" ] && sub "s/@$pname@/$ppath/g"
     # Check if the program exists
-    [ -x `which $pcall 2>/dev/null` ] && sub "s/@$pname@/$pcall/g"
+    ppath=`which $pcall 2>/dev/null`
+    [ ! -z "$ppath" -a -x "$ppath" ] && sub "s/@$pname@/$pcall/g"
 done
 # If nothing found in first loop, set the first pair anyway
 for i in $progs; do

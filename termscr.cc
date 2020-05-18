@@ -6,7 +6,11 @@
 #include "termscr.h"
 #include "app.h"
 #include <signal.h>
-#include <termio.h>
+#if __has_include(<termio.h>)
+    #include <termio.h>
+#else
+    #include <termios.h>
+#endif
 
 namespace cwiclo {
 namespace ui {

@@ -101,7 +101,7 @@ iid_t App::interface_by_name (const char* iname, streamsize inamesz) // static
 #define M(s) bit_mask(s)
 enum {
     sigset_Die	= M(SIGILL)|M(SIGABRT)|M(SIGBUS)|M(SIGFPE)|M(SIGSYS)|M(SIGSEGV)|M(SIGALRM)|M(SIGXCPU),
-    sigset_Quit	= M(SIGINT)|M(SIGQUIT)|M(SIGTERM)|M(SIGPWR),
+    sigset_Quit	= M(SIGINT)|M(SIGQUIT)|M(SIGTERM),
     sigset_Msg	= sigset_Quit|M(SIGHUP)|M(SIGCHLD)|M(SIGWINCH)|M(SIGURG)|M(SIGXFSZ)|M(SIGUSR1)|M(SIGUSR2)|M(SIGPIPE)
 };
 #undef M
@@ -472,7 +472,7 @@ void App::check_poll_timers (const pollfd* fds)
 		DEBUG_PRINTF("[T]\tFile descriptor %d ", cfd->fd);
 		if (cfd->revents & POLLIN)	DEBUG_PRINTF("can be read\n");
 		if (cfd->revents & POLLOUT)	DEBUG_PRINTF("can be written\n");
-		if (cfd->revents & POLLMSG)	DEBUG_PRINTF("has extra data\n");
+		if (cfd->revents & POLLPRI)	DEBUG_PRINTF("has extra data\n");
 		if (cfd->revents & POLLERR)	DEBUG_PRINTF("has errors\n");
 	    }
 	}
