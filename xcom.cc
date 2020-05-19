@@ -404,6 +404,14 @@ bool Extern::attach_to_socket (fd_t fd)
     return !PTimer::make_nonblocking (fd);
 }
 
+#ifdef SCM_CREDS // BSD interface
+    #define SCM_CREDENTIALS	SCM_CREDS
+    #define SO_PASSCRED		LOCAL_PEERCRED
+    #define ucred		cmsgcred
+#elif !defined(SCM_CREDENTIALS)
+    #error "socket credentials passing not supported"
+#endif
+
 void Extern::enable_credentials_passing (bool enable)
 {
     if (_sockfd < 0 || !_einfo.is_unix_socket)

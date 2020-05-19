@@ -77,7 +77,14 @@ public:
     struct Info {
 	vector<iid_t>	imported;
 	const iid_t*	exported;
-	struct ucred	creds;
+	struct Credentials {
+	    pid_t	pid;
+	    uid_t	uid;
+	    #ifdef SCM_CREDS
+		uid_t	euid; // BSD-only field, do not use
+	    #endif
+	    gid_t	gid;
+	}		creds;
 	mrid_t		oid;
 	SocketSide	side;
 	bool		is_unix_socket;
