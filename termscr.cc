@@ -197,7 +197,7 @@ void TerminalScreen::unregister_window (const TerminalScreenWindow* w)
     }
 }
 
-Rect TerminalScreen::position_window (Rect warea) const
+Rect TerminalScreen::position_window (extid_t parent_id, Rect warea) const
 {
     // Maximize window if empty
     if (!warea.w)
@@ -211,8 +211,12 @@ Rect TerminalScreen::position_window (Rect warea) const
 	warea.h = min (warea.h, screen_info().size().h);
 	if (warea.w < screen_info().size().w)
 	    warea.x = (screen_info().size().w - warea.w)/2u;
-	if (warea.h < screen_info().size().h)
-	    warea.y = (screen_info().size().h - warea.h)/2u;
+	if (warea.h < screen_info().size().h) {
+	    // Drop top level windows to the bottom.
+	    warea.y = screen_info().size().h - warea.h;
+	    if (parent_id)
+		warea.y /= 2;	// parented windows centered
+	}
     }
 
     // Clip the window to the screen area
@@ -225,7 +229,7 @@ Rect TerminalScreen::position_window (Rect warea) const
 void TerminalScreen::draw_window (const TerminalScreenWindow* w)
 {
     assert (flag (f_UIMode));
-    assert (position_window(w->area()) == w->area() && "you must use position_window to set window area");
+    assert (position_window(w->window_info().parent(), w->area()) == w->area() && "you must use position_window to set window area");
     if (w->area().empty())
 	return;
     auto wpos (w->area().pos());
@@ -306,7 +310,7 @@ void TerminalScreen::draw_window (const TerminalScreenWindow* w)
 			// Rewrite unchanged chars if only a few and no attributes changed
 			for (; dpos.dx; --dpos.dx) {
 			    auto uici = ici-dpos.dx;
-			    if (uici->attr != _lastcell.attr)
+			    if (uici->attr != _lastcell.attr || uici->c < ' ' || uici->c > '~')
 				break;
 			    _tout += uici->c;
 			}

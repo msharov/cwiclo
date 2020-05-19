@@ -79,6 +79,10 @@ void MessageBox::on_key (key_t key)
 	done (Answer::No);
     else if (key == Key::Escape || key == 'c')
 	done (Answer::Cancel);
+    else if (key == Key::Left || key == 'h')
+	focus_prev();
+    else if (key == Key::Right || key == 'l')
+	focus_next();
     else if (key == Key::Enter) {
 	if (focused_widget_id() == wid_Cancel)
 	    done (Answer::Cancel);

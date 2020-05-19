@@ -102,7 +102,7 @@ Rect Widget::compute_size_hints (void)
 	    rsh.w += sh.w;
 	else
 	    rsh.w = max (rsh.w, sh.w);
-	if (layinfo().type() == Type::VBox)
+	if (layinfo().type() == Type::VBox || layinfo().type() == Type::GroupFrame)
 	    rsh.h += sh.h;
 	else
 	    rsh.h = max (rsh.h, sh.h);
@@ -182,7 +182,7 @@ void Widget::resize (const Rect& inarea)
 	    subsz.w -= sw;
 	    warea.w = sw;
 	}
-	if (layinfo().type() == Type::VBox) {
+	if (layinfo().type() == Type::VBox || layinfo().type() == Type::GroupFrame) {
 	    auto sh = min (subsz.h, wszh.h);
 	    if (yexp && nexpy) {
 		auto eh = extra.h/nexpy--;

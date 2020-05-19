@@ -167,9 +167,9 @@ void Window::on_event (const Event& ev)
 
 void Window::on_key (key_t k)
 {
-    if (k == Key::Tab || k == Key::Right || k == Key::Down)
+    if (k == Key::Tab)
 	focus_next();
-    else if (k == KMod::Shift+Key::Tab || k == Key::Left || k == Key::Up)
+    else if (k == KMod::Shift+Key::Tab)
 	focus_prev();
 }
 

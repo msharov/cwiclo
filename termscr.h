@@ -69,7 +69,7 @@ public:
     void	reset (void);
     void	register_window (TerminalScreenWindow* w);
     void	unregister_window (const TerminalScreenWindow* w);
-    Rect	position_window (Rect warea) const;
+    Rect	position_window (extid_t parent_id, Rect warea) const;
     void	draw_window (const TerminalScreenWindow* w);
     bool	dispatch (Msg& msg) override;
     inline void	Signal_signal (int s);
@@ -127,7 +127,7 @@ public:
 private:
 		friend class Drawlist;
     Rect	interior_area (void) const	{ return Rect (area().size()); }
-    Rect	clip_to_screen (void) const	{ return TerminalScreen::instance().position_window (area()); }
+    Rect	clip_to_screen (void) const	{ return TerminalScreen::instance().position_window (_winfo.parent(), area()); }
     icolor_t	clip_color (icolor_t c, Surface::Attr::EAttr fattr);
     auto	cell_from_char (char32_t c) const { Cell cc (_attr); cc.c = c; return cc; }
     inline void	Draw_reset (void);

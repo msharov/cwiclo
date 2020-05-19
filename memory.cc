@@ -83,13 +83,13 @@ void print_backtrace (void)
 {
 #if __has_include(<execinfo.h>)
     void* frames[32];
-    auto nf = backtrace (ARRAY_BLOCK(frames));
+    unsigned nf = backtrace (ARRAY_BLOCK(frames));
     if (nf <= 1)
 	return;
     auto syms = backtrace_symbols (frames, nf);
     if (!syms)
 	return;
-    for (auto f = 1; f < nf; ++f) {
+    for (auto f = 1u; f < nf; ++f) {
 	// Symbol names are formatted thus: "file(function+0x42) [0xAddress]"
 	// Parse out the function name
 	auto fnstart = strchr (syms[f], '(');
