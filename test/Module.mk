@@ -19,10 +19,10 @@ test/all:	${test/tests}
 check:		test/check
 test/check:	${test/tests}
 	@for i in ${test/tests}; do \
-	    TEST="test/$$(basename $$i)";\
-	    echo "Running $$TEST";\
-	    PATH="$Otest" TERM="xterm" LINES="47" COLUMNS="160" $$i < $$TEST.cc > $$i.out 2>&1;\
-	    diff $$TEST.std $$i.out && rm -f $$i.out;\
+	    test="test/$$(basename $$i)";\
+	    echo "Running $$test";\
+	    PATH="$Otest" TERM="xterm" LINES="47" COLUMNS="160" $$i < $$test.cc > $$i.out 2>&1;\
+	    diff $$test.std $$i.out && rm -f $$i.out;\
 	done
 
 $Otest/fwork:	$Otest/ping.o
@@ -40,7 +40,7 @@ $Otest/ipcomsrv:	$Otest/ipcomsrv.o $Otest/ping.o ${liba}
 
 clean:	test/clean
 test/clean:
-	@if [ -d $Otest ]; then\
+	@if [ -d ${builddir}/test ]; then\
 	    rm -f ${test/tests} $Otest/ipcomsrv ${test/objs} ${test/deps} ${test/outs} $Otest/.d;\
 	    rmdir ${builddir}/test;\
 	fi

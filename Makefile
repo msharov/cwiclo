@@ -42,15 +42,14 @@ endif
 
 ################ Installation ##########################################
 
-.PHONY:	install install-incs installdirs
+.PHONY:	install installdirs install-incs
 .PHONY:	uninstall uninstall-incs uninstall-lib uninstall-pc
 
 ifdef includedir
 incsd	:= ${DESTDIR}${includedir}/${name}
 incsi	:= $(addprefix ${incsd}/,${incs})
 incr	:= ${incsd}.h
-install:	${incsi} ${incr}
-installdirs:	${incsd}
+
 ${incsd}:
 	@echo "Creating $@ ..."
 	@${INSTALL} -d $@
@@ -60,27 +59,33 @@ ${incsi}: ${incsd}/%.h: %.h | ${incsd}
 ${incr}:	${name}.h | ${incsd}
 	@echo "Installing $@ ..."
 	@${INSTALL_DATA} $< $@
+
+installdirs:	${incsd}
+install:	${incsi} ${incr}
 uninstall:	uninstall-incs
 uninstall-incs:
-	@if [ -d ${includedir}/${name} ]; then\
+	@if [ -d ${incsd} ]; then\
 	    echo "Removing headers ...";\
 	    rm -f ${incsi} ${incr};\
 	    rmdir ${incsd};\
 	fi
 endif
+
 ifdef libdir
 libad	:= ${DESTDIR}${libdir}
 libai	:= ${libad}/$(notdir ${liba})
 libai_r	:= ${libad}/$(notdir ${liba_r})
 libai_d	:= ${libad}/$(notdir ${liba_d})
-install:	${libai}
-installdirs:	${libad}
+
 ${libad}:
 	@echo "Creating $@ ..."
 	@${INSTALL} -d $@
 ${libai}:	${liba} | ${libad}
 	@echo "Installing $@ ..."
 	@${INSTALL_DATA} $< $@
+
+installdirs:	${libad}
+install:	${libai}
 uninstall:	uninstall-lib
 uninstall-lib:
 	@if [ -f ${libai_r} -o -f ${libai_d} ]; then\
@@ -88,11 +93,11 @@ uninstall-lib:
 	    rm -f ${libai_r} ${libai_d};\
 	fi
 endif
+
 ifdef pkgconfigdir
 pcd	:= ${DESTDIR}${pkgconfigdir}
 pci	:= ${pcd}/${name}.pc
-install:	${pci}
-installdirs:	${pcd}
+
 ${pcd}:
 	@echo "Creating $@ ..."
 	@${INSTALL} -d $@
@@ -100,9 +105,14 @@ ${pci}:	${name}.pc | ${pcd}
 	@echo "Installing $@ ..."
 	@${INSTALL_DATA} $< $@
 
+installdirs:	${pcd}
+install:	${pci}
 uninstall:	uninstall-pc
 uninstall-pc:
-	@if [ -f ${pci} ]; then echo "Removing ${pci} ..."; rm -f ${pci}; fi
+	@if [ -f ${pci} ]; then\
+	    echo "Removing ${pci} ...";\
+	    rm -f ${pci};\
+	fi
 endif
 
 ################ Maintenance ###########################################
@@ -132,7 +142,7 @@ ${builddir}/.d:	Makefile
 Config.mk:	Config.mk.in
 config.h:	config.h.in
 ${name}.pc:	${name}.pc.in
-${objs}:	Makefile ${confs} $O.d config.h
+${objs}:	Makefile ${confs} $O.d
 ${confs}:	configure
 	@if [ -x config.status ]; then echo "Reconfiguring ...";\
 	    ./config.status;\

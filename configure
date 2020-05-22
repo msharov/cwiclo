@@ -33,7 +33,7 @@ pkg_string="$pkg_name $pkg_verstr"
 
 # Miscellaneous substitutions
 custsubs="s/@pkg_name@/$pkg_name/g
-s/@pkg_version@/0x$pkg_major${pkg_minor}/g
+s/@pkg_version@/0x$pkg_major$pkg_minor/g
 s/@pkg_verstr@/$pkg_verstr/g
 s/@pkg_string@/$pkg_string/g
 s/@pkg_uname@/`echo $pkg_name|tr a-z A-Z`/g
@@ -86,7 +86,7 @@ Installation directories:
 }
 
 print_version() {
-    echo "$pkg_name configure $pkg_verstr"
+    echo "$pkg_name $pkg_verstr configure"
 }
 
 sub_var() {
