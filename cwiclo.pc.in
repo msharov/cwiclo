@@ -6,4 +6,4 @@ Name: @pkg_name@
 Description: Asynchronous component object library
 Version: @pkg_major@.@pkg_minor@
 Libs: -L${libdir} -Wl,-O1,-gc-sections -l@pkg_name@
-Cflags: -I${includedir} -ffunction-sections -fdata-sections
+Cflags: -I${includedir} -fno-exceptions -fno-rtti -ffunction-sections -fdata-sections
