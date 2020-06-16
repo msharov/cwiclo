@@ -1,0 +1,43 @@
+body {
+    background-color: black;
+    color: gray;
+    margin: 0;
+}
+#pagectr {
+    background-color: #004;
+    margin: 0 auto;
+    max-width: 64em;
+    overflow: hidden;
+}
+#header {
+    border-bottom: 1px #044 solid;
+    min-height: 8em;
+    overflow: hidden;
+}
+#header h1 {
+    color: #0cc;
+    float: left;
+    font-size: 3.5em;
+    margin: .4em 1em;
+}
+#header img {
+    float: right;
+    margin-left: 1.5em;
+}
+#content {
+    background-color: #003;
+    padding: .5em 1.5em;
+    text-align: justify;
+}
+#content pre {
+    color: #488;
+    margin-left: 1em;
+}
+#content a		{ color: #0bb }
+#content a:visited	{ color: #088 }
+#content a:active	{ color: #0ff }
+#content h2		{ color: #899 }
+#content h3		{ color: #899 }
+#content tt		{ color: #688 }
+#content dt		{ color: #4bb }
+#content table		{ margin: 1em }

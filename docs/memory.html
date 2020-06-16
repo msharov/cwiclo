@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="style.css" />
+    <title>CWICLO - Memory management</title>
+</head>
+<body><div id="pagectr">
+<header id="header">
+
+<h1>Memory management</h1>
+
+</header>
+<main id="content">
+<p>
+The cwiclo programming philosophy considers memory management to be the
+most essential consideration in every project. Apps consist primarily
+of ways to move data from one place to another, hence every design must
+start by specifying how data is stored, who owns it, how it is created,
+and when it is destroyed. Any algorithms for processing the data are
+then chosen to fit its structure.
+</p><p>
+The low-level memory API in cwiclo is similar to that of the standard
+library, providing methods of managing typed allocated memory. The code
+is located in <tt>memory.h</tt>, containing allocation primitives,
+<tt>new</tt> and <tt>delete</tt>, object initialization, pointer and
+iterator utilities, and the necessary C++ ABI support normally present
+in <tt>libstdc++</tt>.
+</p>
+
+<h2>Allocators</h2>
+<p>
+The standard libc <tt>malloc</tt> is used for all memory allocation.
+Custom allocators are not supported anywhere in cwiclo because the task
+they are supposed to optimize - fast and efficient allocation of a large
+number of very small objects - should never be necessary. The necessity
+of defining strict object ownership and lifetime makes the frequent
+practice of creating objects with new and throwing them "up in the air"
+as <tt>shared_ptr</tt>s inappropriate. Small objects should be created
+in a vector, so that their ownership, lifetime, and access could be
+managed by that vector's owning object, thus obviating the need for a
+custom allocator tailored to small objects.
+</p><p>
+Because cwiclo has no exceptions, memory allocations never throw, but
+rather <tt>abort</tt> on failure. Exiting in this manner is the only
+reasonable thing to do because the app can do nothing to correct this
+problem. An often repeated admonition to "free unnecessary resources"
+in this situation is inappropriate because the app should not have
+allocated any unnecessary resources to begin with. Furthermore, on Linux,
+the main target platform, failed memory allocations typically result in
+the process being killed by the OOM killer before the allocation failure
+is even reported to the process.
+</p><p>
+All cwiclo allocations go through the <tt>_realloc</tt> function, which
+calls libc <tt>realloc</tt> and aborts on failure. <tt>_alloc</tt>
+forwards to <tt>_realloc</tt>. Global <tt>new</tt> variants inline to
+<tt>_alloc</tt>. Global <tt>delete</tt>s inline to normal <tt>free</tt>.
+Placement <tt>new</tt> and <tt>delete</tt> do nothing. Placement
+<tt>new</tt> is constexpr, allowing calling constexpr constructors
+this way.
+</p><p>
+Following the "no naked new" principle, constructors can be called
+using <tt>construct_at&lt;Rect&gt; (parea, 0,0,80,24);</tt> instead of
+the naked placement new. Likewise, the destructor can be called using
+<tt>destroy_at</tt>. For object arrays there are <tt>destroy (begin(a),
+end(a))</tt> and <tt>destroy_n (begin(a), size(a))</tt>. Uninitialized
+plain memory can be constructed into an object array using
+<tt>uninitialized_default_construct (f,l)</tt> and
+<tt>uninitialized_default_construct_n (f,n)</tt>.
+</p><p>
+The allocator functions above are generally only used for implementing
+containers. You seldom need to use them directly.
+</p>
+
+<h2>Containers</h2>
+<p>
+Low-level memory containers include <tt>std::initializer_list</tt>
+and <tt>unique_ptr</tt> templates. <tt>std::initializer_list</tt> is an internal
+compiler construct (which is why it must be in <tt>std::</tt>) that is
+created when objects are brace-initialized.  For example, if you were to
+create <tt>vector a = {1,2,3};</tt>, an <tt>std::initializer_list</tt>
+object containing a pointer to the array of numbers and the size of
+that array is created by the compiler and passed to the appropriate
+<tt>vector</tt> constructor.
+</p><p>
+<tt>std::initializer_list</tt> has the standard STL container interface,
+<tt>begin</tt>, <tt>end</tt>, and <tt>size</tt> members for iteration.
+There is an <tt>operator[]</tt> for random access. There is no public
+constructor because you will never directly create one of these.
+</p><p>
+The other container here is <tt>unique_ptr</tt>, a smart pointer template
+that owns the allocated object and frees it in the destructor. For
+example: <tt>auto name = make_unique&lt;string&gt;("gandalf");</tt>
+creates a <tt>unique_ptr&lt;string&gt;</tt> object owning a pointer to
+a string with the value "gandalf". The use of <tt>make_unique</tt> is
+recommended to specify the object type only once and to reinforce the
+habit of not using naked <tt>new</tt>.
+</p><p>
+<tt>unique_ptr</tt> explicitly manages ownership with the <tt>get</tt>
+method giving an unowned object pointer, while <tt>release</tt>
+relinquishes ownership to the caller. <tt>reset</tt> deletes the object
+and sets the internal pointer to a new value; this can be used to give
+ownership to the <tt>unique_ptr</tt>.
+</p><p>
+<tt>unique_ptr</tt> also contains passthrough functionality for mimicking
+bare pointer behavior, such as <tt>bool nullptr</tt>-testing, pointer
+comparisons, as well as the <tt>*</tt> and <tt>-&gt;</tt> operators.
+<tt>unique_ptr</tt> thus prevents memory leaks and use-after-free,
+while acting much like a bare pointer, making it the preferred choice
+over the latter in most circumstances.
+</p><p>
+A frequently asked question here is why there is no <tt>shared_ptr</tt>
+or <tt>weak_ptr</tt>. The reason is that those containers violate cwiclo's
+strict ownership policy. Each object must have exactly one owner, who
+then determines the lifetime of each owned object. The "up in the air"
+ownership structure provided by <tt>shared_ptr</tt> should never be used.
+</p>
+
+<h2>Iterators</h2>
+<p>
+Iterator-based algorithm implementation is aided by
+the <tt>iterator_traits</tt> template, which allows
+discovery of relevant iterator properties. You can get
+<tt>iterator_traits&lt;I&gt;::value_type</tt>, showing what the iterator
+iterates over, <tt>difference_type</tt>, for storing iterator distances,
+value <tt>pointer</tt>, value <tt>reference</tt>, <tt>const_pointer</tt>
+and <tt>const_reference</tt>. By using <tt>iterator_traits</tt> you can
+set internal variable types independently of iterator type, supporting
+pointers, <tt>void*</tt>, and complex iterators with the same code.
+</p><p>
+Functions for adjusting iterators are also required to support
+<tt>void*</tt>. Academic C++ frowns upon untyped storage, but
+with cwiclo's attitude that types are not sacred, raw storage is
+common and <tt>void</tt> pointers occasionally occur. So here we have
+<tt>advance(p)</tt> to increment the iterator given by reference. It works
+with normal pointers, complex iterators, and <tt>void*</tt>.  <tt>np =
+next(p)</tt> is a non-modifying version that returns <tt>p+1</tt>.
+<tt>np = next(p,n)</tt> returns <tt>p+n</tt>. Complementary
+<tt>prev</tt> returns <tt>--p</tt> or <tt>p-n</tt>. And finally there
+is <tt>distance(p,q)</tt>, returning the <tt>q-p</tt>. Use these and
+make friends with <tt>void*</tt>.
+</p><p>
+Algorithms that need a pointer to the actual data can use the
+<tt>to_address</tt> function to convert a complex iterator into a
+raw pointer. This works with iterators that support <tt>-&gt;</tt>,
+<tt>unique_ptr</tt>, and, of course, normal pointers.
+</p>
+
+<h2>Move utilities</h2>
+<p>
+One of C++11's great features is move semantics, and cwiclo implements
+the standard support functions for it. There is <tt>move</tt> function
+that converts an l-value to an r-value, "moving" the given object. The
+<tt>forward&lt;T&gt;</tt> template forwards an l-value or r-value as-is.
+This is used in template wrappers to forward arguments that may be either.
+</p><p>
+<tt>swap(a,b)</tt> uses <tt>move</tt> to efficiently swap arguments.
+There is an array version as well, swapping two arrays element by element.
+<tt>iter_swap(p,q)</tt> swaps what iterators <tt>p</tt> and <tt>q</tt>
+point to. <tt>auto olda = exchange(a,b)</tt> moves <tt>b</tt> into
+<tt>a</tt> and returns what was in <tt>a</tt>. A half-swap, if you will;
+handy when resetting a resource: <tt>free (exchange (p, nullptr))</tt>.
+</p>
+
+<h2>copy</h2>
+<p>
+Copying memory is as down-to-the-metal as it gets and in C it is done
+by <tt>memcpy</tt> with the several problems that come with it. The
+first is that it is not always inlined to <tt>rep movs</tt>, creating an
+unnecessary call frame that invariably increases emitted code size. Not
+inlining the call also loses the element size information provided
+by the type of the argument and sometimes by the size. This requires
+the implementation of memcpy to either be implemented using <tt>rep
+movsb</tt>, or to have extra chunking code, increasing complexity and
+setup time, and decreasing performance for small blocks. The second
+is that it takes the destination argument first, while we usually
+first consider the source of the data.  And the third is that in C++
+some types are non-trivial and must be copied by <tt>operator=</tt>,
+requiring use of a different interface.
+</p><p>
+The standard library, and cwiclo, provide <tt>copy (f,l,t)</tt> and
+<tt>copy_n (f,n,t)</tt> for this purpose, choosing the correct copy
+approach for each type, either copying one-by-one, or by forwarding
+trivial types to <tt>memcpy</tt>. The cwiclo implementation explicitly
+forces inline <tt>rep movs</tt> with an appropriate chunk size. This is
+one of the few places where inline assembly was required since C++ has
+no other means of instructing the compiler to use string instructions.
+A more direct <tt>rep_movs (f,n,t)</tt> is provided for that purpose, with
+parameters equivalent to <tt>copy_n</tt>, but <tt>f</tt> and <tt>t</tt>
+are required to be pointers and are passed by reference to take advantage
+of <tt>rep movs</tt> instruction's ability to advance them both.
+</p><p>
+Another reason for forcing <tt>rep movs</tt> is to maintain a strict
+forward copy order. Because <tt>memcpy</tt> does not specify that, libc
+developers tried to "help" us by making copying in an unspecified order,
+presumably because they could make large copies faster. People like
+me, who frequently look at assembly, tend to select copy operations
+directly based on direction when the regions overlap. To shift data
+left, use forward copy, implemented by <tt>rep movs</tt>. To shift data
+right, use backward copy, implemented by first setting the direction
+flag. In C, these two kinds of moves naturally map to <tt>memcpy</tt>
+and <tt>memmove</tt> respectively.
+</p><p>
+Now, I know that <tt>memmove</tt> can be implemented to check which way
+the data is to be moved, and to choose the right direction with minimum
+performance penalty. I have implemented it myself in just this way. But
+every time I am forced to use <tt>memmove</tt> I can't shake a feeling
+of personal insult. I mean, I know which way the data should be copied,
+so why am I forced to rely on a special function that may or may not be
+implemented to do this efficiently? Silly, I know, but is it all that
+different from the disdain we all feel toward garbage collectors?
+</p><p>
+Anyway, <tt>copy</tt> and <tt>copy_n</tt> in cwiclo are guaranteed
+to copy forward. To copy backward, use <tt>copy_backward</tt> or
+<tt>copy_backward_n</tt>. All four return the iterator pointing to
+the last copied element, which is the end of the destination range for
+<tt>copy</tt> and its beginning for <tt>copy_backward</tt>.
+</p><p>
+To copy into an uninitialized memory there is <tt>uninitialized_copy
+(f,l,t)</tt> and <tt>uninitialized_copy_n (f,n,t)</tt>, which in-place
+copy-construct each destination element. You can move elements using
+<tt>uninitialized_move</tt> and <tt>uninitialized_move_n</tt>, which
+call move constructors on destination elements. All these can expand
+to a plain <tt>rep movs</tt> for trivial types.
+</p>
+
+<h2>shift and rotate</h2>
+<p>
+My problems with copy direction mainly arise from working with untyped
+buffers, needing to either insert or delete something in the middle of
+them. This situation being very common, cwiclo and the C++20 standard
+library add <tt>shift_left (f,l,n)</tt> and <tt>shift_right (f,l,n)</tt>
+to shift data in the given range by <tt>n</tt> elements in the explicitly
+given direction, using the correct copy direction.
+</p><p>
+Variations for plain arrays are also implemented as <tt>shift_left
+(a,n)</tt> and <tt>shift_right (a,n)</tt>.
+</p><p>
+The classic <tt>rotate (f,m,l)</tt> is available here, but is explicitly
+implemented only for pointers to trivial types, moving memory directly.
+</p>
+
+<h2>fill</h2>
+<p>
+Filling memory with data is another core operation and should likewise
+be done with <tt>rep stos</tt> whenever possible for the same reasons
+given above. <tt>fill (f,l,v)</tt> and <tt>fill_n (f,n,v)</tt> are
+provided for this purpose and will correctly chose to either use a
+loop with assignment, or a direct <tt>rep stos</tt> for trivial types.
+Unlike <tt>memset</tt>, which only writes single bytes, these fill
+functions can load small types of 1, 2, 4, or 8 bytes into a register
+and <tt>rep stos</tt> them, living the dream close to the metal.
+</p><p>
+Because once again C++ won't let us tell the compiler to use a string
+instruction, <tt>rep_stos (f,n,v)</tt> function is provided with
+<tt>f</tt> passed as a pointer by reference, taking advantage of the
+hardware being able to advance the pointer during the fill. Just like
+the <tt>fill</tt> implementation, you too can <tt>bit_cast</tt> small
+trivial types to an integer and fill to your heart's content.
+</p><p>
+The special case of filling with zero is worth supporting explicitly with
+<tt>zero_fill (f,l)</tt> and <tt>zero_fill_n (f,n)</tt>, which will call
+<tt>memset</tt> to zero trivial types. There is also a <tt>zero_fill
+(a)</tt> for directly zeroing plain arrays. The compiler is able to
+optimize this better than usual, working around its aversion to untyped
+storage and often using the correct single store instructions, such as
+<tt>movaps</tt> for zeroing 16-byte blocks. The use of <tt>memset</tt>
+also makes both of these functions <tt>constexpr</tt>, which can be
+quite useful for overcoming the compiler's usual squeamishness about
+zeroing static data in large blocks.
+</p><p>
+Uninitialized memory can be filled with <tt>uninitialized_fill (f,l,v)</tt>
+and <tt>uninitialized_fill_n (f,n,v)</tt>, which in-place construct each
+destination element from <tt>v</tt>. For trivially constructible types
+this reduces to the usual <tt>rep stos</tt>.
+</p>
+
+<h2>C++ ABI</h2>
+<p>
+To remove any necessity of linking with the very large (and
+difficult to find on some platforms) C++ support libraries, cwiclo
+implements the ABI stubs emitted by the compiler for some language
+constructs. There are calls like <tt>__cxa_call_unexpected</tt>,
+<tt>__cxa_pure_virtual</tt>, <tt>__cxa_deleted_virtual</tt>,
+<tt>__cxa_bad_cast</tt>, <tt>__cxa_bad_typeid</tt> (from
+<tt>-frtti</tt>), <tt>__cxa_throw_bad_array_new_length</tt>,
+<tt>__cxa_throw_bad_array_length</tt> (from array new). These are all
+implemented as aliases to <tt>std::terminate</tt>.
+</p><p>
+Not using <tt>-fno-threadsafe-statics</tt> will emit
+<tt>__cxa_guard_acquire</tt>, <tt>__cxa_guard_release</tt>,
+and <tt>__cxa_guard_abort</tt>, which are implemented using
+<tt>atomic_flag</tt>.
+</p><p>
+For debugging, <tt>print_backtrace</tt> is implemented to dump a backtrace
+in debug builds. <tt>hexdump (p,n)</tt> and <tt>hexdump (a)</tt> are
+implemented to print raw memory contents with you are totally stuck.
+</p>
+</main>
+</div></body>
+</html>
