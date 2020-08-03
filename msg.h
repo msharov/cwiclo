@@ -59,20 +59,28 @@ using iid_t = const char*;
 using methodid_t = const char*;
 
 // Methods are preceded by indexes to interface and next method
-static constexpr auto method_interface_offset (methodid_t mid)
-    { return uint8_t(mid[-1]); }
 static constexpr auto method_next_offset (methodid_t mid)
-    { return uint8_t(mid[-2]); }
-
-// Interface name and methods are packed together for easy lookup
-static constexpr iid_t interface_of_method (methodid_t __restrict__ mid)
-    { return mid-method_interface_offset(mid); }
-static constexpr auto interface_name_size (iid_t iid)
-    { return uint8_t(iid[-1]); }
+    { return uint8_t(mid[-3]); }
+static constexpr auto method_name_size (methodid_t mid)
+    { return method_next_offset(mid)-3; }
+static constexpr auto method_interface_offset (methodid_t mid)
+#if __x86__
+    { return *pointer_cast<uint16_t>(&mid[-2]); }
+#else
+    { return (uint16_t(mid[-1])<<8)|uint8_t(mid[-2]); }
+#endif
 
 // Signatures immediately follow the method in the pack
 static constexpr const char* signature_of_method (methodid_t __restrict__ mid)
     { return mid+__builtin_strlen(mid)+1; }
+
+// Interface name and methods are packed together for easy lookup
+static constexpr auto interface_name_size (iid_t iid)
+    { return uint8_t(iid[-1]); }
+static constexpr auto interface_first_method (iid_t iid)
+    { return iid+interface_name_size(iid)+3; }
+static constexpr iid_t interface_of_method (methodid_t __restrict__ mid)
+    { return mid-method_interface_offset(mid); }
 
 // When unmarshalling a message, convert method name to local pointer in the interface
 methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, size_t mnamesz);
@@ -87,16 +95,19 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 
 #define DECLARE_INTERFACE_METHOD_VARS(iface,mname,sig)	\
 	uint8_t	method_##mname##_size;			\
-	uint8_t	method_##mname##_offset;		\
+	uint8_t	method_##mname##_offset_low;		\
+	uint8_t	method_##mname##_offset_high;		\
 	char	method_##mname [sizeof(#mname)];	\
 	char	method_##mname##_signature [sizeof(sig)];
 
 #define DEFINE_INTERFACE_METHOD_VALUES(iface,mname,sig)	\
     sizeof(I##iface::method_##mname##_size)+		\
-	sizeof(I##iface::method_##mname##_offset)+	\
+	sizeof(I##iface::method_##mname##_offset_low)+	\
+	sizeof(I##iface::method_##mname##_offset_high)+	\
 	sizeof(I##iface::method_##mname)+		\
 	sizeof(I##iface::method_##mname##_signature),	\
-    offsetof(I##iface, method_##mname)-offsetof(I##iface, name),\
+    uint8_t(offsetof(I##iface, method_##mname)-offsetof(I##iface, name)),\
+    uint8_t((offsetof(I##iface, method_##mname)-offsetof(I##iface, name))>>8),\
     #mname, sig,
 
 #define DECLARE_INTERFACE_METHOD_ACCESSORS(iface,mname,sig)\

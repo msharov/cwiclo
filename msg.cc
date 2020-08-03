@@ -11,9 +11,10 @@ namespace cwiclo {
 
 methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, size_t mnamesz)
 {
-    for (methodid_t __restrict__ mid = iid+iid[-1]; mid[0]; mid += mid[0])
-	if (equal_n (mname, mnamesz, mid+2, mid[0]-2))
-	    return mid+2;
+    methodid_t __restrict__ mid = interface_first_method (iid);
+    for (uint8_t nextm; (nextm = method_next_offset (mid)); mid += nextm)
+	if (equal_n (mname, mnamesz, mid, method_name_size(mid)))
+	    return mid;
     return nullptr;
 }
 
