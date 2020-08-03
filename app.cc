@@ -245,12 +245,12 @@ auto App::msger_factory_for (iid_t id) // static
 auto App::create_msger (const Msg::Link& l, iid_t iid) // static
     { return create_msger_with (l, iid, msger_factory_for (iid)); }
 
-void App::create_dest (iid_t iid, const Msg::Link& l)
+void App::create_method_dest (methodid_t mid, const Msg::Link& l)
 {
     assert (valid_msger_id (l.src) && "You may only create links originating from an existing Msger");
     if (l.dest < _msgers.size() && !_msgers[l.dest]) {
 	if (_creators[l.dest] == l.src)
-	    _msgers[l.dest] = create_msger (l, iid);
+	    _msgers[l.dest] = create_msger (l, interface_of_method(mid));
 	else // messages for a deleted Msger can arrive if the sender was not yet aware of the deletion, in another process, for example, where the notification had not arrived. Condition logged, but is not usually an error.
 	    DEBUG_PRINTF ("Warning: dead destination Msger %hu can only be resurrected by creator %hu, not %hu.\n", l.dest, _creators[l.dest], l.src);
     }

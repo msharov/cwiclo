@@ -200,7 +200,7 @@ Proxy::Proxy (mrid_t from)
 
 void Proxy::create_dest_for (iid_t iid) const
 {
-    App::instance().create_dest (iid, link());
+    App::instance().create_method_dest (interface_first_method(iid), link());
 }
 
 void Proxy::create_dest_with (pfn_factory_t fac, iid_t iid) const

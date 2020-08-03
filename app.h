@@ -114,12 +114,12 @@ public:
     static void		install_signal_handlers (void);
     void		process_args (argc_t, argv_t)	{ }
     int			run (void);
-    void		create_dest (iid_t iid, const Msg::Link& l);
+    void		create_method_dest (methodid_t mid, const Msg::Link& l);
     void		create_dest_with (iid_t iid, Msger::pfn_factory_t fac, const Msg::Link& l);
     inline Msg&		create_msg (const Msg::Link& l, methodid_t mid, streamsize size, Msg::fdoffset_t fdo = Msg::NoFdIncluded)
-			    { create_dest (interface_of_method(mid),l); return _outq.emplace_back (l,mid,size,fdo); }
+			    { create_method_dest (mid,l); return _outq.emplace_back (l,mid,size,fdo); }
     inline Msg&		create_msg (const Msg::Link& l, methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0)
-			    { create_dest (interface_of_method(mid),l); return _outq.emplace_back (l,mid,move(body),fdo,extid); }
+			    { create_method_dest (mid,l); return _outq.emplace_back (l,mid,move(body),fdo,extid); }
     mrid_t		register_singleton_msger (Msger* m);
     static iid_t	interface_by_name (const char* iname, streamsize inamesz);
     msgq_t::size_type	has_messages_for (mrid_t mid) const;
