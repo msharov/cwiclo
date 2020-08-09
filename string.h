@@ -61,6 +61,7 @@ public:
     auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
     auto		compare (char c) const				{ return compare (begin(), end(), &c, &c+1); }
     inline constexpr void	swap (string&& s)			{ memblock::swap (move(s)); }
+    inline constexpr auto&	operator= (string&& s)			{ memblock::operator= (move(s)); return *this; }
     inline auto&	operator= (const string& s)			{ assign (s); return *this; }
     inline auto&	operator= (const cmemlink& s)			{ assign (s); return *this; }
     inline auto&	operator= (const_pointer s)			{ assign (s); return *this; }

@@ -34,7 +34,7 @@ public:
     inline constexpr		vector (vector&& v)		: _data (move(v._data)) {}
     inline			~vector (void)			{ destroy_all(); }
     inline auto&		operator= (const vector& v)	{ assign (v); return *this; }
-    inline auto&		operator= (vector&& v)		{ assign (move(v)); return *this; }
+    inline constexpr auto&	operator= (vector&& v)		{ assign (move(v)); return *this; }
     inline auto&		operator= (initlist_t v)	{ assign (v); return *this; }
     bool			operator== (const vector& v) const	{ return equal_n (begin(), size(), v.begin(), v.size()); }
     inline bool			operator!= (const vector& v) const	{ return !(*this == v); }
@@ -76,7 +76,7 @@ public:
     inline void			deallocate (void)		{ assert (!is_linked()); destroy_all(); _data.deallocate(); }
     inline void			shrink_to_fit (void)		{ _data.shrink_to_fit(); }
     inline void			assign (const vector& v)	{ assign (v.begin(), v.end()); }
-    inline void			assign (vector&& v)		{ swap (v); }
+    inline constexpr void	assign (vector&& v)		{ _data.assign (move(v._data)); }
     inline void			assign (const_iterator i1, const_iterator i2);
     inline void			assign (size_type n, const T& v)	{ resize (n); fill_n (begin(), n, v); }
     inline void			assign (initlist_t v)			{ assign (v.begin(), v.end()); }
@@ -103,7 +103,7 @@ public:
     inline auto			append (size_type n, const T& v)	{ return insert (end(), n, v); }
     inline auto			append (initlist_t v)			{ return append (v.begin(), v.end()); }
     inline void			pop_back (void)				{ auto ns = _data.size() - sizeof(T); auto b = iback(); _data.memlink::resize (ns); destroy_at (b); }
-    inline void			manage (pointer p, size_type n)		{ _data.manage (p, n * sizeof(T)); }
+    inline constexpr void	manage (pointer p, size_type n)		{ _data.manage (p, n*sizeof(T)); }
     inline constexpr bool	is_linked (void) const			{ return _data.is_linked(); }
     inline constexpr void	unlink (void)				{ _data.unlink(); }
     inline void			copy_link (void);
@@ -164,14 +164,14 @@ public:
     inline constexpr		vector_view (const T (&a)[N])		: _data (begin(a), size(a)) {}
     inline constexpr		vector_view (initlist_t v)		: _data (begin(v), size(v)) {}
     inline constexpr auto&	operator= (const vector_view& v)	{ assign (v); return *this; }
-    inline constexpr auto&	operator= (vector_view&& v)		{ assign (move(v)); return *this; }
+    inline constexpr auto&	operator= (vector_view&& v)		{ _data = move(v._data); return *this; }
     inline constexpr auto&	operator= (initlist_t v)		{ assign (v); return *this; }
     bool			operator== (const vector_view& v) const	{ return equal_n (begin(), size(), v.begin(), v.size()); }
     inline bool			operator!= (const vector_view& v) const	{ return !(*this == v); }
     bool			operator== (const vector_t& v) const	{ return equal_n (begin(), size(), v.begin(), v.size()); }
     inline bool			operator!= (const vector_t& v) const	{ return !(*this == v); }
     constexpr			operator const cmemlink& (void) const	{ return _data; }
-    inline			operator const vector_t& (void) const	{ return reinterpret_cast<const vector_t&>(*this); }
+    constexpr			operator const vector_t& (void) const	{ return *pointer_cast<const vector_t>(this); }
     constexpr size_type		capacity (void) const			{ return 0; }
     constexpr size_type		size (void) const			{ return _data.size() / sizeof(T);	}
     constexpr auto		bsize (void) const			{ return _data.size();			}
@@ -193,7 +193,7 @@ public:
     constexpr auto&		back (void) const			{ assert (!empty()); return *iback(); }
     inline constexpr void	swap (vector_view&& v)			{ _data.swap (move(v._data)); }
     inline void			assign (const vector_t& v)		{ assign (v.begin(), v.end()); }
-    inline void			assign (vector_view&& v)		{ swap (v); }
+    inline constexpr void	assign (vector_view&& v)		{ _data = move(v._data); }
     inline void			assign (const_iterator i1, const_iterator i2)	{ _data.link (i1, distance(i1,i2)); }
     inline void			assign (initlist_t v)			{ assign (ARRAY_BLOCK(v)); }
     inline constexpr bool	is_linked (void) const			{ return true; }
