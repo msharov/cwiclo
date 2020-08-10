@@ -45,6 +45,6 @@ test/clean:
 	    rmdir ${builddir}/test;\
 	fi
 
-${test/objs}: Makefile test/Module.mk ${confs} $Otest/.d
+${test/objs}: Makefile test/Module.mk ${confs} | $Otest/.d
 
 -include ${test/deps}

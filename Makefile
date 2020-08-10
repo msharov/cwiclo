@@ -130,19 +130,19 @@ distclean:	clean
 
 maintainer-clean: distclean
 
-$O.d:	${builddir}/.d
-	@[ -h ${oname} ] || ln -sf ${builddir} ${oname}
-$O%/.d:	$O.d
-	@[ -d $(dir $@) ] || mkdir $(dir $@)
-	@touch $@
 ${builddir}/.d:	Makefile
 	@[ -d $(dir $@) ] || mkdir -p $(dir $@)
 	@touch $@
+$O.d:	| ${builddir}/.d
+	@[ -h ${oname} ] || ln -sf ${builddir} ${oname}
+$O%/.d:	| $O.d
+	@[ -d $(dir $@) ] || mkdir $(dir $@)
+	@touch $@
 
+${objs}:	Makefile ${confs} | $O.d
 Config.mk:	Config.mk.in
-config.h:	config.h.in
-${name}.pc:	${name}.pc.in
-${objs}:	Makefile ${confs} $O.d
+config.h:	config.h.in | Config.mk
+${name}.pc:	${name}.pc.in | Config.mk
 ${confs}:	configure
 	@if [ -x config.status ]; then echo "Reconfiguring ...";\
 	    ./config.status;\

@@ -12,7 +12,6 @@ INSTALL_DATA	:= ${INSTALL} -m 644
 ################ Destination #########################################
 
 prefix		:= @prefix@
-datadir		:= @datadir@
 includedir	:= @includedir@
 libdir		:= @libdir@
 pkgconfigdir	:= @pkgconfigdir@

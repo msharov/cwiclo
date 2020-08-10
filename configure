@@ -78,7 +78,6 @@ Configuration:
 
 Installation directories:
   --prefix=dir		architecture-independent root [/usr/local]
-  --datadir=dir		architecture-independent data dir [prefix/share]
   --libdir=dir		object code libraries [prefix/lib]
   --includedir=dir	C header files [prefix/include]
   --pkgconfigdir=dir	pkg-config configuration [libdir/pkgconfig]
@@ -124,12 +123,11 @@ done
 #### Set directory prefixes ##########################################
 
 sub "s/@prefix@/${ac_var_prefix:=\/usr\/local}/g
-s/@datadir@/${ac_var_datadir:=\$\{prefix\}\/share}/g
 s/@includedir@/${ac_var_includedir:=\$\{prefix\}\/include}/g
 s/@libdir@/${ac_var_libdir:=\$\{prefix\}\/lib}/g
+s/@pkgconfigdir@/${ac_var_pkgconfigdir:=\$\{libdir\}\/pkgconfig}/g
 s/@TMPDIR@/$(escpath ${TMPDIR:-/tmp})/g
-s/@builddir@/\$\{TMPDIR\}\/make/g
-s/@pkgconfigdir@/${ac_var_pkgconfigdir:=\$\{libdir\}\/pkgconfig}/g"
+s/@builddir@/\$\{TMPDIR\}\/make/g"
 
 #### Find headers, libs, programs, and subs ##########################
 
