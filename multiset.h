@@ -82,4 +82,8 @@ auto multiset<T>::emplace (Args&&... args)
     return rotate (ip, ilast, iend);
 }
 
+template <typename T> struct stream_align<multiset<T>> {
+    static constexpr const streamsize value = stream_align<vector<T>>::value;
+};
+
 } // namespace cwiclo

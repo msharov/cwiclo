@@ -225,7 +225,12 @@ private:
 // These are here because streams need cmemlink
 
 } // namespace cwiclo
+
 STREAM_ALIGN (cmemlink, stream_align<cmemlink::size_type>::value)
+STREAM_ALIGN (memlink, stream_align<cmemlink>::value)
+STREAM_ALIGN (memblock, stream_align<memlink>::value)
+STREAM_ALIGN (memblaz, stream_align<memblock>::value)
+
 namespace cwiclo {
 
 template <typename Stm>
