@@ -38,7 +38,7 @@ public:
     // Methods are implemented by simple marshalling of the arguments.
     // m_ping() is defined by DECLARE_INTERFACE above and returns the methodid_t of the Ping call.
     void ping (uint32_t v) const {
-	auto& msg = create_msg (m_ping(), stream_size_of(v));
+	auto& msg = create_msg (m_ping(), stream_sizeof(v));
 	// Here an expanded example is given with direct
 	// stream access. See PingR for a simpler example
 	// using the Send template.

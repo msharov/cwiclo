@@ -112,9 +112,9 @@ public:
     inline constexpr void	link (pointer f, pointer l)		{ link (f, l-f); }
     void			read (istream& is) {
 				    auto n = is.read<uint32_t>();
-				    if constexpr (stream_align<T>::value > 4)
-					is.align (stream_align<T>::value);
-				    if constexpr (is_trivially_copyable<T>::value && !has_member_function_stream_read<T>::value) {
+				    if constexpr (type_stream_traits<T>::alignment > 4)
+					is.align (type_stream_traits<T>::alignment);
+				    if constexpr (!type_stream_traits<T>::has_read) {
 					assert (is.remaining() >= n*sizeof(T));
 					auto d = is.ptr<T>();
 					assign (d, d+n);
@@ -124,11 +124,12 @@ public:
 					for (auto& i : *this)
 					    is >> i;
 				    }
-				    if constexpr (stream_align<T>::value < 4)
+				    if constexpr (type_stream_traits<T>::alignment < 4)
 					is.align (4);
 				}
     template <typename Stm = sstream>
     inline constexpr void	write (Stm& os) const { os.write_array (data(), size()); }
+    static constexpr const streamsize stream_alignment = memblock::stream_alignment;
 protected:
     inline auto			insert_hole (const_iterator ip, size_type n)
 				    { return iterator (_data.insert (memblock::const_iterator(ip), n*sizeof(T))); }
@@ -205,14 +206,15 @@ public:
     void			read (istream& is)			{ _data.link_read (is, sizeof(T)); }
     template <typename Stm>
     inline constexpr void	write (Stm& os) const			{ os.write_array (this->data(), this->size()); }
+    static constexpr const streamsize stream_alignment = cmemlink::stream_alignment;
     inline static constexpr vector_view	create_from_stream (istream& is) {
 				    auto sz = is.read<uint32_t>();
-				    if constexpr (stream_align<value_type>::value > 4)
-					is.align (stream_align<value_type>::value);
+				    if constexpr (type_stream_traits<T>::alignment > 4)
+					is.align (type_stream_traits<T>::alignment);
 				    auto dp = is.ptr<value_type>();
 				    auto dpe = dp + sz;
 				    auto sde = pointer_cast<istream::value_type>(dpe);
-				    if constexpr (stream_align<value_type>::value < 4)
+				    if constexpr (type_stream_traits<T>::alignment < 4)
 					sde = ceilg (sde,4);
 				    is.seek (sde);
 				    return vector_view (dp, dpe);
@@ -223,15 +225,6 @@ private:
 
 //{{{ cmemlink stream functions ----------------------------------------
 // These are here because streams need cmemlink
-
-} // namespace cwiclo
-
-STREAM_ALIGN (cmemlink, stream_align<cmemlink::size_type>::value)
-STREAM_ALIGN (memlink, stream_align<cmemlink>::value)
-STREAM_ALIGN (memblock, stream_align<memlink>::value)
-STREAM_ALIGN (memblaz, stream_align<memblock>::value)
-
-namespace cwiclo {
 
 template <typename Stm>
 constexpr void cmemlink::write (Stm& os) const
@@ -339,14 +332,6 @@ void vector<T>::copy_link (void)
     else
 	assign (begin(), end());
 }
-
-template <typename T> struct stream_align<vector<T>> {
-    static constexpr const streamsize value = stream_align<memblock::size_type>::value;
-};
-
-template <typename T> struct stream_align<vector_view<T>> {
-    static constexpr const streamsize value = stream_align<memblock::size_type>::value;
-};
 
 //}}}-------------------------------------------------------------------
 

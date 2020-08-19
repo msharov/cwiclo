@@ -240,17 +240,17 @@ protected:
 			    { create_msg (imethod, 0); }
     template <typename... Args>
     inline void		send (methodid_t imethod, const Args&... args) const {
-			    auto& msg = create_msg (imethod, variadic_stream_size(args...));
+			    auto& msg = create_msg (imethod, variadic_stream_sizeof(args...));
 			    commit_msg (msg, (msg.write() << ... << args));
 			}
     void		send_fd (methodid_t imethod, fd_t fd) const {
 			    assert (string_view("h") == signature_of_method(imethod));
-			    auto& msg = create_msg (imethod, stream_size_of(fd), 0);
+			    auto& msg = create_msg (imethod, stream_sizeof(fd), 0);
 			    commit_msg (msg, msg.write() << fd);
 			}
     template <typename... Args>
     inline void		resend (methodid_t imethod, const Args&... args) const {
-			    auto& msg = recreate_msg (imethod, variadic_stream_size(args...));
+			    auto& msg = recreate_msg (imethod, variadic_stream_sizeof(args...));
 			    commit_msg (msg, (msg.write() << ... << args));
 			}
     void		allocate_id (void);

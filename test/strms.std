@@ -1,16 +1,31 @@
 Correct number of bytes written
 Correct number of bytes read
 Values:
-char:    0x12
-u_char:  0x12
-bool:    1
-int:     0x12345678
-u_int:   0x12345678
-long:    0x12345678
-u_long:  0x12345678
-float:   0.12345678
-double:  0.123456789123457
-short:   0x1234
-u_short: 0x1234
-shello:  Hello world!
-hello:   Hello world!
+char:	0x12
+uchar:	0x12
+bool:	1
+int:	0x12345678
+uint:	0x12345678
+long:	0x12345678
+ulong:	0x12345678
+float:	0.12345678
+double:	0.123456789123457
+short:	0x1234
+ushort:	0x1234
+shello:	Hello world!
+hello:	Hello world!
+strs:	{"one","two","three"}
+
+1	stream_alignof (int8_t)
+2	stream_alignof (int16_t)
+4	stream_alignof (uint32_t)
+8	stream_alignof (uint64_t)
+16	stream_alignof (simd16_t)
+4	stream_alignof (cmemlink)
+4	stream_alignof (memlink)
+4	stream_alignof (memblock)
+4	stream_alignof (memblaz)
+4	stream_alignof (string)
+4	stream_alignof (vector<uint8_t>)
+4	stream_alignof (vector<uint64_t>)
+4	stream_alignof (multiset<string>)

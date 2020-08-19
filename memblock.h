@@ -69,6 +69,7 @@ public:
     template <typename Stm>
     constexpr void	write (Stm& os) const;
     inline static constexpr cmemlink create_from_stream (istream& is);
+    static constexpr const unsigned stream_alignment = alignof(size_type);
     int			write_file (const char* filename) const;
     int			write_file_atomic (const char* filename) const;
 protected:
@@ -207,6 +208,7 @@ public:
     using memblock::clear;
     using memblock::erase;
     using memblock::write;
+    using memblock::stream_alignment;
     using memblock::write_file;
     using memblock::write_file_atomic;
 public:

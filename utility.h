@@ -89,16 +89,16 @@ template <typename T> constexpr uintptr_t pointer_value (T p)
 // Defines a has_member_function_name template where has_member_function_name<O>::value is true when O::name exists
 // Example: HAS_MEMBER_FUNCTION(stream_read, read, void (O::*)(istream&)); has_member_function_read<vector<int>>::value == true
 #define HAS_MEMBER_FUNCTION(tname, fname, signature)\
-    template <typename T>			\
+    template <typename FO>			\
     class __has_member_function_##tname {	\
 	template <typename O> static true_type found (signature);\
 	template <typename O> static auto found (decltype(&O::fname), void*) -> decltype(found(&O::fname));\
 	template <typename O> static false_type found (...);\
     public:					\
-	using type = decltype(found<T>(nullptr,nullptr));\
+	using type = decltype(found<FO>(nullptr,nullptr));\
     };						\
-    template <typename T>			\
-    struct has_member_function_##tname : public __has_member_function_##tname<T>::type {}
+    template <typename FO>			\
+    struct has_member_function_##tname : public __has_member_function_##tname<FO>::type {}
 
 //}}}-------------------------------------------------------------------
 //{{{ numeric limits

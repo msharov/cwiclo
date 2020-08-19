@@ -31,14 +31,14 @@ string PCOM::string_from_interface_list (const iid_t* elist) // static
 
 Msg PCOM::export_msg (const string& elstr) // static
 {
-    Msg msg (Msg::Link{}, PCOM::m_export(), stream_size_of(elstr), Msg::NoFdIncluded);
+    Msg msg (Msg::Link{}, PCOM::m_export(), stream_sizeof(elstr), Msg::NoFdIncluded);
     msg.write() << elstr;
     return msg;
 }
 
 Msg PCOM::error_msg (const string& errmsg) // static
 {
-    Msg msg (Msg::Link{}, PCOM::m_error(), stream_size_of(errmsg), Msg::NoFdIncluded);
+    Msg msg (Msg::Link{}, PCOM::m_error(), stream_sizeof(errmsg), Msg::NoFdIncluded);
     msg.write() << errmsg;
     return msg;
 }

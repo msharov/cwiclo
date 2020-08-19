@@ -256,6 +256,3 @@ constexpr string::operator const string_view& (void) const
 //----------------------------------------------------------------------
 
 } // namespace cwiclo
-
-STREAM_ALIGN (string, stream_align<memblock>::value)
-STREAM_ALIGN (string_view, stream_align<string>::value)

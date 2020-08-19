@@ -15,7 +15,7 @@ void cmemlink::link_read (istream& is, size_type elsize)
 {
     assert (is_linked() && "allocated memory in cmemlink; deallocate or unlink first");
     size_type n; is >> n; n *= elsize;
-    auto nskip = ceilg (n, stream_align<size_type>::value);
+    auto nskip = ceilg (n, stream_alignof(n));
     if (is.remaining() < nskip)
 	return;	// errors should have been reported by the message validator
     auto p = is.ptr<value_type>();
@@ -179,7 +179,7 @@ memblock::iterator memblock::replace (const_iterator ip, size_type ipn, const_po
 void memblock::read (istream& is)
 {
     size_type n; is >> n;
-    auto nskip = ceilg (n, stream_align<size_type>::value);
+    auto nskip = ceilg (n, stream_alignof(n));
     if (is.remaining() < nskip)
 	return;	// errors should have been reported by the message validator
     if (zero_terminated() && n)
