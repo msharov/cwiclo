@@ -319,7 +319,7 @@ template <typename I, typename T>
 constexpr auto lower_bound (I f, I l, const T& v)
 {
     while (f < l) {
-	auto m = next (f, uintptr_t(distance(f,l))/2);
+	auto m = midpoint(f,l);
 	if (*m < v)
 	    f = next(m);
 	else
@@ -339,7 +339,7 @@ template <typename I, typename T>
 constexpr auto upper_bound (I f, I l, const T& v)
 {
     while (f < l) {
-	auto m = next (f, uintptr_t(distance(f,l))/2);
+	auto m = midpoint(f,l);
 	if (v < *m)
 	    l = m;
 	else

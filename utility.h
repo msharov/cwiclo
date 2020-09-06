@@ -264,6 +264,10 @@ constexpr bool divisible_by (const T* p, type_identity_t<T> g)
     { return !(pointer_value(p) % g); }
 
 template <typename T>
+constexpr T midpoint (T a, T b)
+    { auto d = b-a; return a + make_unsigned_t<decltype(d)>(d)/2; }
+
+template <typename T>
 [[nodiscard]] constexpr make_unsigned_t<T> square (T n)
     { return n*n; }
 
