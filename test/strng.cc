@@ -145,6 +145,15 @@ int TestApp::run (void)
 	printf ("# found at\t%s\n", poundfound);
     printf ("[456] found at\t%s\n", s1.find_first_of ("456",s1.iat(2)));
 
+    printf ("\"Hello world\" starts with \"Hello\" = %s\n", string("Hello world").starts_with("Hello") ? "true" : "false");
+    printf ("\"Hello world\" starts with \"world\" = %s\n", string_view("Hello world").starts_with("world") ? "true" : "false");
+    printf ("\"Hello world\" starts with \'H\' = %s\n", string_view("Hello world").starts_with('H') ? "true" : "false");
+    printf ("\"Hello world\" starts with \'w\' = %s\n", string_view("Hello world").starts_with('w') ? "true" : "false");
+    printf ("\"Hello world\" ends with \"Hello\" = %s\n", string_view("Hello world").ends_with("Hello") ? "true" : "false");
+    printf ("\"Hello world\" ends with \"world\" = %s\n", string("Hello world").ends_with("world") ? "true" : "false");
+    printf ("\"Hello world\" ends with \'d\' = %s\n", string_view("Hello world").ends_with('d') ? "true" : "false");
+    printf ("\"Hello world\" ends with \'h\' = %s\n", string_view("Hello world").ends_with('h') ? "true" : "false");
+
     s2.clear();
     assert (!*s2.end());
     if (s2.empty())
