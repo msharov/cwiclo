@@ -25,6 +25,9 @@ using false_type = integral_constant<bool, false>;
 template <typename T, typename U> struct is_same : public false_type {};
 template <typename T> struct is_same<T,T> : public true_type {};
 
+template <typename T> struct type_identity		{ using type = T; };
+template <typename T> using type_identity_t = typename type_identity<T>::type;
+
 template <typename T> struct remove_reference		{ using type = T; };
 template <typename T> struct remove_reference<T&>	{ using type = T; };
 template <typename T> struct remove_reference<T&&>	{ using type = T; };
@@ -186,10 +189,10 @@ template <typename T> [[nodiscard]] constexpr T native_to_be (const T& v) { retu
 //{{{ min and max
 
 template <typename T>
-constexpr const T& min (const T& a, const remove_reference_t<T>& b)
+constexpr const T& min (const T& a, const type_identity_t<T>& b)
     { return a < b ? a : b; }
 template <typename T>
-constexpr const T& max (const T& a, const remove_reference_t<T>& b)
+constexpr const T& max (const T& a, const type_identity_t<T>& b)
     { return b < a ? a : b; }
 
 //}}}----------------------------------------------------------------------
@@ -209,20 +212,20 @@ template <typename T>
 constexpr make_unsigned_t<T> absv (T v)
     { return is_negative(v) ? -v : v; }
 template <typename T>
-[[nodiscard]] constexpr T copy_sign (T f, remove_reference_t<T> t)
+[[nodiscard]] constexpr T copy_sign (T f, type_identity_t<T> t)
     { return is_negative<T>(f) ? -t : t; }
 
 //}}}----------------------------------------------------------------------
 //{{{ ceilg and other alignment functionality
 
 template <typename T>
-[[nodiscard]] constexpr T floorg (T n, remove_reference_t<T> g)
+[[nodiscard]] constexpr T floorg (T n, type_identity_t<T> g)
     { return n - n % g; }
 template <typename T>
-[[nodiscard]] constexpr auto ceilg (T n, remove_reference_t<T> g)
+[[nodiscard]] constexpr auto ceilg (T n, type_identity_t<T> g)
     { return floorg<T>(n + copy_sign<T>(n, g-1), g); }
 template <typename T>
-[[nodiscard]] constexpr auto roundg (T n, remove_reference_t<T> g)
+[[nodiscard]] constexpr auto roundg (T n, type_identity_t<T> g)
     { return floorg<T>(n + copy_sign<T>(n, g/2), g); }
 
 // Pointer alignment requires additional tricks because % is not allowed
@@ -233,10 +236,10 @@ template <typename T>
 [[nodiscard]] constexpr auto floorg (const T* p, uintptr_t g)
     { return p - pointer_value(p) % g; }
 template <typename T>
-[[nodiscard]] constexpr auto ceilg (T* p, remove_reference_t<T> g)
+[[nodiscard]] constexpr auto ceilg (T* p, type_identity_t<T> g)
     { return floorg<T>(p + g-1, g); }
 template <typename T>
-[[nodiscard]] constexpr auto ceilg (const T* p, remove_reference_t<T> g)
+[[nodiscard]] constexpr auto ceilg (const T* p, type_identity_t<T> g)
     { return floorg<T>(p + g-1, g); }
 
 template <typename T>
@@ -247,17 +250,17 @@ template <typename T>
     { return static_cast<const T*>(__builtin_assume_aligned (p,g,o)); }
 
 template <typename T>
-[[nodiscard]] constexpr T divide_ceil (T n1, remove_reference_t<T> n2)
+[[nodiscard]] constexpr T divide_ceil (T n1, type_identity_t<T> n2)
     { return (n1 + copy_sign<T>(n1,n2-1)) / n2; }
 template <typename T>
-[[nodiscard]] constexpr T divide_round (T n1, remove_reference_t<T> n2)
+[[nodiscard]] constexpr T divide_round (T n1, type_identity_t<T> n2)
     { return (n1 + copy_sign<T>(n1,n2/2)) / n2; }
 
 template <typename T>
-constexpr bool divisible_by (T n, remove_reference_t<T> g)
+constexpr bool divisible_by (T n, type_identity_t<T> g)
     { return !(n % g); }
 template <typename T>
-constexpr bool divisible_by (const T* p, remove_reference_t<T> g)
+constexpr bool divisible_by (const T* p, type_identity_t<T> g)
     { return !(pointer_value(p) % g); }
 
 template <typename T>
@@ -277,10 +280,10 @@ template <typename T>
 constexpr void set_bit (T& v, unsigned i, bool b=true)
     { auto m = bit_mask<T>(i); v=b?(v|m):(v&~m); }
 template <typename T>
-[[nodiscard]] constexpr auto bit_rol (T v, remove_reference_t<T> n)
+[[nodiscard]] constexpr auto bit_rol (T v, type_identity_t<T> n)
     { return (v << n) | (v >> (bits_in_type<T>::value-n)); }
 template <typename T>
-[[nodiscard]] constexpr auto bit_ror (T v, remove_reference_t<T> n)
+[[nodiscard]] constexpr auto bit_ror (T v, type_identity_t<T> n)
     { return (v >> n) | (v << (bits_in_type<T>::value-n)); }
 
 template <typename T>
