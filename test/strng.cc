@@ -35,7 +35,7 @@ int TestApp::run (void)
     static constexpr const string_view c_TestString3 ("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     string s1 (c_TestString1);
     string s2 (ARRAY_RANGE (c_TestString2));
-    auto s3 (s1);
+    string s3 = { "123456789012345678901234567890" };
 
     puts (s1.c_str());
     puts (s2.c_str());
@@ -61,15 +61,13 @@ int TestApp::run (void)
     s1 += '$';
     puts (s1.c_str());
 
-    s1 = "Hello";
+    s1 = "ello";
+    s1 = 'H' + s1;
     s2.deallocate();
     s2 = "World";
-    s3 = s1 + s2;
+    s3 = "Hello" + s2;
     puts (s3.c_str());
-    s3 = "Concatenated ";
-    s3 += s1.c_str();
-    s3 += s2;
-    s3 += " string.";
+    s3 = "Concatenated " + s1 + s2 + " string.";
     puts (s3.c_str());
 
     if (s1 < s2)

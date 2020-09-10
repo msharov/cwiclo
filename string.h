@@ -19,10 +19,13 @@ public:
     inline		string (const_pointer s, size_type len)		: memblock (s,len,true) {}
     inline		string (const_pointer s1, const_pointer s2)	: string (s1,s2-s1) {}
     inline		string (const_pointer s)			: string (s,__builtin_strlen(s)) {}
+    inline		string (size_type n, char c)			: string() { resize(n); fill_n (begin(), size(), c); }
     inline constexpr	string (string&& s)				: memblock (move(s)) {}
     inline		string (const string& s)			: string (s.data(), s.size()) {}
     inline		string (const cmemlink& s)			: string (s.data(), s.size()) {}
     constexpr auto	c_str (void) const				{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
+    constexpr auto&	front (void) const				{ return at(0); }
+    constexpr auto&	front (void)					{ return at(0); }
     constexpr auto&	back (void) const				{ return at(size()-1); }
     constexpr auto&	back (void)					{ return at(size()-1); }
     constexpr auto	wbegin (void) const				{ return utf8::in (begin()); }
@@ -170,14 +173,16 @@ public:
 
 class string_view : public cmemlink {
 public:
-    inline constexpr		string_view (void)		: cmemlink () { set_zero_terminated(); }
-    inline constexpr		string_view (const_pointer s, size_type len)	: cmemlink (s, len, true) {}
-    inline constexpr		string_view (const_pointer s1, const_pointer s2): string_view (s1, s2-s1) {}
-    inline constexpr		string_view (const_pointer s)	: string_view (s, __builtin_strlen(s)) {}
-    inline constexpr		string_view (string_view&& s)	: cmemlink (move(s)) {}
-    inline constexpr		string_view (const string_view& s)	: cmemlink (s) {}
-    inline constexpr		string_view (const string& s)	: cmemlink (s) {}
+    inline constexpr	string_view (void)		: cmemlink () { set_zero_terminated(); }
+    inline constexpr	string_view (const string_view& s)		: cmemlink (s) {}
+    inline constexpr	string_view (const_pointer s, size_type len)	: cmemlink (s, len, true) {}
+    inline constexpr	string_view (const_pointer s1, const_pointer s2): string_view (s1, s2-s1) {}
+    inline constexpr	string_view (const_pointer s)	: string_view (s, __builtin_strlen(s)) {}
+    inline constexpr	string_view (string_view&& s)	: cmemlink (move(s)) {}
+    inline constexpr	string_view (const string& s)	: cmemlink (s) {}
+
     inline constexpr void	swap (string_view&& s)		{ cmemlink::swap (move(s)); }
+    inline constexpr auto&	operator= (const string_view& s){ cmemlink::operator= (s); return *this; }
     inline constexpr auto&	operator= (const string& s)	{ cmemlink::operator= (s); return *this; }
     inline constexpr auto&	operator= (string_view&& s)	{ cmemlink::operator= (move(s)); return *this; }
 
@@ -185,7 +190,14 @@ public:
     inline constexpr		operator const string& (void) const	{ return str(); }
 
     inline constexpr auto	c_str (void) const		{ assert ((!end() || !*end()) && "This string is linked to data that is not 0-terminated. This may cause serious security problems. Please assign the data instead of linking."); return data(); }
+    inline constexpr auto&	front (void) const		{ return at(0); }
     inline constexpr auto&	back (void) const		{ return at(size()-1); }
+
+    inline auto		operator+ (const string& s) const	{ string r (*this); return r += s; }
+    inline auto		operator+ (const cmemlink& s) const	{ string r (*this); return r += s; }
+    inline auto		operator+ (const_pointer s) const	{ string r (*this); return r += s; }
+    inline auto		operator+ (char c) const		{ string r (*this); return r += c; }
+    inline auto		operator+ (char32_t c) const		{ string r (*this); return r += c; }
 
     inline static int	compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2)
 								{ return string::compare (f1,l1,f2,l2); }
@@ -215,37 +227,37 @@ public:
     constexpr auto	find (char c, const_iterator fi) const	{ return str().find (c, fi); }
     constexpr auto	find (const_pointer s, const_iterator fi) const		{ return str().find (s, fi); }
     constexpr auto	find (const string& s, const_iterator fi) const		{ return str().find (s, fi); }
-    constexpr auto	find (char c) const					{ return str().find (c); }
-    constexpr auto	find (const_pointer s) const				{ return str().find (s); }
-    constexpr auto	find (const string& s) const				{ return str().find (s); }
+    constexpr auto	find (char c) const			{ return str().find (c); }
+    constexpr auto	find (const_pointer s) const		{ return str().find (s); }
+    constexpr auto	find (const string& s) const		{ return str().find (s); }
 
     inline auto		rfind (char c, const_iterator fi) const	{ return str().rfind (c, fi); }
     inline auto		rfind (const_pointer s, const_iterator fi) const	{ return str().rfind (s, fi); }
     inline auto		rfind (const string& s, const_iterator fi) const	{ return str().rfind (s, fi); }
-    inline auto		rfind (char c) const					{ return str().rfind (c); }
-    inline auto		rfind (const_pointer s) const				{ return str().rfind (s); }
-    inline auto		rfind (const string& s) const				{ return str().rfind (s); }
+    inline auto		rfind (char c) const			{ return str().rfind (c); }
+    inline auto		rfind (const_pointer s) const		{ return str().rfind (s); }
+    inline auto		rfind (const string& s) const		{ return str().rfind (s); }
 
     constexpr auto	find_first_of (const_pointer s, const_iterator fi)const	{ return str().find_first_of (s,fi); }
     constexpr auto	find_first_of (const string& s, const_iterator fi)const	{ return str().find_first_of (s,fi); }
-    constexpr auto	find_first_of (const_pointer s) const			{ return str().find_first_of (s); }
-    constexpr auto	find_first_of (const string& s) const			{ return str().find_first_of (s); }
+    constexpr auto	find_first_of (const_pointer s) const	{ return str().find_first_of (s); }
+    constexpr auto	find_first_of (const string& s) const	{ return str().find_first_of (s); }
     constexpr auto	find_first_not_of (const_pointer s, const_iterator fi) const	{ return str().find_first_not_of (s,fi); }
     constexpr auto	find_first_not_of (const string& s, const_iterator fi) const	{ return str().find_first_not_of (s,fi); }
-    constexpr auto	find_first_not_of (const_pointer s) const		{ return str().find_first_not_of (s); }
-    constexpr auto	find_first_not_of (const string& s) const		{ return str().find_first_not_of (s); }
+    constexpr auto	find_first_not_of (const_pointer s) const	{ return str().find_first_not_of (s); }
+    constexpr auto	find_first_not_of (const string& s) const	{ return str().find_first_not_of (s); }
 
-    constexpr bool	starts_with (const string& s) const			{ return str().starts_with (s); }
-    constexpr bool	starts_with (const_pointer s) const			{ return str().starts_with (s); }
-    constexpr bool	starts_with (char c) const				{ return str().starts_with (c); }
+    constexpr bool	starts_with (const string& s) const	{ return str().starts_with (s); }
+    constexpr bool	starts_with (const_pointer s) const	{ return str().starts_with (s); }
+    constexpr bool	starts_with (char c) const		{ return str().starts_with (c); }
 
-    constexpr bool	ends_with (const string& s) const			{ return str().ends_with (s); }
-    constexpr bool	ends_with (const_pointer s) const			{ return str().ends_with (s); }
-    constexpr bool	ends_with (char c) const				{ return str().ends_with (c); }
+    constexpr bool	ends_with (const string& s) const	{ return str().ends_with (s); }
+    constexpr bool	ends_with (const_pointer s) const	{ return str().ends_with (s); }
+    constexpr bool	ends_with (char c) const		{ return str().ends_with (c); }
 
     void		resize (size_type sz) = delete;
-    void		shrink (void) = delete;
-    void		clear (void) = delete;
+    constexpr void	remove_prefix (size_type n)		{ link (iat(n), size()-n); }
+    constexpr void	remove_suffix (size_type n)		{ assert (n <= size()); link (begin(), size()-n); }
 
     template <typename Stm> // Override cmemlink's write to support lack of terminating 0
     inline constexpr void write (Stm& os) const { os.write_string (begin(), size()); }
@@ -268,6 +280,18 @@ public:
 // Here because it needs definition of string_view
 constexpr string::operator const string_view& (void) const
     { return static_cast<const string_view&>(static_cast<const cmemlink&>(*this)); }
+
+//----------------------------------------------------------------------
+
+inline string operator+ (const char* p, const string& s)
+    { string r (p); return r += s; }
+inline string operator+ (char c, const string& s)
+    { string r (1, c); return r += s; }
+
+inline string operator+ (const char* p, const string_view& s)
+    { string r (p); return r += s; }
+inline string operator+ (char c, const string_view& s)
+    { string r (1, c); return r += s; }
 
 //----------------------------------------------------------------------
 
