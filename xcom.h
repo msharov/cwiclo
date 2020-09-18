@@ -85,7 +85,7 @@ public:
 	    #endif
 	    gid_t	gid;
 	}		creds;
-	mrid_t		oid;
+	mrid_t		extern_id;
 	SocketSide	side;
 	bool		is_unix_socket;
     public:
@@ -135,19 +135,14 @@ public:
 //{{{ PExternR
 
 class PExternR : public ProxyR {
-    DECLARE_INTERFACE (ExternR, (connected,"x"))
+    DECLARE_INTERFACE (ExternR, (connected,"q"))
 public:
     constexpr	PExternR (const Msg::Link& l) : ProxyR(l) {}
-    void	connected (const PExtern::Info* einfo) const
-		    { send (m_connected(), einfo); }
+    void	connected (mrid_t extern_id) const
+		    { send (m_connected(), extern_id); }
     template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) {
-	if (msg.method() != m_connected())
-	    return false;
-	o->ExternR_connected (msg.read().read<const PExtern::Info*>());
-	return true;
-    }
-
+    inline static constexpr bool dispatch (O* o, const Msg& msg);
+	// body below Extern because it calls Extern::lookup_by_id
 };
 
 //}}}-------------------------------------------------------------------
@@ -265,6 +260,8 @@ private:
     fd_t		_infd;
 };
 
+//----------------------------------------------------------------------
+
 #define REGISTER_EXTERNS\
     REGISTER_MSGER (PExtern, Extern)\
     REGISTER_MSGER (PCOM, COMRelay)\
@@ -272,6 +269,17 @@ private:
 
 #define REGISTER_EXTERN_MSGER(proxy)\
     REGISTER_MSGER (proxy, COMRelay)
+
+//----------------------------------------------------------------------
+
+template <typename O>
+constexpr bool PExternR::dispatch (O* o, const Msg& msg) { // static
+    if (msg.method() != m_connected())
+	return false;
+    auto pextern = Extern::lookup_by_id (msg.read().read<mrid_t>());
+    o->ExternR_connected (pextern ? &pextern->info() : nullptr);
+    return true;
+}
 
 //}}}-------------------------------------------------------------------
 //{{{ PExternServer

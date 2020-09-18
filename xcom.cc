@@ -368,6 +368,7 @@ void Extern::Extern_open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide sid
     if (!attach_to_socket (fd))
 	return error ("invalid socket type");
     _sockfd = fd;
+    _einfo.extern_id = msger_id();
     _einfo.exported = eifaces;
     _einfo.side = side;
     enable_credentials_passing (true);
@@ -444,7 +445,7 @@ void Extern::COM_export (string elist)
 	    _einfo.imported.push_back (iid);
 	ei = eic;
     }
-    _reply.connected (&_einfo);
+    _reply.connected (msger_id());
 }
 
 void Extern::COM_delete (void)
@@ -1000,7 +1001,7 @@ void ExternServer::ExternServer_close (void)
 
 void ExternServer::ExternR_connected (const Extern::Info* einfo)
 {
-    _reply.connected (einfo);
+    _reply.connected (einfo ? einfo->extern_id : 0);
 }
 
 } // namespace cwiclo
