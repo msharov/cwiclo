@@ -121,7 +121,9 @@ void App::fatal_signal_handler (int sig) // static
 {
     static atomic_flag doubleSignal = ATOMIC_FLAG_INIT;
     if (!doubleSignal.test_and_set (memory_order::relaxed)) {
-	alarm (1);
+	#ifdef NDEBUG
+	    alarm (1);
+	#endif
 	fprintf (stderr, "[S] Error: %s\n", strsignal(sig));
 	#ifndef NDEBUG
 	    print_backtrace();
@@ -136,7 +138,9 @@ void App::msg_signal_handler (int sig) // static
     set_bit (s_received_signals, sig);
     if (get_bit (sigset_Quit, sig)) {
 	App::instance().quit();
-	alarm (1);
+	#ifdef NDEBUG
+	    alarm (1);
+	#endif
     }
 }
 
