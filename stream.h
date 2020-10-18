@@ -106,7 +106,7 @@ public:
 				    else { T v; v.read (*this); return v; }
 				}
     template <typename T>
-    #if __x86__			// x86 can do direct unaligned reads, albeit slower
+    #if __x86__			// x86 can do direct unaligned reads
     inline void			readtu (T& v) __restrict__ {
 				    auto p = pointer_cast<T>(begin());
 				    skip (sizeof(T));
@@ -116,7 +116,7 @@ public:
     inline void			readtu (T& v) __restrict__ { read (&v, sizeof(v)); }
     #endif
     template <typename T>
-    inline decltype(auto)	readu (void) {
+    inline auto			readu (void) {
 				    T v;
 				    if constexpr (!type_stream_traits<T>::has_read && !type_stream_traits<T>::has_readu)
 					readtu<T>(v);
@@ -200,7 +200,7 @@ public:
 					v.write (*this);
 				}
     template <typename T>
-    #if __x86__			// x86 can do direct unaligned writes, albeit slower
+    #if __x86__			// x86 can do direct unaligned writes
     inline void			writetu (const T& v) __restrict__ {
 				    assert (remaining() >= sizeof(T));
 				    *pointer_cast<T>(begin()) = v;
@@ -259,9 +259,9 @@ public:
     inline constexpr		sstream (void)		: _sz() {}
     inline constexpr		sstream (const sstream& ss) = default;
     template <typename T = char>
-    inline constexpr T*		ptr (void)	{ return nullptr; }
-    inline constexpr auto	begin (void)	{ return ptr(); }
-    inline constexpr auto	end (void)	{ return ptr(); }
+    inline constexpr T*		ptr (void)		{ return nullptr; }
+    inline constexpr auto	begin (void)		{ return ptr(); }
+    inline constexpr auto	end (void)		{ return ptr(); }
     inline constexpr auto	size (void) const	{ return _sz; }
     inline constexpr streamsize	remaining (void) const	{ return numeric_limits<size_type>::max(); }
     inline constexpr void	skip (streamsize sz)	{ _sz += sz; }

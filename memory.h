@@ -71,10 +71,10 @@ namespace cwiclo {
 template <typename T> [[nodiscard]] constexpr decltype(auto)
 forward (remove_reference_t<T>& v) { return static_cast<T&&>(v); }
 
-template<typename T> [[nodiscard]] constexpr decltype(auto)
+template <typename T> [[nodiscard]] constexpr decltype(auto)
 forward (remove_reference_t<T>&& v) { return static_cast<T&&>(v); }
 
-template<typename T> [[nodiscard]] constexpr decltype(auto)
+template <typename T> [[nodiscard]] constexpr decltype(auto)
 move(T&& v) { return static_cast<remove_reference_t<T>&&>(v); }
 
 //}}}-------------------------------------------------------------------
