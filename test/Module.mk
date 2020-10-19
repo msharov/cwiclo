@@ -25,14 +25,13 @@ test/check:	${test/tests}
 	    diff $$test.std $$i.out && rm -f $$i.out;\
 	done
 
-$Otest/fwork:	$Otest/ping.o
-$Otest/ipcom:	$Otest/ping.o | $Otest/ipcomsrv
+$Otest/ipcom:	| $Otest/ipcomsrv
 
 ${test/tests}: $Otest/%: $Otest/%.o ${liba}
 	@echo "Linking $@ ..."
 	@${CC} ${ldflags} -o $@ $^
 
-$Otest/ipcomsrv:	$Otest/ipcomsrv.o $Otest/ping.o ${liba}
+$Otest/ipcomsrv:	$Otest/ipcomsrv.o ${liba}
 	@echo "Linking $@ ..."
 	@${CC} ${ldflags} -o $@ $^
 

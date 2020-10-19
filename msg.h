@@ -133,10 +133,6 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 public:					\
     static constexpr iid_t interface (void) { return i_##iface.name; }
 
-// This one instantiates the i_Interface variable from above
-#define DEFINE_INTERFACE(iface)		\
-    constexpr const P##iface::I##iface P##iface::i_##iface;
-
 //}}}-------------------------------------------------------------------
 //{{{ Msg
 

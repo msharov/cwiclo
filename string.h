@@ -160,12 +160,12 @@ public:
     constexpr auto	find_first_not_of (const_pointer s)			{ return UNCONST_MEMBER_FN (find_first_not_of,s); }
     constexpr auto	find_first_not_of (const string& s)			{ return UNCONST_MEMBER_FN (find_first_not_of,s); }
 
-    constexpr bool	starts_with (const string& s) const			{ return size() >= s.size() && 0 == strncmp (begin(), s.begin(), s.size()); }
-    constexpr bool	starts_with (const_pointer s) const			{ auto l = strlen(s); return size() >= l && 0 == strncmp (begin(), s, l); }
+    constexpr bool	starts_with (const string& s) const			{ return size() >= s.size() && 0 == __builtin_strncmp (begin(), s.begin(), s.size()); }
+    constexpr bool	starts_with (const_pointer s) const			{ auto l = __builtin_strlen(s); return size() >= l && 0 == __builtin_strncmp (begin(), s, l); }
     constexpr bool	starts_with (char c) const				{ return size() >= 1 && at(0) == c; }
 
-    constexpr bool	ends_with (const string& s) const			{ return size() >= s.size() && 0 == strncmp (end()-s.size(), s.begin(), s.size()); }
-    constexpr bool	ends_with (const_pointer s) const			{ auto l = strlen(s); return size() >= l && 0 == strncmp (end()-l, s, l); }
+    constexpr bool	ends_with (const string& s) const			{ return size() >= s.size() && 0 == __builtin_strncmp (end()-s.size(), s.begin(), s.size()); }
+    constexpr bool	ends_with (const_pointer s) const			{ auto l = __builtin_strlen(s); return size() >= l && 0 == __builtin_strncmp (end()-l, s, l); }
     constexpr bool	ends_with (char c) const				{ return size() >= 1 && back() == c; }
 };
 

@@ -16,8 +16,6 @@
 //{{{ COM --------------------------------------------------------------
 namespace cwiclo {
 
-DEFINE_INTERFACE (COM)
-
 string PCOM::string_from_interface_list (const iid_t* elist) // static
 {
     string elstr;
@@ -45,8 +43,6 @@ Msg PCOM::error_msg (const string& errmsg) // static
 
 //}}}-------------------------------------------------------------------
 //{{{ PExtern
-
-DEFINE_INTERFACE (Extern)
 
 auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) const -> fd_t
 {
@@ -188,11 +184,6 @@ auto PExtern::launch_pipe (const char* exe, const char* arg) const -> fd_t
     open (socks[socket_ClientSide]);
     return socks[socket_ClientSide];
 }
-
-//}}}-------------------------------------------------------------------
-//{{{ PExternR
-
-DEFINE_INTERFACE (ExternR)
 
 //}}}-------------------------------------------------------------------
 //{{{ Extern

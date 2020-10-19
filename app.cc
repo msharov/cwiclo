@@ -12,10 +12,6 @@
 //{{{ Timer and Signal interfaces --------------------------------------
 namespace cwiclo {
 
-DEFINE_INTERFACE (Timer)
-DEFINE_INTERFACE (TimerR)
-DEFINE_INTERFACE (Signal)
-
 void PTimer::watch (WatchCmd cmd, fd_t fd, mstime_t timeoutms) const
     { send (m_watch(), cmd, fd, timeoutms); }
 
