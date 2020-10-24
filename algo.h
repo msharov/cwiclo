@@ -554,18 +554,23 @@ inline int complete_write (int fd, const void* p, size_t ntw)
     return nw;
 }
 
+//}}}-------------------------------------------------------------------
 extern "C" {
+#ifdef __linux__
 
+void closefrom (int fd);
+
+#endif
 #ifndef UC_VERSION
-const char* executable_in_path (const char* efn, char* exe, size_t exesz) NONNULL();
+
 int mkpath (const char* path, mode_t mode) NONNULL();
 int rmpath (const char* path) NONNULL();
-#endif
 
 enum { SD_LISTEN_FDS_START = STDERR_FILENO+1 };
 unsigned sd_listen_fds (void);
 int sd_listen_fd_by_name (const char* name);
 
+#endif
 } // extern "C"
 } // namespace cwiclo
 //}}}-------------------------------------------------------------------

@@ -8,7 +8,6 @@
 
 //----------------------------------------------------------------------
 namespace cwiclo {
-#ifndef UC_VERSION
 
 zstr::index_type zstr::nstrs (const_pointer p, difference_type n) // static
 {
@@ -37,60 +36,16 @@ zstr::index_type zstr::index (const_pointer k, const_pointer p, difference_type 
 
 //----------------------------------------------------------------------
 
-const char* executable_in_path (const char* efn, char* exe, size_t exesz)
+#ifdef __linux__
+
+void closefrom (int fd)
 {
-    if (efn[0] == '/' || (efn[0] == '.' && (efn[1] == '/' || efn[1] == '.'))) {
-	if (0 != access (efn, X_OK))
-	    return nullptr;
-	return efn;
-    }
-
-    const char* penv = getenv("PATH");
-    if (!penv)
-	penv = "/bin:/usr/bin:.";
-    char path [PATH_MAX];
-    if (size(path) < size_t(snprintf (ARRAY_BLOCK(path), &"%s/%s"[strlen("%s/")], penv)))
-	return nullptr;
-
-    for (char *pf = path, *pl = pf; *pf; pf = pl) {
-	while (*pl && *pl != ':')
-	    ++pl;
-	*pl++ = 0;
-	if (exesz < size_t(snprintf (exe, exesz, "%s/%s", pf, efn)))
-	    return nullptr;
-	if (0 == access (exe, X_OK))
-	    return exe;
-    }
-    return nullptr;
+    for (int tofd = getdtablesize(); fd < tofd; ++fd)
+	close (fd);
 }
 
-unsigned sd_listen_fds (void)
-{
-    const char* e = getenv("LISTEN_PID");
-    if (!e || getpid() != pid_t(atoi(e)))
-	return 0;
-    e = getenv("LISTEN_FDS");
-    return e ? atoi(e) : 0;
-}
-
-int sd_listen_fd_by_name (const char* name)
-{
-    const char* na = getenv("LISTEN_FDNAMES");
-    if (!na)
-	return -1;
-    auto namelen = strlen(name);
-    for (auto fdi = 0u; *na; ++fdi) {
-	const char *ee = strchr(na,':');
-	if (!ee)
-	    ee = na+strlen(na);
-	if (equal_n (name, namelen, na, ee-na))
-	    return fdi < sd_listen_fds() ? SD_LISTEN_FDS_START+fdi : -1;
-	if (!*ee)
-	    break;
-	na = ee+1;
-    }
-    return -1;
-}
+#endif
+#ifndef UC_VERSION
 
 int mkpath (const char* path, mode_t mode)
 {
@@ -123,6 +78,34 @@ int rmpath (const char* path)
     }
     return 0;
 }
-#endif // UC_VERSION
 
+unsigned sd_listen_fds (void)
+{
+    const char* e = getenv("LISTEN_PID");
+    if (!e || getpid() != pid_t(atoi(e)))
+	return 0;
+    e = getenv("LISTEN_FDS");
+    return e ? atoi(e) : 0;
+}
+
+int sd_listen_fd_by_name (const char* name)
+{
+    const char* na = getenv("LISTEN_FDNAMES");
+    if (!na)
+	return -1;
+    auto namelen = strlen(name);
+    for (auto fdi = 0u; *na; ++fdi) {
+	const char *ee = strchr(na,':');
+	if (!ee)
+	    ee = na+strlen(na);
+	if (equal_n (name, namelen, na, ee-na))
+	    return fdi < sd_listen_fds() ? SD_LISTEN_FDS_START+fdi : -1;
+	if (!*ee)
+	    break;
+	na = ee+1;
+    }
+    return -1;
+}
+
+#endif // UC_VERSION
 } // namespace cwiclo

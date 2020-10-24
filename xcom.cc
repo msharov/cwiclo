@@ -5,7 +5,6 @@
 
 #include "xcom.h"
 #include <fcntl.h>
-#include <syslog.h>
 #include <sys/un.h>
 #include <sys/stat.h>
 #include <paths.h>
@@ -152,14 +151,6 @@ auto PExtern::connect_local_ip6 (in_port_t port) const -> fd_t
 
 auto PExtern::launch_pipe (const char* exe, const char* arg) const -> fd_t
 {
-    // Check if executable exists before the fork to allow proper error handling
-    char exepath [PATH_MAX];
-    auto exefp = executable_in_path (exe, ARRAY_BLOCK(exepath));
-    if (!exefp) {
-	errno = ENOENT;
-	return -1;
-    }
-
     // Create socket pipe, will be connected to stdin in server
     enum { socket_ClientSide, socket_ServerSide, socket_N };
     fd_t socks [socket_N];
@@ -171,12 +162,13 @@ auto PExtern::launch_pipe (const char* exe, const char* arg) const -> fd_t
 	::close (socks[socket_ServerSide]);
 	return -1;
     } else if (!fr) {	// Server side
-	::close (socks[socket_ClientSide]);
+	chdir ("/");
 	dup2 (socks[socket_ServerSide], STDIN_FILENO);
-	execl (exefp, exe, arg, NULL);
+	closefrom (STDERR_FILENO+1);
+	execlp (exe, exe, arg, NULL);
 
 	// If exec failed, log the error and exit
-	Msger::error ("failed to launch pipe to '%s %s': %s\n", exe, arg, strerror(errno));
+	Msger::error ("failed to launch pipe to '%s %s': %s", exe, arg, strerror(errno));
 	exit (EXIT_FAILURE);
     }
     // Client side
@@ -932,12 +924,12 @@ auto PExternServer::bind_local_ip6 (in_port_t port, const iid_t* eifaces) -> fd_
 //}}}-------------------------------------------------------------------
 //{{{ ExternServer
 
-bool ExternServer::on_error (mrid_t eid, const string& errmsg)
+bool ExternServer::on_error (mrid_t eid, const string& errmsg [[maybe_unused]])
 {
     if (_timer.dest() == eid || msger_id() == eid)
 	return false;	// errors in listened socket are fatal
     // error in accepted socket. Handle by logging the error and removing record in ObjectDestroyed.
-    syslog (LOG_ERR, "%s", errmsg.c_str());
+    DEBUG_PRINTF ("[X] Client connection error: %s", errmsg.c_str());
     return true;
 }
 
