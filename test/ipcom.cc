@@ -24,7 +24,7 @@ public:
     void		process_args (argc_t argc, argv_t argv);
     inline void		ExternR_connected (const Extern::Info* einfo);
     inline void		PingR_ping (uint32_t v);
-    inline void		Signal_signal (int sig);
+    inline void		Signal_signal (const PSignal::Info& sig);
 private:
 			TestApp (void);
 private:
@@ -127,20 +127,16 @@ void TestApp::PingR_ping (uint32_t v)
 }
 
 // This test scenario launches a private pipe server,
-// and so must cleanup the child process when it exits.
+// and will receive SIGCHLD signal when it exits.
 // Signal messages are sent by the app, broadcasting to
 // all recepients, so there is no need to register for it,
 // and this method is implemented like a signal handler.
 //
-void TestApp::Signal_signal (int sig)
+void TestApp::Signal_signal (const PSignal::Info& si)
 {
-    if (sig == SIGCHLD) {
-	int ec = EXIT_SUCCESS;
-	auto spid = waitpid (-1, &ec, WNOHANG);
-	if (spid > 0 && WIFEXITED(ec)) {
-	    LOG ("Child process %d exited with code %d\n", spid, ec);
-	    quit();
-	}
+    if (si.sig == SIGCHLD && si.pid > 0 && WIFEXITED(si.status)) {
+	LOG ("Child process %d exited with code %d\n", si.pid, WEXITSTATUS(si.status));
+	quit();
     }
 }
 

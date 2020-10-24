@@ -85,16 +85,25 @@ public:
 //{{{ Signal interface
 
 class PSignal : public Proxy {
-    DECLARE_INTERFACE (Signal, (signal,"i"));
+public:
+    struct Info {
+	int32_t	sig;
+	int32_t	status;
+	int32_t	pid;
+	int32_t	uid;
+    };
+    #define SIGNATURE_Signal_Info	"(iiii)"
+private:
+    DECLARE_INTERFACE (Signal, (signal,SIGNATURE_Signal_Info));
 public:
     constexpr	PSignal (mrid_t caller)	: Proxy (caller, mrid_Broadcast) {}
-    void	signal (int sig) const	{ send (m_signal(), sig); }
+    void	signal (const Info& si) const	{ send (m_signal(), si); }
 
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_signal())
 	    return false;
-	o->Signal_signal (msg.read().read<int>());
+	o->Signal_signal (msg.read().read<Info>());
 	return true;
     }
 };

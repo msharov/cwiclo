@@ -6,7 +6,7 @@
 #include "app.h"
 #include <fcntl.h>
 #include <signal.h>
-#include <syslog.h>
+#include <sys/wait.h>
 #include <time.h>
 
 //{{{ Timer and Signal interfaces --------------------------------------
@@ -120,7 +120,7 @@ void App::fatal_signal_handler (int sig) // static
 	#ifdef NDEBUG
 	    alarm (1);
 	#endif
-	fprintf (stderr, "[S] Error: %s\n", strsignal(sig));
+	psignal (sig, "[S] Error");
 	#ifndef NDEBUG
 	    print_backtrace();
 	#endif
@@ -402,9 +402,17 @@ void App::forward_received_signals (void)
     if (!oldrs)
 	return;
     PSignal psig (mrid_App);
-    for (auto i = 0u; i < sizeof(s_received_signals)*8; ++i)
-	if (get_bit (oldrs, i))
-	    psig.signal (i);
+    for (auto i = 0u; i < sizeof(s_received_signals)*8; ++i) {
+	if (!get_bit (oldrs, i))
+	    continue;
+	PSignal::Info si = {};
+	if ((si.sig = i) == SIGCHLD) {
+	    if (0 >= (si.pid = waitpid (-1, &si.status, WNOHANG)))
+		continue;
+	    --i;	// multiple children may exit
+	}
+	psig.signal (si);
+    }
     // clear only the signal bits processed, in case new signals arrived during the loop
     s_received_signals ^= oldrs;
 }
