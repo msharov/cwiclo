@@ -5,12 +5,9 @@
 
 #include "xcom.h"
 #include <fcntl.h>
-#include <sys/un.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
-#include <paths.h>
-#if __has_include(<arpa/inet.h>) && !defined(NDEBUG)
-    #include <arpa/inet.h>
-#endif
+#include <sys/un.h>
 
 //{{{ COM --------------------------------------------------------------
 namespace cwiclo {
@@ -45,11 +42,12 @@ Msg PCOM::error_msg (const string& errmsg) // static
 
 auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) const -> fd_t
 {
-    auto fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, IPPROTO_IP);
+    DEBUG_PRINTF ("[X] Connecting to socket %s\n", debug_socket_name(addr));
+    auto fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, 0);
     if (fd < 0)
 	return fd;
     if (0 > ::connect (fd, addr, addrlen) && errno != EINPROGRESS && errno != EINTR) {
-	DEBUG_PRINTF ("[E] Failed to connect to socket: %s\n", strerror(errno));
+	DEBUG_PRINTF ("[E] connect failed: %s\n", strerror(errno));
 	::close (fd);
 	return fd = -1;
     }
@@ -60,122 +58,31 @@ auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) const -> fd_t
 /// Create local socket with given path
 auto PExtern::connect_local (const char* path) const -> fd_t
 {
-    #ifndef __linux__
-	if (path[0] == '@')
-	    ++path;
-    #endif
     sockaddr_un addr;
-    addr.sun_family = PF_LOCAL;
-    unsigned pathlen = snprintf (ARRAY_BLOCK(addr.sun_path), "%s", path);
-    if (size(addr.sun_path) <= pathlen) {
-	errno = ENAMETOOLONG;
-	return -1;
-    }
-    DEBUG_PRINTF ("[X] connecting to socket %s\n", addr.sun_path);
-    #ifdef __linux__
-	if (addr.sun_path[0] == '@')
-	    addr.sun_path[0] = 0;
-    #endif
-    return connect (pointer_cast<sockaddr>(&addr), sizeof(addr.sun_family)+pathlen);
+    auto addrlen = create_sockaddr_local (&addr, path);
+    if (addrlen < 0)
+	return addrlen;
+    return connect (pointer_cast<sockaddr>(&addr), addrlen);
 }
 
 /// Create local socket of the given name in the system standard location for such
 auto PExtern::connect_system_local (const char* sockname) const -> fd_t
 {
     sockaddr_un addr;
-    addr.sun_family = PF_LOCAL;
-
-    auto psockpath = begin (addr.sun_path);
-    auto sockpathsz = size (addr.sun_path);
-    if (sockname[0] == '@') {
-	++sockname;
-	#ifdef __linux__
-	    --sockpathsz;
-	    *psockpath++ = 0;
-	#endif
-    }
-    unsigned pathlen = snprintf (psockpath, sockpathsz, _PATH_VARRUN "%s", sockname);
-    if (sockpathsz <= pathlen) {
-	errno = ENAMETOOLONG;
-	return -1;
-    }
-    DEBUG_PRINTF ("[X] connecting to socket %s\n", psockpath);
-    return connect (pointer_cast<sockaddr>(&addr), psockpath+pathlen-pointer_cast<char>(&addr));
+    auto addrlen = create_sockaddr_system_local (&addr, sockname);
+    if (addrlen < 0)
+	return addrlen;
+    return connect (pointer_cast<sockaddr>(&addr), addrlen);
 }
 
 /// Create local socket of the given name in the user standard location for such
 auto PExtern::connect_user_local (const char* sockname) const -> fd_t
 {
     sockaddr_un addr;
-    addr.sun_family = PF_LOCAL;
-
-    auto psockpath = begin (addr.sun_path);
-    auto sockpathsz = size (addr.sun_path);
-    if (sockname[0] == '@') {
-	++sockname;
-	#ifdef __linux__
-	    --sockpathsz;
-	    *psockpath++ = 0;
-	#endif
-    }
-    auto rundir = getenv ("XDG_RUNTIME_DIR");
-    unsigned pathlen = snprintf (psockpath, sockpathsz, "%s/%s", rundir ? rundir : _PATH_TMP, sockname);
-    if (sockpathsz <= pathlen) {
-	errno = ENAMETOOLONG;
-	return -1;
-    }
-    DEBUG_PRINTF ("[X] connecting to socket %s\n", psockpath);
-    return connect (pointer_cast<sockaddr>(&addr), psockpath+pathlen-pointer_cast<char>(&addr));
-}
-
-auto PExtern::connect_ip4 (in_addr_t ip, in_port_t port) const -> fd_t
-{
-    sockaddr_in addr = {};
-    addr.sin_family = PF_INET;
-    addr.sin_port = port;
-    #ifdef UC_VERSION
-	addr.sin_addr = ip;
-    #else
-	addr.sin_addr = { ip };
-    #endif
-#ifndef NDEBUG
-    char addrbuf [64];
-    #ifdef UC_VERSION
-	DEBUG_PRINTF ("[X] connecting to socket %s:%hu\n", inet_intop(addr.sin_addr, ARRAY_BLOCK(addrbuf)), port);
-    #else
-	DEBUG_PRINTF ("[X] connecting to socket %s:%hu\n", inet_ntop(PF_INET, &addr.sin_addr, ARRAY_BLOCK(addrbuf)), port);
-    #endif
-#endif
-    return connect (pointer_cast<sockaddr>(&addr), sizeof(addr));
-}
-
-/// Create local IPv4 socket at given port on the loopback interface
-auto PExtern::connect_local_ip4 (in_port_t port) const -> fd_t
-    { return PExtern::connect_ip4 (INADDR_LOOPBACK, port); }
-
-/// Create local IPv6 socket at given ip and port
-auto PExtern::connect_ip6 (in6_addr ip, in_port_t port) const -> fd_t
-{
-    sockaddr_in6 addr = {};
-    addr.sin6_family = PF_INET6;
-    addr.sin6_addr = ip;
-    addr.sin6_port = port;
-#if !defined(NDEBUG) && !defined(UC_VERSION)
-    char addrbuf [128];
-    DEBUG_PRINTF ("[X] connecting to socket %s:%hu\n", inet_ntop(PF_INET6, &addr.sin6_addr, ARRAY_BLOCK(addrbuf)), port);
-#endif
-    return connect (pointer_cast<sockaddr>(&addr), sizeof(addr));
-}
-
-/// Create local IPv6 socket at given ip and port
-auto PExtern::connect_local_ip6 (in_port_t port) const -> fd_t
-{
-    sockaddr_in6 addr = {};
-    addr.sin6_family = PF_INET6;
-    addr.sin6_addr = IN6ADDR_LOOPBACK_INIT;
-    addr.sin6_port = port;
-    DEBUG_PRINTF ("[X] connecting to socket localhost6:%hu\n", port);
-    return connect (pointer_cast<sockaddr>(&addr), sizeof(addr));
+    auto addrlen = create_sockaddr_user_local (&addr, sockname);
+    if (addrlen < 0)
+	return addrlen;
+    return connect (pointer_cast<sockaddr>(&addr), addrlen);
 }
 
 auto PExtern::launch_pipe (const char* exe, const char* arg) const -> fd_t
@@ -876,18 +783,25 @@ auto PExternServer::activate (const iid_t* eifaces) -> fd_t
 /// Create server socket bound to the given address
 auto PExternServer::bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) -> fd_t
 {
-    auto fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, IPPROTO_IP);
+    DEBUG_PRINTF ("[X] Creating server socket %s\n", debug_socket_name(addr));
+    auto fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, 0);
     if (fd < 0)
 	return fd;
     if (0 > ::bind (fd, addr, addrlen) && errno != EINPROGRESS) {
-	DEBUG_PRINTF ("[E] Failed to bind to socket: %s\n", strerror(errno));
+	DEBUG_PRINTF ("[E] bind failed: %s\n", strerror(errno));
 	::close (fd);
 	return -1;
     }
     if (0 > ::listen (fd, min (SOMAXCONN, 64))) {
-	DEBUG_PRINTF ("[E] Failed to listen to socket: %s\n", strerror(errno));
+	DEBUG_PRINTF ("[E] listen failed: %s\n", strerror(errno));
 	::close (fd);
 	return -1;
+    }
+    if (addr->sa_family == PF_LOCAL) {
+	auto sockpath = pointer_cast<sockaddr_un>(addr)->sun_path;
+	_sockname = sockpath;
+	if (sockpath[0])
+	    chmod (sockpath, DEFFILEMODE);
     }
     listen (fd, eifaces, WhenEmpty::Remain);
     return fd;
@@ -896,94 +810,31 @@ auto PExternServer::bind (const sockaddr* addr, socklen_t addrlen, const iid_t* 
 /// Create local socket with given path
 auto PExternServer::bind_local (const char* path, const iid_t* eifaces) -> fd_t
 {
-    #ifndef __linux__
-	// Abstract sockets are linux-specific. Fallback to normal name.
-	if (path[0] == '@')
-	    ++path;
-    #endif
     sockaddr_un addr;
-    addr.sun_family = PF_LOCAL;
-    unsigned pathlen = snprintf (ARRAY_BLOCK(addr.sun_path), "%s", path);
-    if (size(addr.sun_path) <= pathlen) {
-	errno = ENAMETOOLONG;
-	return -1;
-    }
-    #ifdef __linux__
-	if (addr.sun_path[0] == '@')
-	    addr.sun_path[0] = 0;
-    #endif
-    DEBUG_PRINTF ("[X] Creating server socket %s\n", path);
-    auto fd = bind (pointer_cast<sockaddr>(&addr), sizeof(addr.sun_family)+pathlen, eifaces);
-    if (fd < 0 || path[0] == '@')
-	_sockname.clear();
-    else {
-	_sockname = path;
-	chmod (path, DEFFILEMODE);
-    }
-    return fd;
+    auto addrlen = create_sockaddr_local (&addr, path);
+    if (addrlen < 0)
+	return addrlen;
+    return bind (pointer_cast<sockaddr>(&addr), addrlen, eifaces);
 }
 
 /// Create local socket of the given name in the system standard location for such
 auto PExternServer::bind_system_local (const char* sockname, const iid_t* eifaces) -> fd_t
 {
-    _sockname.clear();
-    if (sockname[0] == '@') {
-	++sockname;
-	_sockname += '@';
-    }
-    _sockname.appendf (_PATH_VARRUN "%s", sockname);
-    return bind_local (_sockname.c_str(), eifaces);
+    sockaddr_un addr;
+    auto addrlen = create_sockaddr_system_local (&addr, sockname);
+    if (addrlen < 0)
+	return addrlen;
+    return bind (pointer_cast<sockaddr>(&addr), addrlen, eifaces);
 }
 
 /// Create local socket of the given name in the user standard location for such
 auto PExternServer::bind_user_local (const char* sockname, const iid_t* eifaces) -> fd_t
 {
-    _sockname.clear();
-    if (sockname[0] == '@') {
-	++sockname;
-	_sockname += '@';
-    }
-    auto rundir = getenv ("XDG_RUNTIME_DIR");
-    _sockname.appendf ("%s/%s", rundir ? rundir : _PATH_TMP, sockname);
-    return bind_local (_sockname.c_str(), eifaces);
-}
-
-/// Create local IPv4 socket at given ip and port
-auto PExternServer::bind_ip4 (in_addr_t ip, in_port_t port, const iid_t* eifaces) -> fd_t
-{
-    sockaddr_in addr = {};
-    addr.sin_family = PF_INET,
-    #ifdef UC_VERSION
-	addr.sin_addr = ip;
-    #else
-	addr.sin_addr = { ip };
-    #endif
-    addr.sin_port = port;
-    return bind (pointer_cast<sockaddr>(&addr), sizeof(addr), eifaces);
-}
-
-/// Create local IPv4 socket at given port on the loopback interface
-auto PExternServer::bind_local_ip4 (in_port_t port, const iid_t* eifaces) -> fd_t
-    { return bind_ip4 (INADDR_LOOPBACK, port, eifaces); }
-
-/// Create local IPv6 socket at given ip and port
-auto PExternServer::bind_ip6 (in6_addr ip, in_port_t port, const iid_t* eifaces) -> fd_t
-{
-    sockaddr_in6 addr = {};
-    addr.sin6_family = PF_INET6;
-    addr.sin6_addr = ip;
-    addr.sin6_port = port;
-    return bind (pointer_cast<sockaddr>(&addr), sizeof(addr), eifaces);
-}
-
-/// Create local IPv6 socket at given ip and port
-auto PExternServer::bind_local_ip6 (in_port_t port, const iid_t* eifaces) -> fd_t
-{
-    sockaddr_in6 addr = {};
-    addr.sin6_family = PF_INET6;
-    addr.sin6_addr = IN6ADDR_LOOPBACK_INIT;
-    addr.sin6_port = port;
-    return bind (pointer_cast<sockaddr>(&addr), sizeof(addr), eifaces);
+    sockaddr_un addr;
+    auto addrlen = create_sockaddr_user_local (&addr, sockname);
+    if (addrlen < 0)
+	return addrlen;
+    return bind (pointer_cast<sockaddr>(&addr), addrlen, eifaces);
 }
 
 //}}}-------------------------------------------------------------------

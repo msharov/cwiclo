@@ -554,23 +554,38 @@ inline int complete_write (int fd, const void* p, size_t ntw)
     return nw;
 }
 
+} // namespace cwiclo
 //}}}-------------------------------------------------------------------
 extern "C" {
+
 #ifdef __linux__
-
 void closefrom (int fd);
-
 #endif
-#ifndef UC_VERSION
 
+#ifndef UC_VERSION
 int mkpath (const char* path, mode_t mode) NONNULL();
 int rmpath (const char* path) NONNULL();
 
 enum { SD_LISTEN_FDS_START = STDERR_FILENO+1 };
 unsigned sd_listen_fds (void);
 int sd_listen_fd_by_name (const char* name);
-
 #endif
+
+#ifndef NDEBUG
+const char* debug_socket_name (const struct sockaddr* addr);
+#endif
+
+int create_sockaddr_un (struct sockaddr_un* addr, const char* fmt, const char* path, const char* sockname);
+
+inline int create_sockaddr_local (struct sockaddr_un* addr, const char* sockname)
+    { return create_sockaddr_un (addr, "%s%s", "", sockname); }
+inline int create_sockaddr_system_local (struct sockaddr_un* addr, const char* sockname)
+    { return create_sockaddr_un (addr, "%s/%s", "/run", sockname); }
+inline int create_sockaddr_user_local (struct sockaddr_un* addr, const char* sockname)
+{
+    auto rundir = getenv ("XDG_RUNTIME_DIR");
+    return create_sockaddr_un (addr, "%s/%s", rundir ? rundir : "/tmp", sockname);
+}
+
 } // extern "C"
-} // namespace cwiclo
 //}}}-------------------------------------------------------------------

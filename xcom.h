@@ -5,10 +5,12 @@
 
 #pragma once
 #include "app.h"
-#include <sys/socket.h>
-#include <netinet/in.h>
 
 //{{{ COM --------------------------------------------------------------
+
+struct sockaddr;
+struct iovec;
+
 namespace cwiclo {
 
 class PCOM : public Proxy {
@@ -106,12 +108,8 @@ public:
     void	open (fd_t fd, const iid_t* eifaces, SocketSide side = SocketSide::Server) const
 		    { send (m_open(), eifaces, fd, side); }
     void	open (fd_t fd) const	{ open (fd, nullptr, SocketSide::Client); }
-    fd_t	connect (const sockaddr* addr, socklen_t addrlen) const;
-    fd_t	connect_ip4 (in_addr_t ip, in_port_t port) const;
-    fd_t	connect_ip6 (in6_addr ip, in_port_t port) const;
+    fd_t	connect (const struct sockaddr* addr, socklen_t addrlen) const;
     fd_t	connect_local (const char* path) const;
-    fd_t	connect_local_ip4 (in_port_t port) const;
-    fd_t	connect_local_ip6 (in_port_t port) const;
     fd_t	connect_system_local (const char* sockname) const;
     fd_t	connect_user_local (const char* sockname) const;
     fd_t	launch_pipe (const char* exe, const char* arg = nullptr) const;
@@ -302,10 +300,6 @@ public:
     fd_t	bind_local (const char* path, const iid_t* eifaces) NONNULL();
     fd_t	bind_user_local (const char* sockname, const iid_t* eifaces) NONNULL();
     fd_t	bind_system_local (const char* sockname, const iid_t* eifaces) NONNULL();
-    fd_t	bind_ip4 (in_addr_t ip, in_port_t port, const iid_t* eifaces) NONNULL();
-    fd_t	bind_local_ip4 (in_port_t port, const iid_t* eifaces) NONNULL();
-    fd_t	bind_ip6 (in6_addr ip, in_port_t port, const iid_t* eifaces) NONNULL();
-    fd_t	bind_local_ip6 (in_port_t port, const iid_t* eifaces) NONNULL();
 
     fd_t	activate (const iid_t* eifaces) NONNULL();
     fd_t	activate_local (const char* path, const iid_t* eifaces)
@@ -314,14 +308,6 @@ public:
 		    { auto fd = activate (eifaces); return fd ? fd : bind_user_local (sockname, eifaces); }
     fd_t	activate_system_local (const char* sockname, const iid_t* eifaces)
 		    { auto fd = activate (eifaces); return fd ? fd : bind_system_local (sockname, eifaces); }
-    fd_t	activate_ip4 (in_addr_t ip, in_port_t port, const iid_t* eifaces)
-		    { auto fd = activate (eifaces); return fd ? fd : bind_ip4 (ip, port, eifaces); }
-    fd_t	activate_local_ip4 (in_port_t port, const iid_t* eifaces)
-		    { auto fd = activate (eifaces); return fd ? fd : bind_local_ip4 (port, eifaces); }
-    fd_t	activate_ip6 (in6_addr ip, in_port_t port, const iid_t* eifaces)
-		    { auto fd = activate (eifaces); return fd ? fd : bind_ip6 (ip, port, eifaces); }
-    fd_t	activate_local_ip6 (in_port_t port, const iid_t* eifaces)
-		    { auto fd = activate (eifaces); return fd ? fd : bind_local_ip6 (port, eifaces); }
 
     template <typename O>
     inline static bool dispatch (O* o, const Msg& msg) {

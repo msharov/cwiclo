@@ -4,7 +4,12 @@
 // This file is free software, distributed under the ISC License.
 
 #include "algo.h"
+#include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/un.h>
+#if __has_include(<arpa/inet.h>) && !defined(NDEBUG)
+    #include <arpa/inet.h>
+#endif
 
 //----------------------------------------------------------------------
 namespace cwiclo {
@@ -33,6 +38,9 @@ zstr::index_type zstr::index (const_pointer k, const_pointer p, difference_type 
     }
     return nf;
 }
+
+} // namespace cwiclo
+using namespace cwiclo;
 
 //----------------------------------------------------------------------
 
@@ -108,4 +116,44 @@ int sd_listen_fd_by_name (const char* name)
 }
 
 #endif // UC_VERSION
-} // namespace cwiclo
+
+#ifndef NDEBUG
+const char* debug_socket_name (const struct sockaddr* addr)
+{
+    static char s_snbuf [256];
+    if (addr->sa_family == PF_LOCAL) {
+	auto a = pointer_cast<sockaddr_un>(addr);
+	snprintf (ARRAY_BLOCK(s_snbuf), "%c%s", a->sun_path[0] ? a->sun_path[0] : '@', &a->sun_path[1]);
+    } else if (addr->sa_family == PF_INET) {
+	auto a = pointer_cast<sockaddr_in>(addr);
+	char addrbuf [64];
+	snprintf (ARRAY_BLOCK(s_snbuf), "%s:%hu", inet_ntop (PF_INET, &a->sin_addr, ARRAY_BLOCK(addrbuf)), a->sin_port);
+    } else if (addr->sa_family == PF_INET6) {
+	auto a = pointer_cast<sockaddr_in6>(addr);
+	char addrbuf [64];
+	snprintf (ARRAY_BLOCK(s_snbuf), "%s:%hu", inet_ntop (PF_INET6, &a->sin6_addr, ARRAY_BLOCK(addrbuf)), a->sin6_port);
+    } else
+	snprintf (ARRAY_BLOCK(s_snbuf), "SF%u", addr->sa_family);
+    return s_snbuf;
+}
+#endif
+
+int create_sockaddr_un (struct sockaddr_un* addr, const char* fmt, const char* path, const char* sockname)
+{
+    addr->sun_family = PF_LOCAL;
+    auto psockpath = begin (addr->sun_path);
+    auto sockpathsz = size (addr->sun_path);
+    if (sockname[0] == '@') {
+	++sockname;
+	#ifdef __linux__
+	    --sockpathsz;
+	    *psockpath++ = 0;
+	#endif
+    }
+    unsigned pathlen = snprintf (psockpath, sockpathsz, fmt, path, sockname);
+    if (sockpathsz <= pathlen) {
+	errno = ENAMETOOLONG;
+	return -1;
+    }
+    return psockpath+pathlen-pointer_cast<char>(addr);
+}
