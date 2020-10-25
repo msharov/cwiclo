@@ -106,7 +106,7 @@ public:
 		~PExtern (void)		{ free_id(); }
     void	close (void) const	{ send (m_close()); }
     void	open (fd_t fd, const iid_t* eifaces, SocketSide side = SocketSide::Server) const
-		    { send (m_open(), eifaces, fd, side); }
+		    { send (m_open(), ios::ptr(eifaces), fd, side); }
     void	open (fd_t fd) const	{ open (fd, nullptr, SocketSide::Client); }
     fd_t	connect (const struct sockaddr* addr, socklen_t addrlen) const;
     fd_t	connect_local (const char* path) const;
@@ -117,7 +117,7 @@ public:
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_open()) {
 	    auto is = msg.read();
-	    auto eifaces = is.read<const iid_t*>();
+	    auto eifaces = is.read<ios::ptr<iid_t>>();
 	    auto fd = is.read<fd_t>();
 	    auto side = is.read<SocketSide>();
 	    o->Extern_open (fd, eifaces, side);
@@ -292,9 +292,9 @@ public:
 		~PExternServer (void);
     void	close (void) const		{ send (m_close()); }
     void	listen (fd_t fd, const iid_t* eifaces, WhenEmpty whenempty = WhenEmpty::Close) const
-		    { send (m_listen(), uint64_t(eifaces), fd, whenempty); }
+		    { send (m_listen(), ios::ptr(eifaces), fd, whenempty); }
     void	accept (fd_t fd, const iid_t* eifaces) const
-		    { send (m_accept(), uint64_t(eifaces), fd); }
+		    { send (m_accept(), ios::ptr(eifaces), fd); }
 
     fd_t	bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) NONNULL();
     fd_t	bind_local (const char* path, const iid_t* eifaces) NONNULL();
@@ -313,13 +313,13 @@ public:
     inline static bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_listen()) {
 	    auto is = msg.read();
-	    auto eifaces = (const iid_t*)(is.read<uint64_t>());
+	    auto eifaces = is.read<ios::ptr<iid_t>>();
 	    auto fd = is.read<fd_t>();
 	    auto closeWhenEmpty = is.read<WhenEmpty>();
 	    o->ExternServer_listen (fd, eifaces, closeWhenEmpty);
 	} else if (msg.method() == m_accept()) {
 	    auto is = msg.read();
-	    auto eifaces = (const iid_t*)(is.read<uint64_t>());
+	    auto eifaces = is.read<ios::ptr<iid_t>>();
 	    auto fd = is.read<fd_t>();
 	    o->ExternServer_accept (fd, eifaces);
 	} else if (msg.method() == m_close())

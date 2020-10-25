@@ -331,44 +331,81 @@ inline constexpr auto stream_alignof (const T&)
 
 namespace ios {
 
-/// Stream functor to allow inline align() calls.
+/// Inline align()
 class align {
+    const streamsize	_grain;
 public:
     constexpr explicit		align (streamsize grain)	: _grain(grain) {}
     inline constexpr void	read (istream& is)		{ is.align (_grain); }
     inline constexpr void	write (ostream& os) const	{ os.align (_grain); }
     inline constexpr void	write (sstream& ss) const	{ ss.align (_grain); }
-private:
-    const streamsize	_grain;
 };
 
-/// Stream functor to allow type-based alignment.
+/// Type-based alignment.
 template <typename T>
 class talign : public align {
 public:
     constexpr explicit	talign (void) : align (type_stream_traits<T>::alignment) {}
 };
 
-/// Stream functor to allow inline skip() calls.
+/// Inline skip()
 class skip {
+    const streamsize	_n;
 public:
     constexpr explicit 	skip (streamsize n)		: _n(n) {}
     constexpr void	read (istream& is) const	{ is.skip (_n); }
     constexpr void	write (ostream& os) const	{ os.skip (_n); }
     constexpr void	write (sstream& ss) const	{ ss.skip (_n); }
-private:
-    const streamsize	_n;
 };
 
-/// Stream functor to allow inline zero() calls.
+/// Inline zero()
 class zero {
+    const streamsize	_n;
 public:
     constexpr explicit 	zero (streamsize n)		: _n(n) {}
     constexpr void	read (istream& is) const	{ is.skip (_n); }
     constexpr void	write (ostream& os) const	{ os.zero (_n); }
     constexpr void	write (sstream& ss) const	{ ss.zero (_n); }
+};
+
+// Serialization of pointers as uint64_t
+template <typename T>
+class ptr {
+public:
+    using element_type	= T;
+    using pointer	= element_type*;
+    using reference	= element_type&;
+public:
+    constexpr explicit	ptr (pointer p = nullptr)	: _p(p) {}
+    constexpr auto	get (void) const		{ return _p; }
+    constexpr		ptr (const ptr& p)		: _p(p.get()) {}
+    constexpr auto	release (void)			{ return exchange (_p, nullptr); }
+    constexpr void	reset (pointer p = nullptr)	{ _p = p; }
+    constexpr		operator pointer (void) const	{ return get(); }
+    constexpr explicit	operator bool (void) const	{ return get() != nullptr; }
+    constexpr auto&	operator= (pointer p)		{ reset (p); return *this; }
+    constexpr auto&	operator= (const ptr& p)	{ reset (p.get()); return *this; }
+    constexpr auto&	operator* (void) const		{ return *get(); }
+    constexpr auto	operator-> (void) const		{ return get(); }
+    constexpr bool	operator== (const pointer p) const { return get() == p; }
+    constexpr bool	operator!= (const pointer p) const { return get() != p; }
+    constexpr bool	operator< (const pointer p) const  { return get() < p; }
+    constexpr bool	operator<= (const pointer p) const { return get() <= p; }
+    constexpr bool	operator> (const pointer p) const  { return get() > p; }
+    constexpr bool	operator>= (const pointer p) const { return get() >= p; }
+    constexpr bool	operator== (const ptr& p) const	{ return get() == p.get(); }
+    constexpr bool	operator!= (const ptr& p) const	{ return get() != p.get(); }
+    constexpr bool	operator< (const ptr& p) const	{ return get() < p.get(); }
+    constexpr bool	operator<= (const ptr& p) const	{ return get() <= p.get(); }
+    constexpr bool	operator> (const ptr& p) const	{ return get() > p.get(); }
+    constexpr bool	operator>= (const ptr& p) const	{ return get() >= p.get(); }
+    constexpr void	read (istream& is)		{ _p = value_to_pointer<element_type> (is.read<uint64_t>()); }
+    constexpr void	write (ostream& os) const	{ os << uint64_t(pointer_value (_p)); }
+    constexpr void	write (sstream& ss) const	{ ss << uint64_t(pointer_value (_p)); }
+    static constexpr auto create_from_stream (istream& is)
+			    { return ptr (value_to_pointer<element_type> (is.read<uint64_t>())); }
 private:
-    const streamsize	_n;
+    pointer		_p;
 };
 
 } // namespace ios

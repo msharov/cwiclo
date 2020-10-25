@@ -82,8 +82,12 @@ template <typename T, typename F> constexpr const T* pointer_cast (const F* p)
     { return static_cast<const T*>(static_cast<const void*>(p)); }
 
 // constexpr conversion from pointer to uintptr_t
+template <typename T> constexpr auto null_pointer (void)
+    { return static_cast<T*>(nullptr); }
 template <typename T> constexpr uintptr_t pointer_value (T p)
-    { return pointer_cast<char>(p)-static_cast<const char*>(nullptr); }
+    { return pointer_cast<char>(p) - null_pointer<char>(); }
+template <typename T> constexpr auto value_to_pointer (uintptr_t v)
+    { return pointer_cast<T>(null_pointer<char>() + v); }
 
 // Create a passthrough non-const member function from a call to a const member function
 #define UNCONST_MEMBER_FN(f,...)	\
