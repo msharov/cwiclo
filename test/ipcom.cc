@@ -65,7 +65,7 @@ void TestApp::process_args (argc_t argc [[maybe_unused]], argv_t argv [[maybe_un
     // locations; typically /run for root processes or /run/user/<uid> for
     // processes launched by the user. If you also implement systemd socket
     // activation (see below), any other sockets can be used.
-    static const char c_IPCOM_socket_name[] = "ipcom.socket";
+    static const char c_IPCOM_socket_name[] = "@ipcom.socket";
 
     // Communication between processes requires the use of the Extern
     // interface and auxillary factories for creating passthrough local
@@ -84,7 +84,7 @@ void TestApp::process_args (argc_t argc [[maybe_unused]], argv_t argv [[maybe_un
 	// Automated testing in the Makefile will run only ipcom, so
 	// the server is launched manually here on a private pipe.
 	//
-	if (0 > _eclient.launch_pipe ("ipcomsrv", "-p"))
+	if (0 > _eclient.launch_pipe ("ipcomsrv"))
 	    return error_libc ("launch_pipe");
 
     // Now wait for ExternR_connected

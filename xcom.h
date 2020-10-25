@@ -114,7 +114,7 @@ public:
     fd_t	connect_local_ip6 (in_port_t port) const;
     fd_t	connect_system_local (const char* sockname) const;
     fd_t	connect_user_local (const char* sockname) const;
-    fd_t	launch_pipe (const char* exe, const char* arg) const;
+    fd_t	launch_pipe (const char* exe, const char* arg = nullptr) const;
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_open()) {
@@ -285,7 +285,7 @@ constexpr bool PExternR::dispatch (O* o, const Msg& msg) { // static
 //{{{ PExternServer
 
 class PExternServer : public Proxy {
-    DECLARE_INTERFACE (ExternServer, (open,"xib")(close,""))
+    DECLARE_INTERFACE (ExternServer, (listen,"xib")(accept,"xi")(close,""))
 public:
     using fd_t = PExtern::fd_t;
     enum class WhenEmpty : uint8_t { Remain, Close };
@@ -293,8 +293,11 @@ public:
     explicit	PExternServer (mrid_t caller)	: Proxy(caller),_sockname() {}
 		~PExternServer (void);
     void	close (void) const		{ send (m_close()); }
-    void	open (fd_t fd, const iid_t* eifaces, WhenEmpty whenempty = WhenEmpty::Close)
-		    { send (m_open(), eifaces, fd, whenempty); }
+    void	listen (fd_t fd, const iid_t* eifaces, WhenEmpty whenempty = WhenEmpty::Close) const
+		    { send (m_listen(), uint64_t(eifaces), fd, whenempty); }
+    void	accept (fd_t fd, const iid_t* eifaces) const
+		    { send (m_accept(), uint64_t(eifaces), fd); }
+
     fd_t	bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) NONNULL();
     fd_t	bind_local (const char* path, const iid_t* eifaces) NONNULL();
     fd_t	bind_user_local (const char* sockname, const iid_t* eifaces) NONNULL();
@@ -303,14 +306,36 @@ public:
     fd_t	bind_local_ip4 (in_port_t port, const iid_t* eifaces) NONNULL();
     fd_t	bind_ip6 (in6_addr ip, in_port_t port, const iid_t* eifaces) NONNULL();
     fd_t	bind_local_ip6 (in_port_t port, const iid_t* eifaces) NONNULL();
+
+    fd_t	activate (const iid_t* eifaces) NONNULL();
+    fd_t	activate_local (const char* path, const iid_t* eifaces)
+		    { auto fd = activate (eifaces); return fd ? fd : bind_local (path, eifaces); }
+    fd_t	activate_user_local (const char* sockname, const iid_t* eifaces)
+		    { auto fd = activate (eifaces); return fd ? fd : bind_user_local (sockname, eifaces); }
+    fd_t	activate_system_local (const char* sockname, const iid_t* eifaces)
+		    { auto fd = activate (eifaces); return fd ? fd : bind_system_local (sockname, eifaces); }
+    fd_t	activate_ip4 (in_addr_t ip, in_port_t port, const iid_t* eifaces)
+		    { auto fd = activate (eifaces); return fd ? fd : bind_ip4 (ip, port, eifaces); }
+    fd_t	activate_local_ip4 (in_port_t port, const iid_t* eifaces)
+		    { auto fd = activate (eifaces); return fd ? fd : bind_local_ip4 (port, eifaces); }
+    fd_t	activate_ip6 (in6_addr ip, in_port_t port, const iid_t* eifaces)
+		    { auto fd = activate (eifaces); return fd ? fd : bind_ip6 (ip, port, eifaces); }
+    fd_t	activate_local_ip6 (in_port_t port, const iid_t* eifaces)
+		    { auto fd = activate (eifaces); return fd ? fd : bind_local_ip6 (port, eifaces); }
+
     template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) {
-	if (msg.method() == m_open()) {
+    inline static bool dispatch (O* o, const Msg& msg) {
+	if (msg.method() == m_listen()) {
 	    auto is = msg.read();
-	    auto eifaces = is.read<const iid_t*>();
+	    auto eifaces = (const iid_t*)(is.read<uint64_t>());
 	    auto fd = is.read<fd_t>();
 	    auto closeWhenEmpty = is.read<WhenEmpty>();
-	    o->ExternServer_open (fd, eifaces, closeWhenEmpty);
+	    o->ExternServer_listen (fd, eifaces, closeWhenEmpty);
+	} else if (msg.method() == m_accept()) {
+	    auto is = msg.read();
+	    auto eifaces = (const iid_t*)(is.read<uint64_t>());
+	    auto fd = is.read<fd_t>();
+	    o->ExternServer_accept (fd, eifaces);
 	} else if (msg.method() == m_close())
 	    o->ExternServer_close();
 	else
@@ -327,16 +352,21 @@ private:
 class ExternServer : public Msger {
 public:
     using fd_t = PExternServer::fd_t;
-    enum { f_CloseWhenEmpty = Msger::f_Last, f_Last };
+    enum { f_ListenWhenEmpty = Msger::f_Last, f_Last };
 public:
     explicit		ExternServer (const Msg::Link& l)
 			    : Msger(l),_conns(),_eifaces(),_timer (l.dest),_reply (l),_sockfd (-1) {}
     bool		on_error (mrid_t eid, const string& errmsg) override;
     void		on_msger_destroyed (mrid_t mid) override;
     bool		dispatch (Msg& msg) override;
+private:
+			friend class PTimerR;
     inline void		TimerR_timer (fd_t);
-    inline void		ExternServer_open (fd_t fd, const iid_t* eifaces, PExternServer::WhenEmpty whenempty);
+			friend class PExternServer;
+    inline void		ExternServer_listen (fd_t fd, const iid_t* eifaces, PExternServer::WhenEmpty whenempty);
+    inline void		ExternServer_accept (int fd, const iid_t* eifaces);
     inline void		ExternServer_close (void);
+			friend class PExternR;
     inline void		ExternR_connected (const Extern::Info* einfo);
 private:
     vector<PExtern>	_conns;

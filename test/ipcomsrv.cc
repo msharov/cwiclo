@@ -18,10 +18,9 @@ public:
 			    { return PExternR::dispatch (this, msg) || App::dispatch (msg); }
     inline void		ExternR_connected (const Extern::Info*);
 private:
-			TestApp (void) : App(), _eserver (mrid_App), _epipe (mrid_App) {}
+			TestApp (void) : App(), _eserver (mrid_App) {}
 private:
     PExternServer	_eserver;
-    PExtern		_epipe;
 };
 
 BEGIN_CWICLO_APP (TestApp)
@@ -34,20 +33,15 @@ END_CWICLO_APP
 
 void TestApp::process_args (argc_t argc, argv_t argv)
 {
-    bool is_private_pipe = false;
-    for (int opt; 0 < (opt = getopt (argc, argv, "pd"));) {
-	if (opt == 'p')
-	    is_private_pipe = true;
-	#ifndef NDEBUG
-	    else if (opt == 'd')
-		set_flag (f_DebugMsgTrace);
-	#endif
+    for (int opt; 0 < (opt = getopt (argc, argv, "d"));) {
+	if (opt == 'd')
+	    set_flag (f_DebugMsgTrace);
 	else {
-	    printf ("Usage: ipcom [-p]\n"
-		    #ifndef NDEBUG
-			"  -d\tenable debug tracing\n"
-		    #endif
-		    "  -p\tattach to socket pipe on stdin\n");
+	    puts ("Usage: ipcom"
+		#ifndef NDEBUG
+		    "\n  -d\tenable debug tracing"
+		#endif
+		);
 	    exit (EXIT_SUCCESS);
 	}
     }
@@ -62,7 +56,7 @@ void TestApp::process_args (argc_t argc, argv_t argv)
     // locations; typically /run for root processes or /run/user/<uid> for
     // processes launched by the user. If you also implement systemd socket
     // activation (see below), any other sockets can be used.
-    static const char c_IPCOM_socket_name[] = "ipcom.socket";
+    static const char c_IPCOM_socket_name[] = "@ipcom.socket";
 
     // When writing a server, it is recommended to use the ExternServer
     // object to manage the sockets being listened to. It will create
@@ -70,30 +64,16 @@ void TestApp::process_args (argc_t argc, argv_t argv)
     // this example, only one socket is listened on, but additional
     // ExternServer objects can be created to serve on more sockets.
     //
-    // ExternServer will listen on a socket. For a private pipe, accept
-    // is not required, and only an Extern Msger is needed to directly
-    // bind to the pipe file descriptor.
+    // The activate calls are the recommended implementation method.
+    // They support systemd socket activation and will try that first.
+    // If no sockets are passed in, then the named socket is created.
+    // Here, activate_user_local will create ipcom.socket in
+    // XDG_RUNTIME_DIR. Abstract sockets are supported with @names.
     //
-    if (is_private_pipe)
-	_epipe.open (STDIN_FILENO, eil_Ping);
-    // 
-    // For flexibility it is recommended to implement systemd socket activation.
-    // Doing so is very simple; sd_listen_fds returns the number of fds passed to
-    // the process by systemd. The fds start at SD_LISTEN_FDS_START. To keep the
-    // example simple, only the first one is used; create more ExternServer objects
-    // to listen on more than one socket.
+    // PExternServer calls return the fd of the new socket, -1 on failure.
     //
-    else if (sd_listen_fds())
-	_eserver.open (SD_LISTEN_FDS_START+0, eil_Ping);
-    //
-    // If no sockets were passed from systemd, create one manually
-    // Use bind_user_local to create the socket in XDG_RUNTIME_DIR,
-    // the standard location for sockets of user services.
-    // See other bind variants in PExternServer declaration.
-    // Each returns the fd of the new socket, -1 on failure.
-    //
-    else if (0 > _eserver.bind_user_local (c_IPCOM_socket_name, eil_Ping))
-	return error_libc ("bind_user_local");
+    if (0 > _eserver.activate_user_local (c_IPCOM_socket_name, eil_Ping))
+	return error_libc ("activate_user_local");
 }
 
 void TestApp::ExternR_connected (const Extern::Info*)

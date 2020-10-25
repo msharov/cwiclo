@@ -60,14 +60,23 @@ auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) const -> fd_t
 /// Create local socket with given path
 auto PExtern::connect_local (const char* path) const -> fd_t
 {
+    #ifndef __linux__
+	if (path[0] == '@')
+	    ++path;
+    #endif
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    if (size(addr.sun_path) <= unsigned (snprintf (ARRAY_BLOCK(addr.sun_path), "%s", path))) {
+    unsigned pathlen = snprintf (ARRAY_BLOCK(addr.sun_path), "%s", path);
+    if (size(addr.sun_path) <= pathlen) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
     DEBUG_PRINTF ("[X] connecting to socket %s\n", addr.sun_path);
-    return connect (pointer_cast<sockaddr>(&addr), sizeof(addr));
+    #ifdef __linux__
+	if (addr.sun_path[0] == '@')
+	    addr.sun_path[0] = 0;
+    #endif
+    return connect (pointer_cast<sockaddr>(&addr), sizeof(addr.sun_family)+pathlen);
 }
 
 /// Create local socket of the given name in the system standard location for such
@@ -75,12 +84,23 @@ auto PExtern::connect_system_local (const char* sockname) const -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    if (size(addr.sun_path) <= unsigned (snprintf (ARRAY_BLOCK(addr.sun_path), _PATH_VARRUN "%s", sockname))) {
+
+    auto psockpath = begin (addr.sun_path);
+    auto sockpathsz = size (addr.sun_path);
+    if (sockname[0] == '@') {
+	++sockname;
+	#ifdef __linux__
+	    --sockpathsz;
+	    *psockpath++ = 0;
+	#endif
+    }
+    unsigned pathlen = snprintf (psockpath, sockpathsz, _PATH_VARRUN "%s", sockname);
+    if (sockpathsz <= pathlen) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
-    DEBUG_PRINTF ("[X] connecting to socket %s\n", addr.sun_path);
-    return connect (pointer_cast<sockaddr>(&addr), sizeof(addr));
+    DEBUG_PRINTF ("[X] connecting to socket %s\n", psockpath);
+    return connect (pointer_cast<sockaddr>(&addr), psockpath+pathlen-pointer_cast<char>(&addr));
 }
 
 /// Create local socket of the given name in the user standard location for such
@@ -88,15 +108,24 @@ auto PExtern::connect_user_local (const char* sockname) const -> fd_t
 {
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    const char* runtimedir = getenv ("XDG_RUNTIME_DIR");
-    if (!runtimedir)
-	runtimedir = _PATH_TMP;
-    if (size(addr.sun_path) <= unsigned (snprintf (ARRAY_BLOCK(addr.sun_path), "%s/%s", runtimedir, sockname))) {
+
+    auto psockpath = begin (addr.sun_path);
+    auto sockpathsz = size (addr.sun_path);
+    if (sockname[0] == '@') {
+	++sockname;
+	#ifdef __linux__
+	    --sockpathsz;
+	    *psockpath++ = 0;
+	#endif
+    }
+    auto rundir = getenv ("XDG_RUNTIME_DIR");
+    unsigned pathlen = snprintf (psockpath, sockpathsz, "%s/%s", rundir ? rundir : _PATH_TMP, sockname);
+    if (sockpathsz <= pathlen) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
-    DEBUG_PRINTF ("[X] connecting to socket %s\n", addr.sun_path);
-    return connect (pointer_cast<sockaddr>(&addr), sizeof(addr));
+    DEBUG_PRINTF ("[X] connecting to socket %s\n", psockpath);
+    return connect (pointer_cast<sockaddr>(&addr), psockpath+pathlen-pointer_cast<char>(&addr));
 }
 
 auto PExtern::connect_ip4 (in_addr_t ip, in_port_t port) const -> fd_t
@@ -161,14 +190,25 @@ auto PExtern::launch_pipe (const char* exe, const char* arg) const -> fd_t
 	::close (socks[socket_ClientSide]);
 	::close (socks[socket_ServerSide]);
 	return -1;
-    } else if (!fr) {	// Server side
+    } else if (!fr) {
+	// Server side
 	chdir ("/");
-	dup2 (socks[socket_ServerSide], STDIN_FILENO);
-	closefrom (STDERR_FILENO+1);
-	execlp (exe, exe, arg, NULL);
+
+	// setup socket-activation-style fd passing
+	char pids [12];
+	snprintf (ARRAY_BLOCK(pids), "%d", getpid());
+	setenv ("LISTEN_PID", pids, true);
+	setenv ("LISTEN_FDS", "1", true);
+	setenv ("LISTEN_FDNAMES", "connection", true);
+
+	const fd_t fd = SD_LISTEN_FDS_START+0;
+	dup2 (socks[socket_ServerSide], fd);
+	closefrom (fd+1);
+
+	execlp (exe, exe, arg, nullptr);
 
 	// If exec failed, log the error and exit
-	Msger::error ("failed to launch pipe to '%s %s': %s", exe, arg, strerror(errno));
+	Msger::error ("failed to launch pipe to '%s': %s", exe, strerror(errno));
 	exit (EXIT_FAILURE);
     }
     // Client side
@@ -810,6 +850,29 @@ PExternServer::~PExternServer (void)
 	unlink (_sockname.c_str());
 }
 
+/// Socket activation
+auto PExternServer::activate (const iid_t* eifaces) -> fd_t
+{
+    // First check if socket activation is enabled
+    if (auto e = getenv("LISTEN_PID"); !e || getpid() != pid_t(atoi(e)))
+	return 0;	// normal return values will always be > SD_LISTEN_FDS_START
+
+    // Not having LISTEN_FDS or having more than one are errors
+    // Multiple sockets must be handled with an array of PExternServers
+    if (auto e = getenv("LISTEN_FDS"); !e || 1 != atoi(e)) {
+	errno = EBADF;
+	return -1;
+    }
+    const fd_t fd = SD_LISTEN_FDS_START+0;
+
+    // Passed in sockets are either already accepted, when named "connection"
+    if (auto e = getenv("LISTEN_FDNAMES"); e && 0 == strcmp(e, "connection"))
+	accept (fd, eifaces);
+    else // or they are to be listened on
+	listen (fd, eifaces);
+    return fd;
+}
+
 /// Create server socket bound to the given address
 auto PExternServer::bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) -> fd_t
 {
@@ -821,66 +884,68 @@ auto PExternServer::bind (const sockaddr* addr, socklen_t addrlen, const iid_t* 
 	::close (fd);
 	return -1;
     }
-    if (0 > listen (fd, SOMAXCONN)) {
+    if (0 > ::listen (fd, min (SOMAXCONN, 64))) {
 	DEBUG_PRINTF ("[E] Failed to listen to socket: %s\n", strerror(errno));
 	::close (fd);
 	return -1;
     }
-    if (addr->sa_family == PF_LOCAL)
-	_sockname = pointer_cast<sockaddr_un>(addr)->sun_path;
-    open (fd, eifaces, WhenEmpty::Remain);
+    listen (fd, eifaces, WhenEmpty::Remain);
     return fd;
 }
 
 /// Create local socket with given path
 auto PExternServer::bind_local (const char* path, const iid_t* eifaces) -> fd_t
 {
+    #ifndef __linux__
+	// Abstract sockets are linux-specific. Fallback to normal name.
+	if (path[0] == '@')
+	    ++path;
+    #endif
     sockaddr_un addr;
     addr.sun_family = PF_LOCAL;
-    if (size(addr.sun_path) <= unsigned (snprintf (ARRAY_BLOCK(addr.sun_path), "%s", path))) {
+    unsigned pathlen = snprintf (ARRAY_BLOCK(addr.sun_path), "%s", path);
+    if (size(addr.sun_path) <= pathlen) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
-    DEBUG_PRINTF ("[X] Creating server socket %s\n", addr.sun_path);
-    auto fd = bind (pointer_cast<sockaddr>(&addr), sizeof(addr), eifaces);
-    if (0 > chmod (addr.sun_path, DEFFILEMODE))
-	DEBUG_PRINTF ("[E] Failed to change socket permissions: %s\n", strerror(errno));
+    #ifdef __linux__
+	if (addr.sun_path[0] == '@')
+	    addr.sun_path[0] = 0;
+    #endif
+    DEBUG_PRINTF ("[X] Creating server socket %s\n", path);
+    auto fd = bind (pointer_cast<sockaddr>(&addr), sizeof(addr.sun_family)+pathlen, eifaces);
+    if (fd < 0 || path[0] == '@')
+	_sockname.clear();
+    else {
+	_sockname = path;
+	chmod (path, DEFFILEMODE);
+    }
     return fd;
 }
 
 /// Create local socket of the given name in the system standard location for such
 auto PExternServer::bind_system_local (const char* sockname, const iid_t* eifaces) -> fd_t
 {
-    sockaddr_un addr;
-    addr.sun_family = PF_LOCAL;
-    if (size(addr.sun_path) <= unsigned (snprintf (ARRAY_BLOCK(addr.sun_path), _PATH_VARRUN "%s", sockname))) {
-	errno = ENAMETOOLONG;
-	return -1;
+    _sockname.clear();
+    if (sockname[0] == '@') {
+	++sockname;
+	_sockname += '@';
     }
-    DEBUG_PRINTF ("[X] Creating server socket %s\n", addr.sun_path);
-    auto fd = bind (pointer_cast<sockaddr>(&addr), sizeof(addr), eifaces);
-    if (0 > chmod (addr.sun_path, DEFFILEMODE))
-	DEBUG_PRINTF ("[E] Failed to change socket permissions: %s\n", strerror(errno));
-    return fd;
+    _sockname.appendf (_PATH_VARRUN "%s", sockname);
+    return bind_local (_sockname.c_str(), eifaces);
 }
 
 /// Create local socket of the given name in the user standard location for such
 auto PExternServer::bind_user_local (const char* sockname, const iid_t* eifaces) -> fd_t
 {
-    sockaddr_un addr;
-    addr.sun_family = PF_LOCAL;
-    const char* runtimeDir = getenv ("XDG_RUNTIME_DIR");
-    if (!runtimeDir)
-	runtimeDir = _PATH_TMP;
-    if (size(addr.sun_path) <= unsigned (snprintf (ARRAY_BLOCK(addr.sun_path), "%s/%s", runtimeDir, sockname))) {
-	errno = ENAMETOOLONG;
-	return -1;
+    _sockname.clear();
+    if (sockname[0] == '@') {
+	++sockname;
+	_sockname += '@';
     }
-    DEBUG_PRINTF ("[X] Creating server socket %s\n", addr.sun_path);
-    auto fd = bind (pointer_cast<sockaddr>(&addr), sizeof(addr), eifaces);
-    if (0 > chmod (addr.sun_path, S_IRUSR| S_IWUSR))
-	DEBUG_PRINTF ("[E] Failed to change socket permissions: %s\n", strerror(errno));
-    return fd;
+    auto rundir = getenv ("XDG_RUNTIME_DIR");
+    _sockname.appendf ("%s/%s", rundir ? rundir : _PATH_TMP, sockname);
+    return bind_local (_sockname.c_str(), eifaces);
 }
 
 /// Create local IPv4 socket at given ip and port
@@ -937,7 +1002,7 @@ void ExternServer::on_msger_destroyed (mrid_t mid)
 {
     DEBUG_PRINTF ("[X] Client connection %hu dropped\n", mid);
     remove_if (_conns, [&](const auto& e) { return e.dest() == mid; });
-    if (_conns.empty() && flag (f_CloseWhenEmpty))
+    if (_conns.empty() && !flag (f_ListenWhenEmpty))
 	set_unused();
 }
 
@@ -951,11 +1016,8 @@ bool ExternServer::dispatch (Msg& msg)
 
 void ExternServer::TimerR_timer (PTimer::fd_t)
 {
-    for (int cfd; 0 <= (cfd = accept (_sockfd, nullptr, nullptr));) {
-	DEBUG_PRINTF ("[X] Client connection accepted on fd %d\n", cfd);
-	_conns.emplace_back (msger_id()).open (cfd, _eifaces);
-	set_unused (false);
-    }
+    for (int cfd; 0 <= (cfd = accept (_sockfd, nullptr, nullptr));)
+	ExternServer_accept (cfd, _eifaces);
     if (errno == EAGAIN) {
 	DEBUG_PRINTF ("[X] Resuming wait on fd %d\n", _sockfd);
 	_timer.wait_read (_sockfd);
@@ -965,15 +1027,22 @@ void ExternServer::TimerR_timer (PTimer::fd_t)
     }
 }
 
-void ExternServer::ExternServer_open (int fd, const iid_t* eifaces, PExternServer::WhenEmpty closeWhenEmpty)
+void ExternServer::ExternServer_listen (int fd, const iid_t* eifaces, PExternServer::WhenEmpty closeWhenEmpty)
 {
     assert (_sockfd == -1 && "each ExternServer instance can only listen to one socket");
     if (PTimer::make_nonblocking (fd))
 	return error_libc ("fcntl(SETFL(O_NONBLOCK))");
     _sockfd = fd;
     _eifaces = eifaces;
-    set_flag (f_CloseWhenEmpty, bool(closeWhenEmpty));
+    set_flag (f_ListenWhenEmpty, !bool(closeWhenEmpty));
     TimerR_timer (_sockfd);
+}
+
+void ExternServer::ExternServer_accept (int fd, const iid_t* eifaces)
+{
+    DEBUG_PRINTF ("[X] Client connection accepted on fd %d\n", fd);
+    set_unused (false);
+    _conns.emplace_back (msger_id()).open (fd, eifaces);
 }
 
 void ExternServer::ExternServer_close (void)
