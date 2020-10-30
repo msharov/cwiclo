@@ -145,6 +145,7 @@ void App::errorv (const char* fmt, va_list args)
 {
     bool isFirst = _errors.empty();
     _errors.appendv (fmt, args);
+    DEBUG_PRINTF ("[E] Error: %s\n", _errors.c_str());
     if (isFirst)
 	print_backtrace();
 }
@@ -156,6 +157,7 @@ bool App::forward_error (mrid_t oid, mrid_t eoid)
     if (!m)
 	return false;
     if (m->on_error (eoid, errors())) {
+	DEBUG_PRINTF ("[E] Error handled.\n");
 	_errors.clear();	// error handled; clear message
 	return true;
     }
@@ -222,10 +224,10 @@ Msger* App::create_msger_with (const Msg::Link& l, iid_t iid [[maybe_unused]], M
     #ifndef NDEBUG	// Log failure to create in debug mode
 	if (!r && (!iid || !iid[0] || iid[iid[-1]-1] != 'R')) { // reply messages do not recreate dead Msgers
 	    if (!fac) {
-		DEBUG_PRINTF ("Error: no factory registered for interface %s\n", iid ? iid : "(iid_null)");
+		DEBUG_PRINTF ("[E] No factory registered for interface %s\n", iid ? iid : "(iid_null)");
 		assert (!"Unable to find factory for the given interface. You must register a Msger for every interface you use using REGISTER_MSGER in the BEGIN_MSGER/END_MSGER block.");
 	    } else {
-		DEBUG_PRINTF ("Error: failed to create Msger for interface %s\n", iid ? iid : "(iid_null)");
+		DEBUG_PRINTF ("[E] Failed to create Msger for interface %s\n", iid ? iid : "(iid_null)");
 		assert (!"Failed to create Msger for the given destination. Msger constructors are not allowed to fail or throw.");
 	    }
 	} else
@@ -331,7 +333,7 @@ void App::process_input_queue (void)
 	auto mg = 0u, mgend = _msgers.size();
 	if (msg.dest() != mrid_Broadcast) {
 	    if (!valid_msger_id (msg.dest())) {
-		DEBUG_PRINTF ("Error: invalid message destination %hu. Ignoring message.\n", msg.dest());
+		DEBUG_PRINTF ("[E] Invalid message destination %hu. Ignoring message.\n", msg.dest());
 		continue; // Error was reported in allocate_mrid
 	    }
 	    mg = msg.dest();
@@ -345,7 +347,7 @@ void App::process_input_queue (void)
 	    auto accepted = msger->dispatch (msg);
 
 	    if (!accepted && msg.dest() != mrid_Broadcast)
-		DEBUG_PRINTF ("Error: message delivered, but not accepted by the destination Msger.\nDid you forget to add the interface to the dispatch override?\n");
+		DEBUG_PRINTF ("[E] Message delivered, but not accepted by the destination Msger.\nDid you forget to add the interface to the dispatch override?\n");
 
 	    // Check for errors generated during this dispatch
 	    if (!errors().empty() && !forward_error (mg, mg))
