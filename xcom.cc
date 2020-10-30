@@ -654,6 +654,10 @@ COMRelay::~COMRelay (void)
 
 bool COMRelay::dispatch (Msg& msg)
 {
+    // Broadcast messages are never exported or imported
+    if (msg.dest() == mrid_Broadcast)
+	return true;
+
     // COM messages are processed here
     if (PCOM::dispatch (this, msg))
 	return true;
