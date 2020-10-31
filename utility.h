@@ -199,6 +199,10 @@ template <typename T>
 constexpr const T& max (const T& a, const type_identity_t<T>& b)
     { return b < a ? a : b; }
 
+template <typename T>
+constexpr const T& clamp (const T& v, const type_identity_t<T>& lo, const type_identity_t<T>& hi)
+    { return min (max (v, lo), hi); }
+
 //}}}----------------------------------------------------------------------
 //{{{ sign and absv
 

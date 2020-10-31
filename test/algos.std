@@ -1,0 +1,65 @@
+{ 1 2 3 4 5 6 7 8 9 10 10 11 12 13 13 14 15 16 17 18 }
+swap(1,2)
+{ 2 1 3 4 5 6 7 8 9 10 10 11 12 13 13 14 15 16 17 18 }
+copy(0,8,9)
+{ 1 2 3 4 5 6 7 8 9 1 2 3 4 5 6 7 8 16 17 18 }
+copy_n(0,8,9)
+{ 1 2 3 4 5 6 7 8 9 1 2 3 4 5 6 7 8 16 17 18 }
+find(10)
+10 found at offset 9
+find_if(!(v%5))
+5 found at offset 4
+find_if_not(v<10)
+10 found at offset 9
+count(13)
+2 values of 13, 1 values of 18
+replace(13,666)
+{ 1 2 3 4 5 6 7 8 9 10 10 11 12 666 666 14 15 16 17 18 }
+fill(13)
+{ 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 13 }
+fill_n(5, 13)
+{ 13 13 13 13 13 6 7 8 9 10 10 11 12 13 13 14 15 16 17 18 }
+fill 64083 uint8_t(0x41) works
+fill 64083 uint16_t(0x4142) works
+fill 64083 uint32_t(0x41424344) works
+fill 64083 float(0.4242) works
+fill 64083 uint64_t(0x4142434445464748) works
+copy 64083 uint8_t(0x41) works
+copy 64083 uint16_t(0x4142) works
+copy 64083 uint32_t(0x41424344) works
+copy 64083 float(0.4242) works
+copy 64083 uint64_t(0x4142434445464748) works
+merge with (3,5,10,11,11,14)
+{ 1 2 3 3 4 5 5 6 7 8 9 10 10 10 11 11 11 12 13 13 14 14 15 16 17 18 }
+inplace_merge with (3,5,10,11,11,14)
+{ 1 2 3 3 4 5 5 6 7 8 9 10 10 10 11 11 11 12 13 13 14 14 15 16 17 18 }
+remove(13)
+{ 1 2 3 4 5 6 7 8 9 10 10 11 12 14 15 16 17 18 }
+unique
+{ 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 }
+reverse
+{ 18 17 16 15 14 13 13 12 11 10 10 9 8 7 6 5 4 3 2 1 }
+lower_bound(10)
+{ 1 2 3 4 5 6 7 8 9 10 10 11 12 13 13 14 15 16 17 18 }
+10 begins at position 9
+upper_bound(10)
+{ 1 2 3 4 5 6 7 8 9 10 10 11 12 13 13 14 15 16 17 18 }
+10 ends at position 11
+sort
+{ 18 17 16 15 14 13 13 12 11 10 10 9 8 7 6 5 4 3 2 1 }
+{ 1 2 3 4 5 6 7 8 9 10 10 11 12 13 13 14 15 16 17 18 }
+stable_sort
+{ 18 17 16 15 14 13 13 12 11 10 10 9 8 7 6 5 4 3 2 1 }
+{ 1 2 3 4 5 6 7 8 9 10 10 11 12 13 13 14 15 16 17 18 }
+is_sorted
+unsorted=false, sorted=true
+find_first_of
+found 14 at position 15
+max element is 18
+min element is 1
+reverse_copy
+{ 18 17 16 15 14 13 13 12 11 10 10 9 8 7 6 5 4 3 2 1 }
+rotate_copy
+{ 7 8 9 10 10 11 12 13 13 14 15 16 17 18 1 2 3 4 5 6 }
+equal(0,9,0) = 1
+accumulate(0,18,3) = 213

@@ -63,6 +63,8 @@ int mkpath (const char* path, mode_t mode)
 	return -1;
     for (auto f = begin(pbuf), l = f+n; f < l; ++f) {
 	f = find (f, l, '/');
+	if (!f)
+	    f = l;
 	*f = 0;
 	if (0 > mkdir (pbuf, mode) && errno != EEXIST)
 	    return -1;

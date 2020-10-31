@@ -65,6 +65,10 @@ min(3,4) = 3
 min(6u,1u) = 1
 max(-3,-6) = -3
 max(-3l,6l) = 6
+clamp(3,4,6) = 4
+clamp(6u,5u,6u) = 6
+clamp(-3,-10,-6) = -6
+clamp(-3l,-6l,6l) = -3
 
 equal(abcd,abcd) = 1
 equal(abcd,acbd) = 0

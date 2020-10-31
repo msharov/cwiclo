@@ -279,26 +279,30 @@ public:
 };
 
 //}}}-------------------------------------------------------------------
-//{{{ Searching algorithms
+//{{{ scope_exit
+
+template <typename F>
+class scope_exit {
+public:
+    constexpr explicit	scope_exit (F&& f)		: _f(move(f)),_enabled(true) {}
+    constexpr		scope_exit (scope_exit&& f)	: _f(move(f._f)),_enabled(f._enabled) { f.release(); }
+    constexpr void	release (void)			{ _enabled = false; }
+    inline		~scope_exit (void)		{ if (_enabled) _f(); }
+    scope_exit&		operator= (scope_exit&&) = delete;
+private:
+    F		_f;
+    bool	_enabled;
+};
+
+template <typename F>
+constexpr auto make_scope_exit (F&& f)
+    { return scope_exit<remove_reference_t<F>>(forward<F>(f)); }
+
+//}}}-------------------------------------------------------------------
+//{{{ Searching
 
 template <typename I, typename T>
-constexpr auto find (I f, I l, const T& v)
-{
-    while (f < l && !(*f == v))
-	advance(f);
-    return f;
-}
-
-template <typename I, typename P>
-constexpr auto find_if (I f, I l, P p)
-{
-    while (f < l && !p(*f))
-	advance(f);
-    return f;
-}
-
-template <typename I, typename T>
-constexpr I linear_search (I f, I l, const T& v)
+constexpr I find (I f, I l, const T& v)
 {
     for (; f < l; advance(f))
 	if (*f == v)
@@ -307,11 +311,30 @@ constexpr I linear_search (I f, I l, const T& v)
 }
 
 template <typename I, typename P>
-constexpr I linear_search_if (I f, I l, P p)
+constexpr I find_if (I f, I l, P p)
 {
     for (; f < l; advance(f))
 	if (p(*f))
 	    return f;
+    return nullptr;
+}
+
+template <typename I, typename P>
+constexpr I find_if_not (I f, I l, P p)
+{
+    for (; f < l; advance(f))
+	if (!p(*f))
+	    return f;
+    return nullptr;
+}
+
+template <typename I, typename J>
+constexpr I find_first_of (I f1, I l1, J f2, J l2)
+{
+    for (; f1 < l1; ++f1)
+	for (auto i = f2; i < l2; ++i)
+	    if (*f1 == *i)
+		return f1;
     return nullptr;
 }
 
@@ -348,33 +371,15 @@ constexpr auto upper_bound (I f, I l, const T& v)
     return l;
 }
 
-template <typename T>
-constexpr int c_compare (const void* p1, const void* p2)
-{
-    auto& v1 = *static_cast<const T*>(p1);
-    auto& v2 = *static_cast<const T*>(p2);
-    return v1 < v2 ? -1 : (v2 < v1 ? 1 : 0);
-}
-
-template <typename I>
-constexpr void sort (I f, I l)
-{
-    using value_type = typename iterator_traits<I>::value_type;
-    qsort (f, distance(f,l), sizeof(value_type), c_compare<value_type>);
-}
-
 template <typename C, typename T>
 inline constexpr auto find (C& c, const T& v)
     { return find (begin(c), end(c), v); }
 template <typename C, typename P>
 inline constexpr auto find_if (C& c, P p)
     { return find_if (begin(c), end(c), move(p)); }
-template <typename C, typename T>
-inline constexpr auto linear_search (C& c, const T& v)
-    { return linear_search (begin(c), end(c), v); }
 template <typename C, typename P>
-inline constexpr auto linear_search_if (C& c, P p)
-    { return linear_search_if (begin(c), end(c), move(p)); }
+inline constexpr auto find_if_not (C& c, P p)
+    { return find_if_not (begin(c), end(c), move(p)); }
 template <typename C, typename T>
 inline constexpr auto lower_bound (C& c, const T& v)
     { return lower_bound (begin(c), end(c), v); }
@@ -384,17 +389,17 @@ inline constexpr auto upper_bound (C& c, const T& v)
 template <typename C, typename T>
 inline constexpr auto binary_search (C& c, const T& v)
     { return binary_search (begin(c), end(c), v); }
-template <typename C>
-inline constexpr void sort (C& c)
-    { sort (begin(c), end(c)); }
+
+//}}}-------------------------------------------------------------------
+//{{{ Comparisons
 
 template <typename I1, typename I2>
 bool equal_n (I1 i1, size_t n, I2 i2)
 {
-    using value1_type = make_unsigned_t<remove_const_t<typename iterator_traits<I1>::value_type>>;
-    using value2_type = make_unsigned_t<remove_const_t<typename iterator_traits<I2>::value_type>>;
-    if constexpr (is_trivially_assignable<value1_type>::value && is_same<value1_type,value2_type>::value)
-	return zstr::compare (i1, i2, n *= sizeof(value1_type));
+    using v1_type = make_unsigned_t<remove_const_t<typename iterator_traits<I1>::value_type>>;
+    using v2_type = make_unsigned_t<remove_const_t<typename iterator_traits<I2>::value_type>>;
+    if constexpr (is_trivially_assignable<v1_type>::value && is_same<v1_type,v2_type>::value)
+	return zstr::compare (i1, i2, n *= sizeof(v1_type));
     while (n--)
 	if (!(*i1++ == *i2++))
 	    return false;
@@ -416,61 +421,71 @@ template <typename C, typename I>
 inline bool equal (const C& c, I i)
     { return equal_n (begin(c), size(c), i); }
 
-//}}}-------------------------------------------------------------------
-//{{{ scope_exit
-
-template <typename F>
-class scope_exit {
-public:
-    constexpr explicit	scope_exit (F&& f)		: _f(move(f)),_enabled(true) {}
-    constexpr		scope_exit (scope_exit&& f)	: _f(move(f._f)),_enabled(f._enabled) { f.release(); }
-    constexpr void	release (void)			{ _enabled = false; }
-    inline		~scope_exit (void)		{ if (_enabled) _f(); }
-    scope_exit&		operator= (scope_exit&&) = delete;
-private:
-    F		_f;
-    bool	_enabled;
-};
-
-template <typename F>
-constexpr auto make_scope_exit (F&& f)
-    { return scope_exit<remove_reference_t<F>>(forward<F>(f)); }
-
-//}}}-------------------------------------------------------------------
-//{{{ Other algorithms
-
-template <typename C, typename T>
-void remove (C& c, const T& v)
+/// Returns true if the given range is sorted.
+template <typename I>
+constexpr bool is_sorted (I f, I l)
 {
-    for (auto i = c.cbegin(); i < c.cend(); ++i)
-	if (*i == v)
-	    --(i = c.erase(i));
+    for (auto i = f; ++i < l; ++f)
+	if (*i < *f)
+	    return false;
+    return true;
 }
+template <typename C>
+inline constexpr bool is_sorted (const C& c)
+    { return is_sorted (begin(c), end(c)); }
 
-template <typename C, typename P>
-void remove_if (C& c, P p)
+//}}}-------------------------------------------------------------------
+//{{{ Sorting
+
+template <typename T>
+constexpr int c_compare (const void* p1, const void* p2)
 {
-    for (auto i = c.cbegin(); i < c.cend(); ++i)
-	if (p(*i))
-	    --(i = c.erase(i));
+    auto& v1 = *static_cast<const T*>(p1);
+    auto& v2 = *static_cast<const T*>(p2);
+    return v1 < v2 ? -1 : (v2 < v1 ? 1 : 0);
 }
 
 template <typename I>
-void random_shuffle (I f, I l)
+constexpr void sort (I f, I l)
 {
-    for (; f < l; advance(f))
-	iter_swap (f, next (f,(rand() % size_t(distance(f,l)))));
+    using value_type = typename iterator_traits<I>::value_type;
+    qsort (f, distance(f,l), sizeof(value_type), c_compare<value_type>);
 }
+
+template <typename I>
+constexpr void stable_sort (I f, I l)
+{
+    for (I j, i = f; ++i < l;) { // Insertion sort
+	for (j = i; j-- > f && *i < *j;) {}
+	if (++j != i) rotate (j, i, i + 1);
+    }
+}
+
 template <typename C>
-inline void random_shuffle (C& c)
-    { random_shuffle (begin(c), end(c)); }
+inline constexpr void sort (C& c)
+    { sort (begin(c), end(c)); }
+template <typename C>
+inline constexpr void stable_sort (C& c)
+    { stable_sort (begin(c), end(c)); }
+
+//}}}-------------------------------------------------------------------
+//{{{ Numerical
 
 template <typename I, typename T>
-constexpr void iota (I f, I l, T v)
-    { for (; f < l; advance(f),advance(v)) *f = v; }
-template <typename C, typename T>
-constexpr void iota (C& c, T v)
-    { iota (begin(c), end(c), move(v)); }
+constexpr auto accumulate (I f, I l, T v)
+{
+    for (; f < l; advance(f))
+	v += *f;
+    return v;
+}
+
+template <typename I, typename T, typename P>
+constexpr auto accumulate (I f, I l, T v, P p)
+{
+    for (; f < l; advance(f))
+	v += p(v,*f);
+    return v;
+}
 
 template <typename I, typename T>
 constexpr auto count (I f, I l, const T& v)
@@ -498,6 +513,147 @@ template <typename C, typename P>
 constexpr auto count_if (const C& c, P p)
     { return count_if (begin(c), end(c), move(p)); }
 
+template <typename I, typename T>
+constexpr void iota (I f, I l, T v)
+    { for (; f < l; advance(f),advance(v)) *f = v; }
+template <typename C, typename T>
+constexpr void iota (C& c, T v)
+    { iota (begin(c), end(c), move(v)); }
+
+template <typename I>
+constexpr auto max_element (I f, I l)
+{
+    auto r = f;
+    for (; f < l; advance(f))
+	if (*r < *f)
+	    r = f;
+    return r;
+}
+
+template <typename I>
+constexpr auto min_element (I f, I l)
+{
+    auto r = f;
+    for (; f < l; advance(f))
+	if (*f < *r)
+	    r = f;
+    return r;
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ remove, reverse, rotate_copy
+
+template <typename C, typename T>
+void remove (C& c, const T& v)
+{
+    foreach (i, c)
+	if (*i == v)
+	    --(i = c.erase(i));
+}
+
+template <typename C, typename P>
+void remove_if (C& c, P p)
+{
+    foreach (i, c)
+	if (p(*i))
+	    --(i = c.erase(i));
+}
+
+template <typename I, typename O, typename T>
+constexpr auto remove_copy (I f, I l, O r, const T& v)
+{
+    for (; f < l; advance(f))
+	if (!(*f == v))
+	    *r++ = *f;
+    return r;
+}
+template <typename C, typename O, typename T>
+inline constexpr auto remove_copy (const C& c, O r, const T& v)
+    { return remove_copy (begin(c), end(c), r, v); }
+
+template <typename I, typename O, typename RI>
+constexpr auto remove_copy (I f, I l, O r, RI rf, RI rl)
+{
+    for (; f < l; advance(f))
+	if (!find (rf, rl, *f))
+	    *r++ = *f;
+    return r;
+}
+
+template <typename I>
+constexpr void reverse (I f, I l)
+{
+    while (f < --l)
+	iter_swap (f++, l);
+}
+template <typename C>
+inline constexpr void reverse (C& c)
+    { reverse (begin(c), end(c)); }
+
+template <typename I, typename O>
+constexpr O reverse_copy (I f, I l, O r)
+{
+    while (f < l)
+	*r++ = *--l;
+    return r;
+}
+template <typename C, typename O>
+inline constexpr auto reverse_copy (const C& c, O r)
+    { return reverse_copy (begin(c), end(c), r); }
+
+template <typename I, typename O>
+inline O rotate_copy (I f, I m, I l, O r)
+    { return copy (f, m, copy (m, l, r)); }
+
+//}}}-------------------------------------------------------------------
+//{{{ Merging
+
+/// Combines two sorted ranges from the same container.
+template <typename I>
+constexpr void inplace_merge (I f, I m [[maybe_unused]], I l)
+    { stable_sort (f, l); }
+
+template <typename I1, typename I2, typename O>
+O merge (I1 f1, I1 l1, I2 f2, I2 l2, O r)
+{
+    for (; f1 < l1 && f2 < l2; ++r) {
+	if (*f1 < *f2)
+	    *r = *f1++;
+	else
+	    *r = *f2++;
+    }
+    if (f1 < l1)
+	return copy (f1, l1, r);
+    else
+	return copy (f2, l2, r);
+}
+
+template <typename I, typename O>
+constexpr auto unique_copy (I f, I l, O r)
+{
+    if (f != l) {
+	*r = *f;
+	while (++f != l)
+	    if (!(*f == *r))
+		*++r = *f;
+	++r;
+    }
+    return r;
+}
+template <typename C, typename O>
+inline constexpr auto unique_copy (const C& c, O r)
+    { return unique_copy (begin(c), end(c), r); }
+
+template <typename I>
+inline constexpr auto unique (I f, I l)
+    { return unique_copy (f, l, f); }
+template <typename C>
+inline void unique (C& c)
+    { c.erase (unique (c.begin(), c.end()), c.end()); }
+
+//}}}-------------------------------------------------------------------
+//{{{ Transformation
+
 template <typename I, typename G>
 constexpr void generate_n (I f, size_t n, G g)
 {
@@ -514,6 +670,38 @@ constexpr void generate (I f, I l, G g)
 template <typename C, typename G>
 constexpr auto generate (C& c, G g)
     { return generate (begin(c), end(c), move(g)); }
+
+template <typename I>
+void random_shuffle (I f, I l)
+{
+    for (; f < l; advance(f))
+	iter_swap (f, next (f,(rand() % size_t(distance(f,l)))));
+}
+template <typename C>
+inline void random_shuffle (C& c)
+    { random_shuffle (begin(c), end(c)); }
+
+template <typename I, typename T>
+constexpr void replace (I f, I l, const T& ov, const T& nv)
+{
+    for (; f < l; advance(f))
+	if (*f == ov)
+	    *f = nv;
+}
+template <typename C, typename T>
+inline constexpr void replace (C& c, const T& ov, const T& nv)
+    { replace (begin(c), end(c), ov, nv); }
+
+template <typename I, typename O, typename T>
+constexpr auto replace_copy (I f, I l, O r, const T& ov, const T& nv)
+{
+    for (; f < l; advance(f), advance(r))
+	*r = (*f == ov ? nv : *f);
+    return r;
+}
+template <typename C, typename O, typename T>
+inline constexpr auto replace_copy (const C& c, O r, const T& ov, const T& nv)
+    { return replace_copy (begin(c), end(c), r, ov, nv); }
 
 //}}}-------------------------------------------------------------------
 //{{{ C utility functions
@@ -555,7 +743,6 @@ inline int complete_write (int fd, const void* p, size_t ntw)
 }
 
 } // namespace cwiclo
-//}}}-------------------------------------------------------------------
 extern "C" {
 
 #ifdef __linux__

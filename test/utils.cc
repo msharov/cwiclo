@@ -96,6 +96,10 @@ int TestApp::run (void)
     printf ("min(6u,1u) = %d\n", min(6u,1u));
     printf ("max(-3,-6) = %d\n", max(-3,-6));
     printf ("max(-3l,6l) = %ld\n", max(-3l,6l));
+    printf ("clamp(3,4,6) = %d\n", clamp(3,4,6));
+    printf ("clamp(6u,5u,6u) = %d\n", clamp(6u,5u,6u));
+    printf ("clamp(-3,-10,-6) = %d\n", clamp(-3,-10,-6));
+    printf ("clamp(-3l,-6l,6l) = %ld\n", clamp(-3l,-6l,6l));
 
     printf ("\nequal(abcd,abcd) = %u\n", equal("abcd","abcd"));
     printf ("equal(abcd,acbd) = %u\n", equal("abcd","acbd"));

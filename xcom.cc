@@ -172,13 +172,13 @@ void Extern::queue_outgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t f
 
 Extern::RelayProxy* Extern::relay_proxy_by_id (mrid_t id)
 {
-    return linear_search_if (_relays, [&](const auto& r)
+    return find_if (_relays, [&](const auto& r)
 	    { return r.relay.dest() == id; });
 }
 
 Extern::RelayProxy* Extern::relay_proxy_by_extid (extid_t extid)
 {
-    return linear_search_if (_relays, [&](const auto& r)
+    return find_if (_relays, [&](const auto& r)
 	    { return r.extid == extid; });
 }
 
@@ -200,21 +200,21 @@ void Extern::unregister_relay (const COMRelay* relay)
 
 Extern* Extern::lookup_by_id (mrid_t id) // static
 {
-    auto ep = linear_search_if (extern_list(), [&](const auto e)
+    auto ep = find_if (extern_list(), [&](const auto e)
 		{ return e->msger_id() == id; });
     return ep ? *ep : nullptr;
 }
 
 Extern* Extern::lookup_by_imported (iid_t iid) // static
 {
-    auto ep = linear_search_if (extern_list(), [&](const auto e)
+    auto ep = find_if (extern_list(), [&](const auto e)
 		{ return e->info().is_importing(iid); });
     return ep ? *ep : nullptr;
 }
 
 Extern* Extern::lookup_by_relay_id (mrid_t rid) // static
 {
-    auto ep = linear_search_if (extern_list(), [&](const auto e)
+    auto ep = find_if (extern_list(), [&](const auto e)
 		{ return nullptr != e->relay_proxy_by_id (rid); });
     return ep ? *ep : nullptr;
 }

@@ -92,7 +92,7 @@ public:
 	bool		is_unix_socket;
     public:
 	constexpr auto is_importing (iid_t iid) const
-	    { return linear_search (imported, iid); }
+	    { return find (imported, iid); }
 	constexpr bool is_exporting (iid_t iid) const {
 	    for (auto e = exported; e && *e; ++e)
 		if (*e == iid)

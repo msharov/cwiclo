@@ -22,7 +22,7 @@ int TestApp::run (void)
 {
     vector<string> v = { "Hello world!", "Hello again!", "element3", "element4", "element5_long_element5" };
 
-    auto bogusi = linear_search (v, "bogus");
+    auto bogusi = find (v, "bogus");
     if (bogusi)
 	printf ("bogus found at position %td\n", bogusi - v.begin());
 
@@ -30,10 +30,10 @@ int TestApp::run (void)
 
     if (v[2] != "element3")
 	printf ("operator== failed\n");
-    auto el3i = linear_search (v, string_view("element3"));
+    auto el3i = find (v, string_view("element3"));
     if (el3i)
 	printf ("%s found at position %td\n", el3i->c_str(), el3i - v.begin());
-    bogusi = linear_search (v, "bogus");
+    bogusi = find (v, "bogus");
     if (bogusi)
 	printf ("%s found at position %td\n", bogusi->c_str(), bogusi - v.begin());
 
