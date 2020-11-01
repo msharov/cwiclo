@@ -19,6 +19,8 @@ public:
     using const_reference	= const value_type&;
     using iterator		= pointer;
     using const_iterator	= const_pointer;
+    using reverse_iterator	= ::cwiclo::reverse_iterator<iterator>;
+    using const_reverse_iterator= ::cwiclo::reverse_iterator<const_iterator>;
     using size_type		= memblock::size_type;
     using difference_type	= memblock::difference_type;
     using initlist_t		= std::initializer_list<value_type>;
@@ -52,9 +54,13 @@ public:
     constexpr auto		begin (void)			{ return pointer_cast<T>(_data.begin());}
     constexpr auto		begin (void) const		{ return pointer_cast<T>(_data.begin());}
     constexpr auto		cbegin (void) const		{ return begin();			}
+    constexpr auto		rbegin (void)			{ return make_reverse_iterator(end());}
+    constexpr auto		rbegin (void) const		{ return make_reverse_iterator(end());}
     constexpr auto		end (void)			{ return pointer_cast<T>(_data.end());	}
     constexpr auto		end (void) const		{ return pointer_cast<T>(_data.end());	}
     constexpr auto		cend (void) const		{ return end();				}
+    constexpr auto		rend (void)			{ return make_reverse_iterator(begin());}
+    constexpr auto		rend (void) const		{ return make_reverse_iterator(begin());}
     constexpr auto		iat (size_type i)		{ assert (i <= size()); return begin() + i; }
     constexpr auto		iat (size_type i) const		{ assert (i <= size()); return begin() + i; }
     constexpr auto		ciat (size_type i) const	{ assert (i <= size()); return cbegin() + i; }

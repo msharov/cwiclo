@@ -39,6 +39,24 @@ template <typename T> struct remove_const<const T*>	{ using type = T*; };
 template <typename T> struct remove_const<const T&>	{ using type = T&; };
 template <typename T> using remove_const_t = typename remove_const<T>::type;
 
+template <typename T> struct remove_volatile		{ using type = T; };
+template <typename T> struct remove_volatile<volatile T> { using type = T; };
+template <typename T> struct remove_volatile<volatile T*> { using type = T*; };
+template <typename T> struct remove_volatile<volatile T&> { using type = T&; };
+template <typename T> using remove_volatile_t = typename remove_volatile<T>::type;
+
+template <typename T> struct remove_cv			{ using type = T; };
+template <typename T> struct remove_cv<const T>		{ using type = T; };
+template <typename T> struct remove_cv<const T*>	{ using type = T*; };
+template <typename T> struct remove_cv<const T&>	{ using type = T&; };
+template <typename T> struct remove_cv<volatile T>	{ using type = T; };
+template <typename T> struct remove_cv<volatile T*>	{ using type = T*; };
+template <typename T> struct remove_cv<volatile T&>	{ using type = T&; };
+template <typename T> struct remove_cv<const volatile T> { using type = T; };
+template <typename T> struct remove_cv<const volatile T*> { using type = T*; };
+template <typename T> struct remove_cv<const volatile T&> { using type = T&; };
+template <typename T> using remove_cv_t = typename remove_cv<T>::type;
+
 template <typename T> struct add_const		{ using type = const T; };
 template <typename T> struct add_const<const T> { using type = const T; };
 template <typename T> struct add_const<const T*>{ using type = const T*; };
@@ -54,6 +72,10 @@ template <typename T> struct is_trivially_constructible : public integral_consta
 template <typename T> struct is_trivially_destructible : public integral_constant<bool, __has_trivial_destructor(T)> {};
 template <typename T> struct is_trivially_copyable : public integral_constant<bool, __has_trivial_copy(T)> {};
 template <typename T> struct is_trivially_assignable : public integral_constant<bool, __has_trivial_assign(T)> {};
+
+template <typename T> struct is_pointer_integral_constant : false_type {};
+template <typename T> struct is_pointer_integral_constant<T*> : true_type {};
+template <typename T> struct is_pointer : is_pointer_integral_constant<remove_cv_t<T>> {};
 
 template <typename T> struct make_unsigned	{ using type = T; };
 template <> struct make_unsigned<char>		{ using type = unsigned char; };
@@ -127,36 +149,42 @@ public:
 };
 
 //}}}-------------------------------------------------------------------
-//{{{ Array adapters
+//{{{ Rvalue forwarding
 
-template <typename T> constexpr decltype(auto)	begin (T& c)		{ return c.begin(); }
-template <typename T> constexpr decltype(auto)	begin (const T& c)	{ return c.begin(); }
-template <typename T, size_t N> constexpr auto	begin (T (&a)[N])	{ return &a[0]; }
-template <typename T> constexpr decltype(auto)	cbegin (const T& c)	{ return begin(c); }
-template <typename T> constexpr decltype(auto)	end (T& c)		{ return c.end(); }
-template <typename T> constexpr decltype(auto)	end (const T& c)	{ return c.end(); }
-template <typename T, size_t N> constexpr auto	end (T (&c)[N])		{ return &c[N]; }
-template <typename T> constexpr decltype(auto)	cend (const T& c)	{ return end(c); }
-template <typename T> constexpr auto		size (const T& c)	{ return c.size(); }
-template <typename T, size_t N> constexpr auto	size (const T (&)[N])	{ return N; }
-template <typename T> [[nodiscard]] constexpr bool empty (const T& c)	{ return !c.size(); }
-template <typename T> constexpr decltype(auto)	data (T& c)		{ return c.data(); }
-template <typename T> constexpr decltype(auto)	data (const T& c)	{ return c.data(); }
-template <typename T, size_t N> constexpr auto	data(T (&c)[N])		{ return &c[0]; }
+template <typename T> [[nodiscard]] constexpr decltype(auto)
+forward (remove_reference_t<T>& v) { return static_cast<T&&>(v); }
 
-/// Expands into a ptr,size expression for the given static vector; useful as link arguments.
-#define ARRAY_BLOCK(v)	::cwiclo::data(v), ::cwiclo::size(v)
-/// Expands into a begin,end expression for the given static vector; useful for algorithm arguments.
-#define ARRAY_RANGE(v)	::cwiclo::begin(v), ::cwiclo::end(v)
-/// Expands into a ptr,sizeof expression for the given static data block
-#define DATA_BLOCK(v)	::cwiclo::data(v), sizeof(v)
+template <typename T> [[nodiscard]] constexpr decltype(auto)
+forward (remove_reference_t<T>&& v) { return static_cast<T&&>(v); }
 
-/// Shorthand for container iteration.
-#define foreach(i,ctr)	for (auto i = ::cwiclo::begin(ctr); i < ::cwiclo::end(ctr); ++i)
-/// Shorthand for container reverse iteration.
-#define eachfor(i,ctr)	for (auto i = ::cwiclo::end(ctr); i-- > ::cwiclo::begin(ctr);)
+template <typename T> [[nodiscard]] constexpr decltype(auto)
+move(T&& v) { return static_cast<remove_reference_t<T>&&>(v); }
 
-//}}}----------------------------------------------------------------------
+//}}}-------------------------------------------------------------------
+//{{{ Swap algorithms
+
+/// Assigns the contents of a to b and the contents of b to a.
+/// This is used as a primitive operation by many other algorithms.
+template <typename T>
+inline constexpr void swap (T& a, T& b)
+    { auto t = move(a); a = move(b); b = move(t); }
+
+template <typename T, size_t N>
+constexpr void swap (T (&a)[N], T (&b)[N])
+{
+    for (size_t i = 0; i < N; ++i)
+	swap (a[i], b[i]);
+}
+
+template <typename T, typename U = T>
+inline constexpr auto exchange (T& o, U&& nv)
+{
+    auto ov = move(o);
+    o = forward<T>(nv);
+    return ov;
+}
+
+//}}}-------------------------------------------------------------------
 //{{{ bswap
 
 [[nodiscard]] constexpr uint8_t bswap (uint8_t v)	{ return v; }

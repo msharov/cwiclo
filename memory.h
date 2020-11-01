@@ -4,7 +4,7 @@
 // This file is free software, distributed under the ISC License.
 
 #pragma once
-#include "utility.h"
+#include "iterator.h"
 
 //{{{ initializer_list -------------------------------------------------
 namespace std {	// replaced gcc internal stuff must be in std::
@@ -64,135 +64,8 @@ inline void operator delete  (void*, void*)	{ }
 inline void operator delete[](void*, void*)	{ }
 
 //}}}-------------------------------------------------------------------
-//{{{ Rvalue forwarding
-
-namespace cwiclo {
-
-template <typename T> [[nodiscard]] constexpr decltype(auto)
-forward (remove_reference_t<T>& v) { return static_cast<T&&>(v); }
-
-template <typename T> [[nodiscard]] constexpr decltype(auto)
-forward (remove_reference_t<T>&& v) { return static_cast<T&&>(v); }
-
-template <typename T> [[nodiscard]] constexpr decltype(auto)
-move(T&& v) { return static_cast<remove_reference_t<T>&&>(v); }
-
-//}}}-------------------------------------------------------------------
-//{{{ Swap algorithms
-
-/// Assigns the contents of a to b and the contents of b to a.
-/// This is used as a primitive operation by many other algorithms.
-template <typename T>
-inline constexpr void swap (T& a, T& b)
-    { auto t = move(a); a = move(b); b = move(t); }
-
-template <typename T, size_t N>
-constexpr void swap (T (&a)[N], T (&b)[N])
-{
-    for (size_t i = 0; i < N; ++i)
-	swap (a[i], b[i]);
-}
-
-template <typename T, typename U = T>
-inline constexpr auto exchange (T& o, U&& nv)
-{
-    auto ov = move(o);
-    o = forward<T>(nv);
-    return ov;
-}
-
-template <typename I>
-inline constexpr void iter_swap (I a, I b)
-    { swap (*a, *b); }
-
-//}}}-------------------------------------------------------------------
-//{{{ iterator_traits
-template <typename Iterator>
-struct iterator_traits {
-    using value_type		= typename Iterator::value_type;
-    using difference_type	= typename Iterator::difference_type;
-    using pointer		= typename Iterator::pointer;
-    using reference		= typename Iterator::reference;
-};
-
-template <typename T>
-struct iterator_traits<T*> {
-    using value_type		= T;
-    using difference_type	= ptrdiff_t;
-    using const_pointer		= const value_type*;
-    using pointer		= value_type*;
-    using const_reference	= const value_type&;
-    using reference		= value_type&;
-};
-template <typename T>
-struct iterator_traits<const T*> {
-    using value_type		= T;
-    using difference_type	= ptrdiff_t;
-    using const_pointer		= const value_type*;
-    using pointer		= const_pointer;
-    using const_reference	= const value_type&;
-    using reference		= const_reference;
-};
-template <>
-struct iterator_traits<void*> {
-    using value_type		= char;
-    using difference_type	= ptrdiff_t;
-    using const_pointer		= const void*;
-    using pointer		= void*;
-    using const_reference	= const value_type&;
-    using reference		= value_type&;
-};
-template <>
-struct iterator_traits<const void*> {
-    using value_type		= char;
-    using difference_type	= ptrdiff_t;
-    using const_pointer		= const void*;
-    using pointer		= const_pointer;
-    using const_reference	= const value_type&;
-    using reference		= const_reference;
-};
-
-//}}}-------------------------------------------------------------------
-//{{{ Iterator-pointer utilities
-
-template <typename T>
-constexpr T* to_address (T* p)
-    { return p; }
-template <typename P>
-constexpr auto to_address (const P& p)
-    { return to_address (p.operator->()); }
-
-template <typename I>
-constexpr I next (I f, size_t n = 1)
-    { return f+n; }
-template <> constexpr void* next (void* f, size_t n)
-    { return next (static_cast<char*>(f), n); }
-template <> constexpr const void* next (const void* f, size_t n)
-    { return next (static_cast<const char*>(f), n); }
-
-template <typename I>
-constexpr I prev (I f, size_t n = 1)
-    { return f-n; }
-template <> constexpr void* prev (void* f, size_t n)
-    { return prev (static_cast<char*>(f), n); }
-template <> constexpr const void* prev (const void* f, size_t n)
-    { return prev (static_cast<const char*>(f), n); }
-
-template <typename I>
-constexpr auto distance (I f, I l)
-    { return l-f; }
-template <> constexpr auto distance (void* f, void* l)
-    { return distance (static_cast<char*>(f), static_cast<char*>(l)); }
-template <> constexpr auto distance (const void* f, const void* l)
-    { return distance (static_cast<const char*>(f), static_cast<const char*>(l)); }
-
-template <typename T>
-constexpr void advance (T*& f, size_t n = 1) { f = next(f,n); }
-template <typename I> constexpr void advance (I& f) { ++f; }
-template <typename I> constexpr void advance (I& f, size_t n) { f += n; }
-
-//}}}-------------------------------------------------------------------
 //{{{ unique_ptr
+namespace cwiclo {
 
 /// \brief A smart pointer.
 ///
@@ -266,7 +139,7 @@ auto copy_n (II f, size_t n, OI r)
     #if __x86__
     using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
-    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
+    if constexpr (is_pointer<II>::value && is_pointer<OI>::value && is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
 	#define CWICLO_CALL_REP_MOVS(type) do {\
 	    auto ef = pointer_cast<const type>(to_address(f));\
 	    auto er = pointer_cast<type>(to_address(r));\
@@ -295,7 +168,7 @@ auto copy (II f, II l, OI r)
 {
     using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
-    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
+    if constexpr (is_pointer<II>::value && is_pointer<OI>::value && is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return copy_n (f, distance(f,l), r);
     for (; f < l; advance(r), advance(f))
 	*r = *f;
@@ -312,7 +185,7 @@ auto copy_backward_n (II f, size_t n, OI r)
     #if __x86__
     using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
-    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
+    if constexpr (is_pointer<II>::value && is_pointer<OI>::value && is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
 	__asm__ volatile ("std":::"cc");
 	#define CWICLO_CALL_REP_MOVS(type) do {\
 	    auto ef = pointer_cast<const type>(to_address(next(f,n)))-1;\
@@ -343,7 +216,7 @@ auto copy_backward (II f, II l, OI r)
 {
     using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
-    if constexpr (is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
+    if constexpr (is_pointer<II>::value && is_pointer<OI>::value && is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return copy_backward_n (f, distance(f,l), r);
     while (f < l)
 	*--r = *--l;
@@ -381,7 +254,7 @@ auto fill_n (I f, size_t n, const T& v)
 {
     using ivalue_type = make_unsigned_t<remove_const_t<T>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
-    constexpr bool canstos = is_trivially_assignable<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value;
+    constexpr bool canstos = is_pointer<I>::value && is_trivially_assignable<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value;
     if constexpr (canstos && sizeof(ovalue_type) == 1)
 	{ __builtin_memset (to_address(f), bit_cast<uint8_t>(v), n); advance(f,n); }
 #define CWICLO_IF_CALL_REP_STOS(type)\
@@ -401,7 +274,7 @@ auto fill (I f, I l, const T& v)
 {
     using ivalue_type = make_unsigned_t<remove_const_t<T>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
-    if constexpr (is_trivially_assignable<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
+    if constexpr (is_pointer<I>::value && is_trivially_assignable<ovalue_type>::value && is_same<ivalue_type,ovalue_type>::value)
 	return fill_n (f, distance(f,l), v);
     for (; f < l; advance(f))
 	*f = v;
@@ -416,7 +289,7 @@ template <typename I>
 inline constexpr auto zero_fill_n (I f, size_t n)
 {
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
-    if constexpr (is_trivially_assignable<ovalue_type>::value)
+    if constexpr (is_pointer<I>::value && is_trivially_assignable<ovalue_type>::value)
 	{ __builtin_memset (to_address(f), 0, n*sizeof(ovalue_type)); advance(f,n); }
     else for (auto l = next(f,n); f < l; advance(f))
 	*f = ovalue_type{};
@@ -427,7 +300,7 @@ template <typename I>
 inline constexpr auto zero_fill (I f, I l)
 {
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
-    if constexpr (is_trivially_assignable<ovalue_type>::value)
+    if constexpr (is_pointer<I>::value && is_trivially_assignable<ovalue_type>::value)
 	f = zero_fill_n (f, distance(f,l));
     else for (; f < l; advance(f))
 	*f = ovalue_type{};

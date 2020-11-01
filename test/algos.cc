@@ -230,5 +230,21 @@ int TestApp::run (void)
     iota (v.begin(), v.end(), 1);
     printf ("equal(0,9,0) = %u\n", equal (f, f+9, v.cbegin()));
     printf ("accumulate(0,18,3) = %u\n", accumulate (v.begin(), v.end(), 3));
+
+    printf ("back_inserter: ");
+    buf.clear();
+    copy (v, back_inserter(buf));
+    print_vector (buf);
+
+    printf ("front_inserter: ");
+    buf.clear();
+    copy (make_move_iterator(v.begin()), make_move_iterator(v.end()), front_inserter(buf));
+    print_vector (buf);
+
+    printf ("inserter: ");
+    buf.resize (7);
+    copy_n (make_reverse_iterator(v.end()), 7, buf.begin());
+    copy (v, inserter(buf, buf.iat(3)));
+    print_vector (buf);
     return EXIT_SUCCESS;
 }
