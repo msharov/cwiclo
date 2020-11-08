@@ -81,7 +81,7 @@ public:
     inline auto		operator+ (char c) const			{ auto r (*this); return r += c; }
     inline auto		operator+ (char32_t c) const			{ auto r (*this); return r += c; }
     inline bool		operator== (const string& s) const		{ return memblock::operator== (s); }
-    bool		operator== (const_pointer s) const;
+    inline bool		operator== (const_pointer s) const		{ return 0 == compare(s); }
     constexpr bool	operator== (char c) const			{ return size() == 1 && c == at(0); }
     inline bool		operator!= (const string& s) const		{ return !operator== (s); }
     inline bool		operator!= (const_pointer s) const		{ return !operator== (s); }

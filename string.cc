@@ -78,11 +78,6 @@ int string::compare (const_iterator f1, const_iterator l1, const_iterator f2, co
     return rv ? rv : sign (len1 - len2);
 }
 
-bool string::operator== (const_pointer s) const
-{
-    return strlen(s) == size() && 0 == strcmp (c_str(), s);
-}
-
 string::iterator string::replace (const_iterator f, const_iterator l, value_type c, size_type n)
 {
     auto dsz = difference_type(n) - (l-f);
