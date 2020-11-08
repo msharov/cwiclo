@@ -706,8 +706,10 @@ inline constexpr auto replace_copy (const C& c, O r, const T& ov, const T& nv)
 //}}}-------------------------------------------------------------------
 //{{{ C utility functions
 
+namespace {
+
 // Read ntr bytes from fd, accounting for partial reads and EINTR
-inline int complete_read (int fd, void* p, size_t ntr)
+inline static int complete_read (int fd, void* p, size_t ntr)
 {
     int nr = 0;
     while (ntr) {
@@ -725,7 +727,7 @@ inline int complete_read (int fd, void* p, size_t ntr)
 }
 
 // Write ntw bytes to fd, accounting for partial writes and EINTR
-inline int complete_write (int fd, const void* p, size_t ntw)
+inline static int complete_write (int fd, const void* p, size_t ntw)
 {
     int nw = 0;
     while (ntw) {
@@ -741,6 +743,21 @@ inline int complete_write (int fd, const void* p, size_t ntw)
     }
     return nw;
 }
+
+// Number printing without printf, which can undesirably load locales
+template <unsigned N>
+static constexpr char* uint_to_text (unsigned n, char (&a)[N])
+{
+    auto t = end(a);
+    *--t = 0;
+    for (; n; n /= 10)
+	*--t = '0'+(n%10);
+    return t;
+}
+
+} // namespace
+
+//----------------------------------------------------------------------
 
 } // namespace cwiclo
 extern "C" {

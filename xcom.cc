@@ -99,12 +99,10 @@ auto PExtern::launch_pipe (const char* exe, const char* arg) const -> fd_t
 	return -1;
     } else if (!fr) {
 	// Server side
-	chdir ("/");
 
 	// setup socket-activation-style fd passing
-	char pids [12];
-	snprintf (ARRAY_BLOCK(pids), "%d", getpid());
-	setenv ("LISTEN_PID", pids, true);
+	char pids [16];
+	setenv ("LISTEN_PID", uint_to_text(getpid(), pids), true);
 	setenv ("LISTEN_FDS", "1", true);
 	setenv ("LISTEN_FDNAMES", "connection", true);
 
