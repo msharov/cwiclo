@@ -45,16 +45,7 @@ template <typename T> struct remove_volatile<volatile T*> { using type = T*; };
 template <typename T> struct remove_volatile<volatile T&> { using type = T&; };
 template <typename T> using remove_volatile_t = typename remove_volatile<T>::type;
 
-template <typename T> struct remove_cv			{ using type = T; };
-template <typename T> struct remove_cv<const T>		{ using type = T; };
-template <typename T> struct remove_cv<const T*>	{ using type = T*; };
-template <typename T> struct remove_cv<const T&>	{ using type = T&; };
-template <typename T> struct remove_cv<volatile T>	{ using type = T; };
-template <typename T> struct remove_cv<volatile T*>	{ using type = T*; };
-template <typename T> struct remove_cv<volatile T&>	{ using type = T&; };
-template <typename T> struct remove_cv<const volatile T> { using type = T; };
-template <typename T> struct remove_cv<const volatile T*> { using type = T*; };
-template <typename T> struct remove_cv<const volatile T&> { using type = T&; };
+template <typename T> struct remove_cv : public remove_const<remove_volatile_t<T>> {};
 template <typename T> using remove_cv_t = typename remove_cv<T>::type;
 
 template <typename T> struct add_const		{ using type = const T; };
@@ -104,12 +95,8 @@ template <typename T, typename F> constexpr const T* pointer_cast (const F* p)
     { return static_cast<const T*>(static_cast<const void*>(p)); }
 
 // constexpr conversion from pointer to uintptr_t
-template <typename T> constexpr auto null_pointer (void)
-    { return static_cast<T*>(nullptr); }
 template <typename T> constexpr uintptr_t pointer_value (T p)
-    { return pointer_cast<char>(p) - null_pointer<char>(); }
-template <typename T> constexpr auto value_to_pointer (uintptr_t v)
-    { return pointer_cast<T>(null_pointer<char>() + v); }
+    { return pointer_cast<char>(p) - static_cast<char*>(nullptr); }
 
 // Create a passthrough non-const member function from a call to a const member function
 #define UNCONST_MEMBER_FN(f,...)	\

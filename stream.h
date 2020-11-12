@@ -399,11 +399,16 @@ public:
     constexpr bool	operator<= (const ptr& p) const	{ return get() <= p.get(); }
     constexpr bool	operator> (const ptr& p) const	{ return get() > p.get(); }
     constexpr bool	operator>= (const ptr& p) const	{ return get() >= p.get(); }
-    constexpr void	read (istream& is)		{ _p = value_to_pointer<element_type> (is.read<uint64_t>()); }
-    constexpr void	write (ostream& os) const	{ os << uint64_t(pointer_value (_p)); }
-    constexpr void	write (sstream& ss) const	{ ss << uint64_t(pointer_value (_p)); }
-    static constexpr auto create_from_stream (istream& is)
-			    { return ptr (value_to_pointer<element_type> (is.read<uint64_t>())); }
+    template <typename STM>
+    constexpr void	write (STM& os) const		{ os << uint64_t(pointer_value (_p)); }
+    constexpr void read (istream& is) {
+	static_assert (sizeof(_p) <= sizeof(uint64_t), "ios::ptr only works for pointers <= 64bit");
+	if constexpr (sizeof(_p) < sizeof(uint64_t) && endian::native == endian::big)
+	    is.skip (sizeof(uint64_t)-sizeof(_p));
+	is.readt (_p);
+	if constexpr (sizeof(_p) < sizeof(uint64_t) && endian::native == endian::little)
+	    is.skip (sizeof(uint64_t)-sizeof(_p));
+    }
 private:
     pointer		_p;
 };
