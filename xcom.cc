@@ -273,8 +273,10 @@ methodid_t Extern::ExtMsg::parse_method (void) const
     auto methodend = *++mi;
     auto methodnamesz = methodend - methodname;
     auto iface = App::interface_by_name (ifacename, methodname-ifacename);
-    if (!iface)
+    if (!iface) {
+	DEBUG_PRINTF ("[XE] Extern message arrived for %s.%s, but the interface is not registered.\n\tDid you forget to REGISTER_EXTERN_MSGER it?\n\tRemember that reply interfaces must also be registered.\n", ifacename, methodname);
 	return nullptr;
+    }
     return interface_lookup_method (iface, methodname, methodnamesz);
 }
 
@@ -367,8 +369,8 @@ void Extern::COM_export (string elist)
 	auto eic = elist.find (',', ei);
 	if (!eic)
 	    eic = elist.end();
-	*eic++ = 0;
-	auto iid = App::interface_by_name (ei, eic-ei);
+	*eic = 0;
+	auto iid = App::interface_by_name (ei, eic+1-ei);
 	if (iid)	// _einfo.imported only contains interfaces supported by this App
 	    _einfo.imported.push_back (iid);
 	ei = eic;
