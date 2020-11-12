@@ -35,10 +35,10 @@ public:
     inline constexpr		cmemlink (void)			: _d{}{}
     inline constexpr		cmemlink (const cmemlink& v)	: _d{v._d}{}
     inline constexpr		cmemlink (cmemlink&& v)		: _d (exchange (v._d, block_type{})) {}
-    inline constexpr void	swap (cmemlink&& v)		{ ::cwiclo::swap (_d, v._d); }
+    inline constexpr void	swap (cmemlink& v)		{ ::cwiclo::swap (_d, v._d); }
     inline constexpr void	unlink (void)			{ auto zt = zero_terminated(); _d = block_type{}; _d.zerot = zt; }
     inline constexpr auto&	operator= (const cmemlink& v)	{ link (v); return *this; }
-    inline constexpr auto&	operator= (cmemlink&& v)	{ swap (move(v)); return *this; }
+    inline constexpr auto&	operator= (cmemlink&& v)	{ swap (v); return *this; }
     inline constexpr auto	max_size (void) const		{ return numeric_limits<size_type>::max()/2-1; }
     inline constexpr auto	size (void) const		{ return _d.size; }
     [[nodiscard]] inline constexpr auto	empty (void) const	{ return !size(); }
@@ -111,7 +111,7 @@ public:
     inline constexpr void	link (pointer p, size_type n)	{ cmemlink::link (p, n); }
     inline constexpr void	link (void* p, size_type n)	{ link (static_cast<pointer>(p), n); }
     inline constexpr void	link (const memlink& v)		{ cmemlink::link (v); }
-    inline constexpr void	swap (memlink&& v)		{ cmemlink::swap (move (v)); }
+    inline constexpr void	swap (memlink& v)		{ cmemlink::swap (v); }
     iterator			insert (const_iterator start, size_type n);
     iterator			erase (const_iterator start, size_type n);
 protected:
@@ -143,8 +143,8 @@ public:
     inline constexpr void	manage (void* p, size_type n)	{ manage (p, n, n); }
     void			assign (const_pointer p, size_type n);
     inline void			assign (const cmemlink& v)	{ assign (v.data(), v.size()); }
-    inline void			assign (memlink&& v)		{ deallocate(); swap (move(v)); }
-    inline constexpr void	assign (memblock&& v)		{ swap (move(v)); }
+    inline void			assign (memlink&& v)		{ deallocate(); swap (v); }
+    inline constexpr void	assign (memblock&& v)		{ swap (v); }
     inline auto&		operator= (const cmemlink& v)	{ assign (v); return *this; }
     inline auto&		operator= (const memblock& v)	{ assign (v); return *this; }
     inline auto&		operator= (memlink&& v)		{ assign (move(v)); return *this; }
@@ -225,9 +225,9 @@ public:
     void			assign (const_pointer p, size_type n);
     inline void			assign (const cmemlink& v)	{ assign (v.data(), v.size()); }
     inline void			assign (const memblaz& v)	{ assign (v.data(), v.size()); }
-    inline constexpr void	assign (memblaz&& v)		{ swap (move(v)); }
-    inline constexpr void	assign (memblock&& v)		{ wipe(); swap (move(v)); }
-    inline void			assign (memlink&& v)		{ deallocate(); swap (move(v)); }
+    inline constexpr void	assign (memblaz&& v)		{ swap (v); }
+    inline constexpr void	assign (memblock&& v)		{ wipe(); swap (v); }
+    inline void			assign (memlink&& v)		{ deallocate(); swap (v); }
     inline constexpr void	wipe (void)			{ zero_fill_n (data(), capacity()); }
     constexpr auto&		operator[] (size_type i)	{ return at (i); }
     constexpr auto&		operator[] (size_type i) const	{ return at (i); }

@@ -86,10 +86,10 @@ public:
     inline constexpr auto	get (void) const		{ return _p; }
     inline constexpr auto	release (void)			{ return exchange (_p, nullptr); }
     inline constexpr void	reset (pointer p = nullptr)	{ assert (p != _p || !p); delete exchange (_p, p); }
-    inline constexpr void	swap (unique_ptr&& v)		{ ::cwiclo::swap (_p, v._p); }
+    inline constexpr void	swap (unique_ptr& v)		{ ::cwiclo::swap (_p, v._p); }
     inline constexpr explicit	operator bool (void) const	{ return _p != nullptr; }
     inline constexpr auto&	operator= (pointer p)		{ reset (p); return *this; }
-    inline constexpr auto&	operator= (unique_ptr&& p)	{ swap (move(p)); return *this; }
+    inline constexpr auto&	operator= (unique_ptr&& p)	{ swap (p); return *this; }
     inline constexpr auto&	operator* (void) const		{ return *get(); }
     inline constexpr auto	operator-> (void) const		{ return get(); }
     inline constexpr bool	operator== (const pointer p) const	{ return _p == p; }

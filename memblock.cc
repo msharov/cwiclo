@@ -216,7 +216,7 @@ void memblaz::reserve (size_type cap)
     memblaz r;
     r.memblock::reserve (cap);
     r.memblock::assign (*this);
-    swap (move(r));
+    swap (r);
 }
 
 void memblaz::shrink_to_fit (void)
@@ -224,7 +224,7 @@ void memblaz::shrink_to_fit (void)
     memblaz r;
     r.manage (_realloc (nullptr, size()), size());
     copy (*this, r.data());
-    swap (move(r));
+    swap (r);
 }
 
 void memblaz::deallocate (void)

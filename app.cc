@@ -143,10 +143,10 @@ void App::msg_signal_handler (int sig) // static
 #ifndef NDEBUG
 void App::errorv (const char* fmt, va_list args)
 {
-    bool isFirst = _errors.empty();
+    bool is_first = _errors.empty();
     _errors.appendv (fmt, args);
     DEBUG_PRINTF ("[E] Error: %s\n", _errors.c_str());
-    if (isFirst)
+    if (is_first)
 	print_backtrace();
 }
 #endif
@@ -311,8 +311,8 @@ int App::run (void)
 
 void App::message_loop_once (void)
 {
-    _inq.clear();		// input queue was processed on the last iteration
-    _inq.swap (move(_outq));	// output queue now becomes the input queue
+    _inq.clear();	// input queue was processed on the last iteration
+    _inq.swap (_outq);	// output queue now becomes the input queue
 
     process_input_queue();
     delete_unused_msgers();

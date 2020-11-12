@@ -76,7 +76,7 @@ int TestApp::run (void)
     printf ("vp = %lX\n", (uintptr_t) vp);
 
     auto up1 = make_unique<int> (42);
-    up1.swap (make_unique<int> (24));
+    up1 = make_unique<int>(24);
     printf ("unique_ptr(24) = %d\n", *up1);
 
     const int32_t c_Numbers[] = { 1, 2, 3, 4, 5 };

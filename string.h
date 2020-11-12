@@ -63,8 +63,8 @@ public:
     auto		compare (const string& s) const			{ return compare (begin(), end(), s.begin(), s.end()); }
     auto		compare (const_pointer s) const			{ return compare (begin(), end(), s, s + strlen(s)); }
     auto		compare (char c) const				{ return compare (begin(), end(), &c, &c+1); }
-    inline constexpr void	swap (string&& s)			{ memblock::swap (move(s)); }
-    inline constexpr auto&	operator= (string&& s)			{ memblock::operator= (move(s)); return *this; }
+    inline constexpr void	swap (string& s)			{ memblock::swap (s); }
+    inline constexpr auto&	operator= (string&& s)			{ swap (s); return *this; }
     inline auto&	operator= (const string& s)			{ assign (s); return *this; }
     inline auto&	operator= (const cmemlink& s)			{ assign (s); return *this; }
     inline auto&	operator= (const_pointer s)			{ assign (s); return *this; }
@@ -181,10 +181,10 @@ public:
     inline constexpr	string_view (string_view&& s)	: cmemlink (move(s)) {}
     inline constexpr	string_view (const string& s)	: cmemlink (s) {}
 
-    inline constexpr void	swap (string_view&& s)		{ cmemlink::swap (move(s)); }
+    inline constexpr void	swap (string_view& s)		{ cmemlink::swap (s); }
     inline constexpr auto&	operator= (const string_view& s){ cmemlink::operator= (s); return *this; }
     inline constexpr auto&	operator= (const string& s)	{ cmemlink::operator= (s); return *this; }
-    inline constexpr auto&	operator= (string_view&& s)	{ cmemlink::operator= (move(s)); return *this; }
+    inline constexpr auto&	operator= (string_view&& s)	{ swap (s); return *this; }
 
     inline constexpr auto&	str (void) const		{ return static_cast<const string&>(static_cast<const cmemlink&>(*this)); }
     inline constexpr		operator const string& (void) const	{ return str(); }

@@ -78,7 +78,7 @@ public:
     constexpr auto&		back (void)			{ assert (!empty()); return *iback(); }
     constexpr auto&		back (void) const		{ assert (!empty()); return *iback(); }
     inline constexpr void	clear (void)			{ destroy_all(); _data.clear(); }
-    inline constexpr void	swap (vector&& v)		{ _data.swap (move(v._data)); }
+    inline constexpr void	swap (vector& v)		{ _data.swap (v._data); }
     inline void			deallocate (void)		{ assert (!is_linked()); destroy_all(); _data.deallocate(); }
     inline void			shrink_to_fit (void)		{ _data.shrink_to_fit(); }
     inline void			assign (const vector& v)	{ assign (v.begin(), v.end()); }
@@ -198,7 +198,7 @@ public:
     constexpr auto&		operator[] (size_type i) const		{ return at (i); }
     constexpr auto&		front (void) const			{ assert (!empty()); return at(0); }
     constexpr auto&		back (void) const			{ assert (!empty()); return *iback(); }
-    inline constexpr void	swap (vector_view&& v)			{ _data.swap (move(v._data)); }
+    inline constexpr void	swap (vector_view& v)			{ _data.swap (v._data); }
     inline void			assign (const vector_t& v)		{ assign (v.begin(), v.end()); }
     inline constexpr void	assign (vector_view&& v)		{ _data = move(v._data); }
     inline void			assign (const_iterator i1, const_iterator i2)	{ _data.link (i1, distance(i1,i2)); }
