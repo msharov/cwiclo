@@ -4,36 +4,14 @@
 // This file is free software, distributed under the ISC License.
 
 #include "app.h"
-#include <fcntl.h>
 #include <signal.h>
 #include <sys/wait.h>
-#include <time.h>
 
 //{{{ Timer and Signal interfaces --------------------------------------
 namespace cwiclo {
 
 void PTimer::watch (WatchCmd cmd, fd_t fd, mstime_t timeoutms) const
     { send (m_watch(), cmd, fd, timeoutms); }
-
-int PTimer::make_nonblocking (fd_t fd) // static
-{
-    auto f = fcntl (fd, F_GETFL);
-    return f < 0 ? f : fcntl (fd, F_SETFL, f| O_NONBLOCK);
-}
-
-int PTimer::make_blocking (fd_t fd) // static
-{
-    auto f = fcntl (fd, F_GETFL);
-    return f < 0 ? f : fcntl (fd, F_SETFL, f&~(O_NONBLOCK));
-}
-
-auto PTimer::now (void) -> mstime_t // static
-{
-    struct timespec t;
-    if (0 > clock_gettime (CLOCK_REALTIME, &t))
-	return 0;
-    return mstime_t(t.tv_nsec) / 1000000 + t.tv_sec * 1000;
-}
 
 //----------------------------------------------------------------------
 

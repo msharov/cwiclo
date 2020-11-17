@@ -4,12 +4,13 @@
 // This file is free software, distributed under the ISC License.
 
 #include "algo.h"
-#include <sys/socket.h>
+#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/un.h>
 #if __has_include(<arpa/inet.h>) && !defined(NDEBUG)
     #include <arpa/inet.h>
 #endif
+#include <time.h>
 
 //----------------------------------------------------------------------
 namespace cwiclo {
@@ -39,20 +40,41 @@ zstr::index_type zstr::index (const_pointer k, const_pointer p, difference_type 
     return nf;
 }
 
+//----------------------------------------------------------------------
+
 } // namespace cwiclo
 using namespace cwiclo;
 
 //----------------------------------------------------------------------
 
-#ifdef __linux__
+uint64_t now_milliseconds (void)
+{
+    struct timespec t;
+    if (0 > clock_gettime (CLOCK_REALTIME, &t))
+	return 0;
+    return t.tv_nsec/1000000 + t.tv_sec*1000;
+}
 
+#ifdef __linux__ // closefrom is in libc on bsd
 void closefrom (int fd)
 {
     for (int tofd = getdtablesize(); fd < tofd; ++fd)
 	close (fd);
 }
-
 #endif
+
+int make_fd_nonblocking (int fd)
+{
+    auto f = fcntl (fd, F_GETFL);
+    return f < 0 ? f : fcntl (fd, F_SETFL, f| O_NONBLOCK);
+}
+
+int make_fd_blocking (int fd)
+{
+    auto f = fcntl (fd, F_GETFL);
+    return f < 0 ? f : fcntl (fd, F_SETFL, f&~(O_NONBLOCK));
+}
+
 #ifndef UC_VERSION
 
 int mkpath (const char* path, mode_t mode)
@@ -158,4 +180,10 @@ int create_sockaddr_un (struct sockaddr_un* addr, const char* fmt, const char* p
 	return -1;
     }
     return psockpath+pathlen-pointer_cast<char>(addr);
+}
+
+int socket_enable_credentials_passing (int sockfd, bool enable)
+{
+    int sov = enable;
+    return setsockopt (sockfd, SOL_SOCKET, SO_PASSCRED, &sov, sizeof(sov));
 }

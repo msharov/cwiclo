@@ -5,7 +5,6 @@
 
 #include "xcom.h"
 #include <fcntl.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/un.h>
 
@@ -332,24 +331,14 @@ bool Extern::attach_to_socket (fd_t fd)
 	return false;
 
     // If matches, need to set the fd nonblocking for the poll loop to work
-    return !PTimer::make_nonblocking (fd);
+    return !make_fd_nonblocking (fd);
 }
-
-#ifdef SCM_CREDS // BSD interface
-    #define SCM_CREDENTIALS	SCM_CREDS
-    #define SO_PASSCRED		LOCAL_PEERCRED
-    #define ucred		cmsgcred
-#elif !defined(SCM_CREDENTIALS)
-    #error "socket credentials passing not supported"
-#endif
 
 void Extern::enable_credentials_passing (bool enable)
 {
-    if (_sockfd < 0 || !_einfo.is_unix_socket)
-	return;
-    int sov = enable;
-    if (0 > setsockopt (_sockfd, SOL_SOCKET, SO_PASSCRED, &sov, sizeof(sov)))
-	return error_libc ("setsockopt(SO_PASSCRED)");
+    if (_sockfd >= 0 && _einfo.is_unix_socket)
+	if (0 > socket_enable_credentials_passing (_sockfd, enable))
+	    return error_libc ("setsockopt(SO_PASSCRED)");
 }
 
 //}}}-------------------------------------------------------------------
@@ -409,7 +398,7 @@ bool Extern::write_outgoing (void)
 	msghdr mh = {};
 
 	// Add fd if being passed
-	auto passedfd = _outq.front().passed_fd();
+	int passedfd = _outq.front().passed_fd();
 	char fdbuf [CMSG_SPACE(sizeof(passedfd))] = {};
 	unsigned nm = (passedfd >= 0);
 	if (nm && !_bwritten) {	// only the first write passes the fd
@@ -495,7 +484,7 @@ void Extern::read_incoming (void)
 	mh.msg_controllen = sizeof(cmsgbuf);
 
 	// Receive some data
-	if (auto rmr = recvmsg (_sockfd, &mh, 0); rmr <= 0) {
+	if (auto rmr = recvmsg (_sockfd, &mh, 0); rmr <= 0 || (mh.msg_flags & (MSG_CTRUNC|MSG_TRUNC))) {
 	    if (!rmr || errno == ECONNRESET)	// br == 0 when remote end closes. No error then, just need to close this end too.
 		DEBUG_PRINTF ("[X] %hu.Extern: rsocket %d closed by the other end\n", msger_id(), _sockfd);
 	    else if (errno == EINTR)
@@ -513,15 +502,19 @@ void Extern::read_incoming (void)
 	// Check if ancillary data was passed
 	for (auto cmsg = CMSG_FIRSTHDR(&mh); cmsg; cmsg = CMSG_NXTHDR(&mh, cmsg)) {
 	    if (cmsg->cmsg_type == SCM_CREDENTIALS) {
+	        if (cmsg->cmsg_len != CMSG_LEN(sizeof(ucred))) {
+		    error ("invalid socket credentials received");
+		    return Extern_close();
+		}
 		istream (CMSG_DATA(cmsg), sizeof(ucred)) >> _einfo.creds;
 		enable_credentials_passing (false);	// Credentials only need to be received once
 		DEBUG_PRINTF ("[X] Received credentials: pid=%u,uid=%u,gid=%u\n", _einfo.creds.pid, _einfo.creds.uid, _einfo.creds.gid);
 	    } else if (cmsg->cmsg_type == SCM_RIGHTS) {
-		if (_infd >= 0) {	// if message is sent in multiple parts, the fd must only be sent with the first piece
+		if (_infd >= 0 || cmsg->cmsg_len != CMSG_LEN(sizeof(int))) {	// if message is sent in multiple parts, the fd must only be sent with the first piece
 		    error ("multiple file descriptors received in one message");
 		    return Extern_close();
 		}
-		istream (CMSG_DATA(cmsg), sizeof(_infd)) >> _infd;
+		_infd = istream (CMSG_DATA(cmsg), sizeof(int)).read<int>();
 		DEBUG_PRINTF ("[X] Received fd %d\n", _infd);
 	    }
 	}
@@ -885,8 +878,8 @@ void ExternServer::TimerR_timer (PTimer::fd_t)
 void ExternServer::ExternServer_listen (int fd, const iid_t* eifaces, PExternServer::WhenEmpty closeWhenEmpty)
 {
     assert (_sockfd == -1 && "each ExternServer instance can only listen to one socket");
-    if (PTimer::make_nonblocking (fd))
-	return error_libc ("fcntl(SETFL(O_NONBLOCK))");
+    if (make_fd_nonblocking (fd))
+	return error_libc ("make_fd_nonblocking");
     _sockfd = fd;
     _eifaces = eifaces;
     set_flag (f_ListenWhenEmpty, !bool(closeWhenEmpty));

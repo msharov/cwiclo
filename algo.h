@@ -5,6 +5,7 @@
 
 #pragma once
 #include "memory.h"
+#include <sys/socket.h>
 
 //{{{ zstr -------------------------------------------------------------
 namespace cwiclo {
@@ -758,13 +759,38 @@ static constexpr char* uint_to_text (unsigned n, char (&a)[N])
 } // namespace
 
 //----------------------------------------------------------------------
+// Socket credentials passing API for Linux and BSD
+
+struct SocketCredentials {
+    pid_t	pid;
+    uid_t	uid;
+    #ifdef SCM_CREDS
+	uid_t	euid; // BSD-only field, do not use
+    #endif
+    gid_t	gid;
+};
+
+#ifdef SCM_CREDS // BSD interface
+    enum { SCM_CREDENTIALS = SCM_CREDS };
+    enum { SO_PASSCRED = LOCAL_PEERCRED };
+    using ucred = cmsgcred;
+#elif !defined(SCM_CREDENTIALS)
+    #error "this platform does not support socket credentials passing"
+#endif
+
+//----------------------------------------------------------------------
 
 } // namespace cwiclo
 extern "C" {
 
+uint64_t now_milliseconds (void);
+
 #ifdef __linux__
 void closefrom (int fd);
 #endif
+
+int make_fd_nonblocking (int fd);
+int make_fd_blocking (int fd);
 
 #ifndef UC_VERSION
 int mkpath (const char* path, mode_t mode) NONNULL();
@@ -790,6 +816,8 @@ inline int create_sockaddr_user_local (struct sockaddr_un* addr, const char* soc
     auto rundir = getenv ("XDG_RUNTIME_DIR");
     return create_sockaddr_un (addr, "%s/%s", rundir ? rundir : "/tmp", sockname);
 }
+
+int socket_enable_credentials_passing (int sockfd, bool enable);
 
 } // extern "C"
 //}}}-------------------------------------------------------------------

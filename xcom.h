@@ -77,16 +77,11 @@ public:
     //{{{2 Info
     enum class SocketSide : bool { Client, Server };
     struct Info {
+	using Credentials = SocketCredentials;
+    public:
 	vector<iid_t>	imported;
 	const iid_t*	exported;
-	struct Credentials {
-	    pid_t	pid;
-	    uid_t	uid;
-	    #ifdef SCM_CREDS
-		uid_t	euid; // BSD-only field, do not use
-	    #endif
-	    gid_t	gid;
-	}		creds;
+	Credentials	creds;
 	mrid_t		extern_id;
 	SocketSide	side;
 	bool		is_unix_socket;
