@@ -474,7 +474,7 @@ void Extern::read_incoming (void)
 	_inmsg.write_iovecs (iov, _bread);
 
 	// Ancillary space for fd and credentials
-	char cmsgbuf [CMSG_SPACE(sizeof(_infd)) + CMSG_SPACE(sizeof(ucred))] = {};
+	char cmsgbuf [CMSG_SPACE(sizeof(int)) + CMSG_SPACE(sizeof(ucred))] = {};
 
 	// Build struct for recvmsg
 	msghdr mh = {};
@@ -502,19 +502,23 @@ void Extern::read_incoming (void)
 	// Check if ancillary data was passed
 	for (auto cmsg = CMSG_FIRSTHDR(&mh); cmsg; cmsg = CMSG_NXTHDR(&mh, cmsg)) {
 	    if (cmsg->cmsg_type == SCM_CREDENTIALS) {
-	        if (cmsg->cmsg_len != CMSG_LEN(sizeof(ucred))) {
+	        if (cmsg->cmsg_len != CMSG_LEN(stream_sizeof(_einfo.creds))) {
 		    error ("invalid socket credentials received");
 		    return Extern_close();
 		}
-		istream (CMSG_DATA(cmsg), sizeof(ucred)) >> _einfo.creds;
+		istream (CMSG_DATA(cmsg), stream_sizeof(_einfo.creds)) >> _einfo.creds;
 		enable_credentials_passing (false);	// Credentials only need to be received once
 		DEBUG_PRINTF ("[X] Received credentials: pid=%u,uid=%u,gid=%u\n", _einfo.creds.pid, _einfo.creds.uid, _einfo.creds.gid);
 	    } else if (cmsg->cmsg_type == SCM_RIGHTS) {
-		if (_infd >= 0 || cmsg->cmsg_len != CMSG_LEN(sizeof(int))) {	// if message is sent in multiple parts, the fd must only be sent with the first piece
-		    error ("multiple file descriptors received in one message");
-		    return Extern_close();
+		istream cis (CMSG_DATA(cmsg), cmsg->cmsg_len - CMSG_LEN(0));
+		while (cis.remaining() >= sizeof(int)) {
+		    if (_infd >= 0) {
+			DEBUG_PRINTF ("[XE] Closing extra fd %d\n", _infd);
+			close (_infd);
+			error ("multiple file descriptors received in one message");
+		    }
+		    _infd = cis.read<int>();
 		}
-		_infd = istream (CMSG_DATA(cmsg), sizeof(int)).read<int>();
 		DEBUG_PRINTF ("[X] Received fd %d\n", _infd);
 	    }
 	}
