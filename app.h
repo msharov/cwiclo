@@ -5,6 +5,7 @@
 
 #pragma once
 #include "msg.h"
+#include "sysutil.h"
 #include <sys/poll.h>
 
 //{{{ Debugging macros -------------------------------------------------

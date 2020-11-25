@@ -5,6 +5,7 @@
 
 #include "memblock.h"
 #include "stream.h"
+#include "sysutil.h"
 #include <fcntl.h>
 #include <sys/stat.h>
 

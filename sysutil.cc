@@ -4,6 +4,7 @@
 // This file is free software, distributed under the ISC License.
 
 #include "algo.h"
+#include "sysutil.h"
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/un.h>
