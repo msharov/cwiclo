@@ -308,7 +308,10 @@ void Extern::Extern_open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide sid
 void Extern::Extern_close (void)
 {
     set_unused();
-    close (exchange (_sockfd, -1));
+    if (_infd >= 0)
+	close (exchange (_infd, -1));
+    if (_sockfd >= 0)
+	close (exchange (_sockfd, -1));
 }
 
 bool Extern::attach_to_socket (fd_t fd)
@@ -502,20 +505,20 @@ void Extern::read_incoming (void)
 	// Check if ancillary data was passed
 	for (auto cmsg = CMSG_FIRSTHDR(&mh); cmsg; cmsg = CMSG_NXTHDR(&mh, cmsg)) {
 	    if (cmsg->cmsg_type == SCM_CREDENTIALS) {
-	        if (cmsg->cmsg_len != CMSG_LEN(stream_sizeof(_einfo.creds))) {
-		    error ("invalid socket credentials received");
-		    return Extern_close();
+	        if (cmsg->cmsg_len != CMSG_LEN(stream_sizeof(_einfo.creds)))
+		    error ("invalid socket credentials");
+		else {
+		    istream (CMSG_DATA(cmsg), stream_sizeof(_einfo.creds)) >> _einfo.creds;
+		    enable_credentials_passing (false);	// Credentials only need to be received once
+		    DEBUG_PRINTF ("[X] Received credentials: pid=%u,uid=%u,gid=%u\n", _einfo.creds.pid, _einfo.creds.uid, _einfo.creds.gid);
 		}
-		istream (CMSG_DATA(cmsg), stream_sizeof(_einfo.creds)) >> _einfo.creds;
-		enable_credentials_passing (false);	// Credentials only need to be received once
-		DEBUG_PRINTF ("[X] Received credentials: pid=%u,uid=%u,gid=%u\n", _einfo.creds.pid, _einfo.creds.uid, _einfo.creds.gid);
 	    } else if (cmsg->cmsg_type == SCM_RIGHTS) {
 		istream cis (CMSG_DATA(cmsg), cmsg->cmsg_len - CMSG_LEN(0));
 		while (cis.remaining() >= sizeof(int)) {
 		    if (_infd >= 0) {
 			DEBUG_PRINTF ("[XE] Closing extra fd %d\n", _infd);
 			close (_infd);
-			error ("multiple file descriptors received in one message");
+			error ("multiple file descriptors in one message");
 		    }
 		    _infd = cis.read<int>();
 		}
