@@ -155,7 +155,7 @@ Extern::~Extern (void)
 
 bool Extern::dispatch (Msg& msg)
 {
-    return PTimerR::dispatch (this,msg)
+    return PTimer::Reply::dispatch (this,msg)
 	|| PExtern::dispatch (this,msg)
 	|| PCOM::dispatch (this,msg)
 	|| Msger::dispatch (msg);
@@ -164,7 +164,7 @@ bool Extern::dispatch (Msg& msg)
 void Extern::queue_outgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid)
 {
     _outq.emplace_back (mid, move(body), fdo, extid);
-    TimerR_timer (_sockfd);
+    Timer_timer (_sockfd);
 }
 
 Extern::RelayProxy* Extern::relay_proxy_by_id (mrid_t id)
@@ -379,7 +379,7 @@ void Extern::COM_delete (void)
 //}}}-------------------------------------------------------------------
 //{{{ Extern::Timer
 
-void Extern::TimerR_timer (fd_t)
+void Extern::Timer_timer (fd_t)
 {
     if (_sockfd >= 0)
 	read_incoming();
@@ -626,13 +626,11 @@ COMRelay::COMRelay (const Msg::Link& l)
 // Messages coming from an extern will require creating a local Msger,
 // while messages going to the extern from l.src local caller.
 //
-,_localp (l.dest, _pExtern ? mrid_t (mrid_Broadcast) : l.src)
+,_localp (l.dest, _pExtern ? Proxy::allocate_id(l.dest) : l.src)
 //
 // Extid will be determined when the connection interface is known
 ,_extid()
 {
-    if (_pExtern)
-	_localp.allocate_id();
 }
 
 COMRelay::~COMRelay (void)
@@ -863,13 +861,13 @@ void ExternServer::on_msger_destroyed (mrid_t mid)
 
 bool ExternServer::dispatch (Msg& msg)
 {
-    return PTimerR::dispatch (this, msg)
+    return PTimer::Reply::dispatch (this, msg)
 	|| PExternServer::dispatch (this, msg)
-	|| PExternR::dispatch (this, msg)
+	|| PExtern::Reply::dispatch (this, msg)
 	|| Msger::dispatch (msg);
 }
 
-void ExternServer::TimerR_timer (PTimer::fd_t)
+void ExternServer::Timer_timer (PTimer::fd_t)
 {
     for (int cfd; 0 <= (cfd = accept (_sockfd, nullptr, nullptr));)
 	ExternServer_accept (cfd, _eifaces);
@@ -890,7 +888,7 @@ void ExternServer::ExternServer_listen (int fd, const iid_t* eifaces, PExternSer
     _sockfd = fd;
     _eifaces = eifaces;
     set_flag (f_ListenWhenEmpty, !bool(closeWhenEmpty));
-    TimerR_timer (_sockfd);
+    Timer_timer (_sockfd);
 }
 
 void ExternServer::ExternServer_accept (int fd, const iid_t* eifaces)
@@ -906,7 +904,7 @@ void ExternServer::ExternServer_close (void)
     _timer.stop();
 }
 
-void ExternServer::ExternR_connected (const Extern::Info* einfo)
+void ExternServer::Extern_connected (const Extern::Info* einfo)
 {
     _reply.connected (einfo ? einfo->extern_id : 0);
 }

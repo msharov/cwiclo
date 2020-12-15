@@ -23,7 +23,7 @@ namespace cwiclo {
 //{{{ Timer interface
 
 class PTimer : public Proxy {
-    DECLARE_INTERFACE (Timer, (watch,"uix"))
+    DECLARE_INTERFACE (Timer, (watch,"uix")(timer,"i"))
 public:
     enum class WatchCmd : uint32_t {
 	Stop		= 0,
@@ -59,25 +59,20 @@ public:
 	o->Timer_watch (cmd, fd, timer);
 	return true;
     }
-};
-
-//----------------------------------------------------------------------
-
-class PTimerR : public ProxyR {
-    DECLARE_INTERFACE (TimerR, (timer,"i"));
 public:
-    using fd_t = PTimer::fd_t;
-public:
-    constexpr	PTimerR (const Msg::Link& l)	: ProxyR (l) {}
-    void	timer (fd_t fd) const		{ send (m_timer(), fd); }
+    class Reply : public Proxy::Reply {
+    public:
+	constexpr	Reply (const Msg::Link& l)	: Proxy::Reply (l) {}
+	void		timer (fd_t fd) const		{ send (m_timer(), fd); }
 
-    template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) {
-	if (msg.method() != m_timer())
-	    return false;
-	o->TimerR_timer (msg.read().read<fd_t>());
-	return true;
-    }
+	template <typename O>
+	inline static constexpr bool dispatch (O* o, const Msg& msg) {
+	    if (msg.method() != m_timer())
+		return false;
+	    o->Timer_timer (msg.read().read<fd_t>());
+	    return true;
+	}
+    };
 };
 
 //}}}-------------------------------------------------------------------
@@ -182,7 +177,7 @@ public:
 	auto		poll_mask (void) const	{ return _cmd; }
     public:
 	PTimer::mstime_t	_nextfire;
-	PTimerR			_reply;
+	PTimer::Reply		_reply;
 	PTimer::WatchCmd	_cmd;
 	PTimer::fd_t		_fd;
     };

@@ -249,8 +249,7 @@ protected:
 			    auto& msg = recreate_msg (imethod, variadic_stream_sizeof(args...));
 			    commit_msg (msg, (msg.write() << ... << args));
 			}
-    void		allocate_id (void);
-    void		free_id (void);
+    constexpr auto	set_dest (mrid_t dest) { return exchange (_link.dest, dest); }
 private:
     Msg*		get_outgoing_msg (methodid_t imethod) const;
 private:
@@ -306,20 +305,17 @@ public:
     template <typename T>
     void		create_dest_as (iid_t iid = nullptr) const
 			    { create_dest_with (&Msger::factory<T>, iid); }
-			using ProxyB::allocate_id;
-			using ProxyB::free_id;
+    static mrid_t	allocate_id (mrid_t src);
+    void		allocate_id (void) { ProxyB::set_dest (allocate_id (src())); }
+    void		free_id (void);
 protected:
     constexpr		Proxy (mrid_t from, mrid_t to) : ProxyB (from,to) {}
-};
-
-//}}}-------------------------------------------------------------------
-//{{{ ProxyR
-
-class ProxyR : public ProxyB {
+    constexpr auto	set_dest (mrid_t dest) = delete;
 protected:
-    constexpr		ProxyR (const Msg::Link& l) : ProxyB (l.dest, l.src) {}
-    void		allocate_id (void) = delete;
-    void		free_id (void) = delete;
+    class Reply : public ProxyB {
+    protected:
+	constexpr	Reply (const Msg::Link& l) : ProxyB (l.dest, l.src) {}
+    };
 };
 
 } // namespace cwiclo

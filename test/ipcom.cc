@@ -15,15 +15,15 @@ class TestApp : public App {
 public:
     static auto&	instance (void) { static TestApp s_app; return s_app; }
     bool		dispatch (Msg& msg) override {
-			    return PPingR::dispatch (this, msg)
-				|| PExternR::dispatch (this, msg)
+			    return PPing::Reply::dispatch (this, msg)
+				|| PExtern::Reply::dispatch (this, msg)
 				|| PSignal::dispatch (this, msg)
 				|| App::dispatch (msg);
 			}
     void		on_msger_destroyed (mrid_t mid) override;
     void		process_args (argc_t argc, argv_t argv);
-    inline void		ExternR_connected (const Extern::Info* einfo);
-    inline void		PingR_ping (uint32_t v);
+    inline void		Extern_connected (const Extern::Info* einfo);
+    inline void		Ping_ping (uint32_t v);
     inline void		Signal_signal (const PSignal::Info& sig);
 private:
 			TestApp (void);
@@ -34,7 +34,6 @@ private:
 
 BEGIN_CWICLO_APP (TestApp)
     REGISTER_EXTERN_MSGER (PPing)
-    REGISTER_EXTERN_MSGER (PPingR)
     REGISTER_EXTERNS
 END_CWICLO_APP
 
@@ -87,14 +86,14 @@ void TestApp::process_args (argc_t argc [[maybe_unused]], argv_t argv [[maybe_un
 	if (0 > _eclient.launch_pipe ("ipcomsrv"))
 	    return error_libc ("launch_pipe");
 
-    // Now wait for ExternR_connected
+    // Now wait for Extern_connected
 }
 
-// When a client connects, Extern will forward the ExternR_connected message
+// When a client connects, Extern will forward the Extern_connected message
 // here. This is the appropriate place to check that all the imports are satisfied,
 // authenticate the connection (if using a UNIX socket), and create objects.
 //
-void TestApp::ExternR_connected (const Extern::Info* einfo)
+void TestApp::Extern_connected (const Extern::Info* einfo)
 {
     // ExternInfo contains the list of interfaces available on this connection, so
     // here is the right place to check that the expected interfaces can be created.
@@ -117,7 +116,7 @@ void TestApp::ExternR_connected (const Extern::Info* einfo)
 // The ping replies are received exactly the same way as from a local
 // object. But now the object resides in the server process and the
 // message is read from the socket.
-void TestApp::PingR_ping (uint32_t v)
+void TestApp::Ping_ping (uint32_t v)
 {
     LOG ("Ping %u reply received in app\n", v);
     if (++v < 5)

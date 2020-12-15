@@ -14,21 +14,21 @@ public:
 	//
 	// Every Msger must implement the dispatch virtual,
 	// listing all interfaces it responds to. Here, the
-	// TestApp receives PingR messages. PPingR::dispatch
-	// will accept messages for PingR interface and return
+	// TestApp receives Ping messages. PPing::dispatch
+	// will accept messages for Ping interface and return
 	// true when they are handled.
 	//
-	return PPingR::dispatch (this, msg)
+	return PPing::dispatch (this, msg)
 	    //
 	    // The base class dispatch will handle unrecognized
 	    // messages by returning false.
 	    //
 	    || App::dispatch (msg);
     }
-    void PingR_ping (uint32_t v) {
+    void Ping_ping (uint32_t v) {
 	//
-	// This method is called by PPingR::dispatch when a
-	// Ping message is received on a PingR interface.
+	// This method is called by PPing::dispatch when a
+	// Ping message is received on a Ping interface.
 	// Note the naming convention.
 	//
 	LOG ("Ping %u reply received in app\n", v);
@@ -56,7 +56,7 @@ private:
     {
 	// When ready, simply call the desired method.
 	// All method calls are asynchonous, never blocking.
-	// Replies arrive to PingR_ping above when sent
+	// Replies arrive to Ping_ping above when sent
 	// by the Ping server in this same manner.
 	//
 	_pinger.ping (1);

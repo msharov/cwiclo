@@ -19,8 +19,8 @@ using namespace cwiclo;
 // by marshalling the arguments into a message. The remote object is
 // created by the framework, using the a factory created by registration.
 //
-// This is the calling side for the Ping interface
 class PPing : public Proxy {
+    //
     // The interface is a char block built by the DECLARE_INTERFACE macro.
     // This creates the name of the interface followed by methods and
     // signatures in a continuous string. Here there is only one method;
@@ -30,22 +30,16 @@ class PPing : public Proxy {
     //
     DECLARE_INTERFACE (Ping, (ping,"u"));
 public:
-    // Proxies are constructed with the calling object's oid.
-    // Reply messages sent through reply interfaces, here PingR,
-    // will be delivered to the given object.
+    // Proxies are constructed with the calling object's oid,
+    // to let the remote object know where to send the replies.
+    // The remote object is created when the first message is
+    // sent through this proxy.
+    //
     explicit PPing (mrid_t caller) : Proxy (caller) {}
 
-    // Methods are implemented by simple marshalling of the arguments.
+    // Methods are implemented by marshalling the arguments into a message.
     // m_ping() is defined by DECLARE_INTERFACE above and returns the methodid_t of the Ping call.
-    void ping (uint32_t v) const {
-	auto& msg = create_msg (m_ping(), stream_sizeof(v));
-	// Here an expanded example is given with direct
-	// stream access. See PingR for a simpler example
-	// using the Send template.
-	auto os = msg.write();
-	os << v;
-	commit_msg (msg, os);
-    }
+    void ping (uint32_t v) const { send (m_ping(), v); }
 
     // The dispatch method is called from the destination object's
     // aggregate dispatch method. A templated implementation like
@@ -54,37 +48,50 @@ public:
     //
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
-	if (msg.method() == m_ping()) {
-	    // Each method unmarshals the arguments and calls the handling object
-	    auto is = msg.read();
-	    auto v = is.read<uint32_t>();
-	    o->Ping_ping (v);	// name the handlers Interface_method by convention
-	} else
-	    return false;	// protocol errors are handled by caller
-	return true;
-    }
-};
-
-// Interfaces are always one-way. If replies are desired, a separate
-// reply interface must be implemented. This is the reply interface.
-//
-class PPingR : public ProxyR {
-    DECLARE_INTERFACE (PingR, (ping,"u"));
-public:
-    // Reply proxies are constructed from the owning object's creating
-    // link, copied from the message that created it. ProxyR will reverse
-    // the link, sending replies to the originating object.
-    constexpr		PPingR (const Msg::Link& l) : ProxyR (l) {}
-			// Using variadic Send is the easiest way to
-			// create a message that only marshals arguments.
-    void		ping (uint32_t v) const { send (m_ping(), v); }
-    template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_ping())
-	    return false;
-	o->PingR_ping (msg.read().read<uint32_t>());
+	    return false;	// protocol errors are handled by caller
+	// Each method unmarshals the arguments and calls the handling object
+	// Name the handlers Interface_method by convention
+	o->Ping_ping (msg.read().read<uint32_t>());
 	return true;
     }
+public:
+    // Proxies are always one-way. If replies are desired, a separate proxy
+    // must be implemented. This is Ping's reply proxy. Because replies must
+    // necessarily be created in response to some request, reply interface
+    // methods are part of the request interface, and the reply proxy is always
+    // a member class of the request proxy, named Reply.
+    //
+    class Reply : public Proxy::Reply {
+    public:
+	// Reply proxies are constructed from the owning object's creating
+	// link, copied from the message that created it. Messages from this
+	// proxy will send replies to the originating object.
+	constexpr Reply (const Msg::Link& l) : Proxy::Reply (l) {}
+			    // Using variadic Send is the easiest way to
+			    // create a message that only marshals arguments.
+			    // Because method signature is the same in both
+			    // directions, the same method pointer is reused.
+	void ping (uint32_t v) const {
+	    // Here an expanded marshalling example is given with direct
+	    // stream access. Most of the time you should just use send.
+	    auto& msg = create_msg (m_ping(), stream_sizeof(v));
+	    auto os = msg.write();
+	    os << v;
+	    commit_msg (msg, os);
+	}
+	template <typename O>
+	inline static constexpr bool dispatch (O* o, const Msg& msg) {
+	    if (msg.method() == m_ping()) {
+		// An example with explicitly read variables
+		auto is = msg.read();
+		auto v = is.read<uint32_t>();
+		o->Ping_ping (v);
+	    } else
+		return false;
+	    return true;
+	}
+    };
 };
 
 #define LOG(...)	do {printf(__VA_ARGS__);fflush(stdout);} while(false)
@@ -109,6 +116,6 @@ public:
 					|| Msger::dispatch (msg);
 			}
 private:
-    PPingR		_reply;
+    PPing::Reply	_reply;
     uint32_t		_npings;
 };

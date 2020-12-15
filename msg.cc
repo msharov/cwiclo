@@ -178,25 +178,17 @@ Msg& ProxyB::recreate_msg (methodid_t imethod, Msg::Body&& body) const
     return create_msg (imethod, move(body));
 }
 
-void ProxyB::allocate_id (void)
-{
-    assert (_link.dest == mrid_Broadcast && "This Proxy has already allocated a destination");
-    _link.dest = App::instance().allocate_mrid (_link.src);
-}
-
-void ProxyB::free_id (void)
-{
-    auto id = exchange (_link.dest, mrid_Broadcast);
-    App::instance().free_mrid (id);
-}
-
 //----------------------------------------------------------------------
 
 Proxy::Proxy (mrid_t from)
-: ProxyB (from, mrid_Broadcast)
+: ProxyB (from, allocate_id (from))
 {
-    allocate_id();
 }
+
+mrid_t Proxy::allocate_id (mrid_t src) // static
+    { return App::instance().allocate_mrid (src); }
+void Proxy::free_id (void)
+    { App::instance().free_mrid (ProxyB::set_dest (mrid_Broadcast)); }
 
 void Proxy::create_dest_for (iid_t iid) const
 {

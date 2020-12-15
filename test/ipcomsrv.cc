@@ -15,8 +15,8 @@ public:
     static auto&	instance (void) { static TestApp s_app; return s_app; }
     void		process_args (argc_t argc, argv_t argv);
     bool		dispatch (Msg& msg) override
-			    { return PExternR::dispatch (this, msg) || App::dispatch (msg); }
-    inline void		ExternR_connected (const Extern::Info*);
+			    { return PExtern::Reply::dispatch (this, msg) || App::dispatch (msg); }
+    inline void		Extern_connected (const Extern::Info*);
 private:
 			TestApp (void) : App(), _eserver (mrid_App) {}
 private:
@@ -76,9 +76,9 @@ void TestApp::process_args (argc_t argc, argv_t argv)
 	return error_libc ("activate_user_local");
 }
 
-void TestApp::ExternR_connected (const Extern::Info*)
+void TestApp::Extern_connected (const Extern::Info*)
 {
     // When a client connects, ExternServer will forward the
-    // ExternR_connected message here. On the server side,
+    // Extern_connected message here. On the server side,
     // there is nothing to do in this example.
 }

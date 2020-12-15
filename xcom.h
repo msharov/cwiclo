@@ -71,7 +71,7 @@ private:
 //{{{ PExtern
 
 class PExtern : public Proxy {
-    DECLARE_INTERFACE (Extern, (open,"xib")(close,""))
+    DECLARE_INTERFACE (Extern, (open,"xib")(close,"")(connected,"q"))
 public:
     using fd_t = PTimer::fd_t;
     //{{{2 Info
@@ -122,20 +122,15 @@ public:
 	    return false;
 	return true;
     }
-};
-
-//}}}-------------------------------------------------------------------
-//{{{ PExternR
-
-class PExternR : public ProxyR {
-    DECLARE_INTERFACE (ExternR, (connected,"q"))
 public:
-    constexpr	PExternR (const Msg::Link& l) : ProxyR(l) {}
-    void	connected (mrid_t extern_id) const
-		    { send (m_connected(), extern_id); }
-    template <typename O>
-    inline static constexpr bool dispatch (O* o, const Msg& msg);
-	// body below Extern because it calls Extern::lookup_by_id
+    class Reply : public Proxy::Reply {
+    public:
+	constexpr Reply (const Msg::Link& l) : Proxy::Reply(l) {}
+	void connected (mrid_t extern_id) const { send (m_connected(), extern_id); }
+	template <typename O>
+	inline static constexpr bool dispatch (O* o, const Msg& msg);
+	    // body below Extern because it calls Extern::lookup_by_id
+    };
 };
 
 //}}}-------------------------------------------------------------------
@@ -162,7 +157,7 @@ public:
     inline void		COM_error (const string_view& errmsg);
     inline void		COM_export (string elist);
     inline void		COM_delete (void);
-    void		TimerR_timer (fd_t fd);
+    void		Timer_timer (fd_t fd);
 private:
     //{{{2 ExtMsg ------------------------------------------------------
     // Msg formatted for reading/writing to socket
@@ -243,7 +238,7 @@ private:
 private:
     fd_t		_sockfd;
     PTimer		_timer;
-    PExternR		_reply;
+    PExtern::Reply	_reply;
     streamsize		_bwritten;
     vector<ExtMsg>	_outq;		// messages queued for export
     vector<RelayProxy>	_relays;
@@ -266,11 +261,11 @@ private:
 //----------------------------------------------------------------------
 
 template <typename O>
-constexpr bool PExternR::dispatch (O* o, const Msg& msg) { // static
+constexpr bool PExtern::Reply::dispatch (O* o, const Msg& msg) { // static
     if (msg.method() != m_connected())
 	return false;
     auto pextern = Extern::lookup_by_id (msg.read().read<mrid_t>());
-    o->ExternR_connected (pextern ? &pextern->info() : nullptr);
+    o->Extern_connected (pextern ? &pextern->info() : nullptr);
     return true;
 }
 
@@ -323,6 +318,9 @@ public:
 	    return false;
 	return true;
     }
+
+    // ExternServer will forward Extern replies
+    using Reply = PExtern::Reply;
 private:
     string	_sockname;
 };
@@ -341,19 +339,19 @@ public:
     void		on_msger_destroyed (mrid_t mid) override;
     bool		dispatch (Msg& msg) override;
 private:
-			friend class PTimerR;
-    inline void		TimerR_timer (fd_t);
+			friend class PTimer::Reply;
+    inline void		Timer_timer (fd_t);
 			friend class PExternServer;
     inline void		ExternServer_listen (fd_t fd, const iid_t* eifaces, PExternServer::WhenEmpty whenempty);
     inline void		ExternServer_accept (int fd, const iid_t* eifaces);
     inline void		ExternServer_close (void);
-			friend class PExternR;
-    inline void		ExternR_connected (const Extern::Info* einfo);
+			friend class PExtern::Reply;
+    inline void		Extern_connected (const Extern::Info* einfo);
 private:
     vector<PExtern>	_conns;
     const iid_t*	_eifaces;
     PTimer		_timer;
-    PExternR		_reply;
+    PExternServer::Reply _reply;
     fd_t		_sockfd;
 };
 
