@@ -54,34 +54,40 @@ auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) const -> fd_t
     return fd;
 }
 
+auto PExtern::connect_local (const char* fmt, const char* path, const char* sockname) const -> fd_t
+{
+    fd_t sfd = -1;
+    sockaddr_un addr;
+    do {
+	auto addrlen = create_sockaddr_un (&addr, fmt, path, sockname);
+	if (addrlen < 0)
+	    return sfd;
+	sfd = connect (pointer_cast<sockaddr>(&addr), addrlen);
+	if (sfd < 0 && sockname[0] == '@') {
+	    ++sockname;
+	    continue;	// If abstract socket connection fails, try the file socket
+	}
+    } while (false);
+    return sfd;
+}
+
 /// Create local socket with given path
 auto PExtern::connect_local (const char* path) const -> fd_t
 {
-    sockaddr_un addr;
-    auto addrlen = create_sockaddr_local (&addr, path);
-    if (addrlen < 0)
-	return addrlen;
-    return connect (pointer_cast<sockaddr>(&addr), addrlen);
+    return connect_local ("%s%s", "", path);
 }
 
 /// Create local socket of the given name in the system standard location for such
 auto PExtern::connect_system_local (const char* sockname) const -> fd_t
 {
-    sockaddr_un addr;
-    auto addrlen = create_sockaddr_system_local (&addr, sockname);
-    if (addrlen < 0)
-	return addrlen;
-    return connect (pointer_cast<sockaddr>(&addr), addrlen);
+    return connect_local ("%s/%s", "/run", sockname);
 }
 
 /// Create local socket of the given name in the user standard location for such
 auto PExtern::connect_user_local (const char* sockname) const -> fd_t
 {
-    sockaddr_un addr;
-    auto addrlen = create_sockaddr_user_local (&addr, sockname);
-    if (addrlen < 0)
-	return addrlen;
-    return connect (pointer_cast<sockaddr>(&addr), addrlen);
+    auto rundir = getenv ("XDG_RUNTIME_DIR");
+    return connect_local ("%s/%s", rundir ? rundir : "/tmp", sockname);
 }
 
 auto PExtern::launch_pipe (const char* exe, const char* arg) const -> fd_t

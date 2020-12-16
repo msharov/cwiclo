@@ -122,6 +122,8 @@ public:
 	    return false;
 	return true;
     }
+private:
+    fd_t	connect_local (const char* fmt, const char* path, const char* sockname) const;
 public:
     class Reply : public Proxy::Reply {
     public:
