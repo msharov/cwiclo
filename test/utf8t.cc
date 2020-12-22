@@ -17,8 +17,7 @@ public:
     inline int		run (void);
 };
 
-BEGIN_CWICLO_APP (TestApp)
-END_CWICLO_APP
+CWICLO_APP_L (TestApp,)
 
 void TestApp::widen_utf8 (const string& str, vector<char32_t>& result) // static
 {

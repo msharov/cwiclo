@@ -65,11 +65,11 @@ private:
     PPing		_pinger;
 };
 
-// main is easiest to create by using these macros
-BEGIN_CWICLO_APP (TestApp)
-    //
-    // Each interface must be associated with a Msger object that is to be
-    // created as its implementation. Here, PingMsger responds to Ping interface.
-    //
-    REGISTER_MSGER (PPing, PingMsger)
-END_CWICLO_APP
+// main is easiest to create by using these macros.
+// The arguments are the app class and the list of used msgers.
+// Here these are TestApp, and the PingMsger object with which
+// the app will communicate using the PPing proxy. PingMsger
+// lists the Ping interface as invokable, so this macro here
+// will map the Ping interface to PingMsger factory.
+//
+CWICLO_APP_L (TestApp, (PingMsger))

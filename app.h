@@ -23,7 +23,7 @@ namespace cwiclo {
 //{{{ Timer interface
 
 class PTimer : public Proxy {
-    DECLARE_INTERFACE (Timer, (watch,"uix")(timer,"i"))
+    DECLARE_INTERFACE (Proxy, Timer, (watch,"uix")(timer,"i"))
 public:
     enum class WatchCmd : uint32_t {
 	Stop		= 0,
@@ -79,6 +79,8 @@ public:
 //{{{ Signal interface
 
 class PSignal : public Proxy {
+    #define SIGNATURE_Signal_Info	"(iiii)"
+    DECLARE_INTERFACE (Proxy, Signal, (signal,SIGNATURE_Signal_Info))
 public:
     struct Info {
 	int32_t	sig;
@@ -86,9 +88,6 @@ public:
 	int32_t	pid;
 	int32_t	uid;
     };
-    #define SIGNATURE_Signal_Info	"(iiii)"
-private:
-    DECLARE_INTERFACE (Signal, (signal,SIGNATURE_Signal_Info));
 public:
     constexpr	PSignal (mrid_t caller)	: Proxy (caller, mrid_Broadcast) {}
     void	signal (const Info& si) const	{ send (m_signal(), si); }
@@ -100,6 +99,7 @@ public:
 	o->Signal_signal (msg.read().read<Info>());
 	return true;
     }
+    using Reply = PSignal;
 };
 
 //}}}-------------------------------------------------------------------
@@ -124,7 +124,8 @@ public:
     inline Msg&		create_msg (const Msg::Link& l, methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0)
 			    { create_method_dest (mid,l); return _outq.emplace_back (l,mid,move(body),fdo,extid); }
     mrid_t		register_singleton_msger (Msger* m);
-    static iid_t	interface_by_name (const char* iname, streamsize inamesz);
+    static const iid_t*	imports (void)			{ return s_imports; }
+    static const iid_t*	exports (void)			{ return s_exports; }
     msgq_t::size_type	has_messages_for (mrid_t mid) const;
     Msg*		has_outq_msg (methodid_t mid, const Msg::Link& l);
     constexpr auto	has_timers (void) const		{ return _timers.size(); }
@@ -150,7 +151,7 @@ protected:
 			~App (void) override;
     [[noreturn]] static void fatal_signal_handler (int sig);
     static void		msg_signal_handler (int sig);
-private:
+public:
     //{{{2 MsgerFactoryMap ---------------------------------------------
     // Maps a factory to an interface
     struct MsgerFactoryMap {
@@ -158,16 +159,15 @@ private:
 	Msger::pfn_factory_t	factory;
     };
     //}}}2--------------------------------------------------------------
-public:
     //{{{2 Timer
     friend class Timer;
     class Timer : public Msger {
+	IMPLEMENT_INTERFACES_I (Msger, (PTimer),)
     public:
 	explicit	Timer (const Msg::Link& l)
 			    : Msger(l),_nextfire(PTimer::TimerNone),_reply(l),_cmd(),_fd(-1)
 			    { App::instance().add_timer (this); }
 			~Timer (void) override;
-	bool		dispatch (Msg& msg) override;
 	inline void	Timer_watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms);
 	constexpr void	stop (void)		{ set_flag (f_Unused); _cmd = PTimer::WatchCmd::Stop; _fd = -1; _nextfire = PTimer::TimerNone; }
 	void		fire (void)		{ _reply.timer (_fd); stop(); }
@@ -203,32 +203,116 @@ private:
     static App*		s_pApp;
     static int		s_exit_code;
     static uint32_t	s_received_signals;
-    static const MsgerFactoryMap s_msger_factories[];
+    static const MsgerFactoryMap* s_msger_factories;
+    static const iid_t*	s_imports;
+    static const iid_t*	s_exports;
 };
 
 //}}}-------------------------------------------------------------------
 //{{{ main template
 
+//{{{2 Helper templates
+namespace {
+
 template <typename A>
-inline int mainT (typename A::argc_t argc, typename A::argv_t argv)
+inline static int Tmain (typename A::argc_t argc, typename A::argv_t argv)
 {
     A::install_signal_handlers();
     auto& a = A::instance();
     a.process_args (argc, argv);
     return a.run();
 }
+
+template <typename M>
+static constexpr auto get_msger_factory_maps (App::MsgerFactoryMap* m, Msger::pfn_factory_t pfac)
+{
+    constexpr const auto ni = M::n_interfaces();
+    iid_t mias [ni] = {};
+    M::get_interfaces (begin(mias));
+    for (auto i = 0u; i < ni; ++i, ++m) {
+	m->iface = mias[i];
+	m->factory = pfac;
+    }
+    return m;
+}
+
+} // namespace
+//}}}2
+//{{{2 Helper macros
+
 #define CWICLO_MAIN(A)	\
 int main (A::argc_t argc, A::argv_t argv) \
-    { return mainT<A> (argc, argv); }
+    { return Tmain<A> (argc, argv); }
 
-#define BEGIN_MSGERS	const App::MsgerFactoryMap App::s_msger_factories[] = {
-#define REGISTER_MSGER(proxy,mgtype)	{ proxy::interface(), &Msger::factory<mgtype> },
-#define END_MSGERS	{nullptr,nullptr}};
+//{{{3 Factory map
+#define GENERATE_MSGER_INTERFACE_COUNTER(arg,msger)	arg msger::n_interfaces()
+#define GENERATE_MSGER_FACTORY_MAP_ENTRY(arg,msger)	arg = get_msger_factory_maps<msger>(arg,&msger::factory<msger>);
 
-#define BEGIN_CWICLO_APP(A)	\
+#define GENERATE_MSGER_FACTORY_MAP(msgers,nullfac)	\
+namespace {						\
+    constexpr auto generate_msger_factory_map (void) {	\
+	constexpr auto ni = 1 SEQ_FOR_EACH(msgers,+,GENERATE_MSGER_INTERFACE_COUNTER);\
+	struct { App::MsgerFactoryMap m [ni]; } r = {};	\
+	auto m = begin(r.m);				\
+	SEQ_FOR_EACH(msgers,m,GENERATE_MSGER_FACTORY_MAP_ENTRY)\
+	m->factory = nullfac;				\
+	return r;					\
+    }							\
+    static constexpr auto s_factory_map = generate_msger_factory_map();\
+}							\
+const App::MsgerFactoryMap* App::s_msger_factories = s_factory_map.m;
+
+//}}}3
+//{{{3 Imports list
+
+#define GENERATE_PROXY_INTERFACE_COUNTER(arg,proxy)	arg proxy::n_interfaces()
+#define GENERATE_PROXY_GET_INTERFACES(arg,proxy)	arg = proxy::get_interfaces(arg);
+
+#define GENERATE_IMPORTS_LIST(proxies)	\
+namespace {						\
+    constexpr auto generate_imports_list (void) {	\
+	constexpr auto ni = 1 SEQ_FOR_EACH(proxies,+,GENERATE_PROXY_INTERFACE_COUNTER);\
+	struct { iid_t ia [ni]; } r = {};		\
+	auto i = begin(r.ia);				\
+	SEQ_FOR_EACH(proxies,i,GENERATE_PROXY_GET_INTERFACES)\
+	*i = nullptr;					\
+	return r;					\
+    }							\
+    static constexpr auto s_imports_list = generate_imports_list();\
+}							\
+const iid_t* App::s_imports = s_imports_list.ia;
+
+//}}}3
+//{{{3 Exports list
+
+#define GENERATE_EXPORTS_LIST(proxies)	\
+namespace {						\
+    constexpr auto generate_exports_list (void) {	\
+	constexpr auto ni = 1 SEQ_FOR_EACH(proxies,+,GENERATE_PROXY_INTERFACE_COUNTER);\
+	struct { iid_t ia [ni]; } r = {};		\
+	auto i = begin(r.ia);				\
+	SEQ_FOR_EACH(proxies,i,GENERATE_PROXY_GET_INTERFACES)\
+	*i = nullptr;					\
+	return r;					\
+    }							\
+    static constexpr auto s_exports_list = generate_exports_list();\
+}							\
+const iid_t* App::s_exports = s_exports_list.ia;
+
+//}}}3
+//}}}2
+
+#define CWICLO_APP(A,msgers,imports,exports)	\
+    CWICLO_MAIN(A)				\
+    GENERATE_MSGER_FACTORY_MAP((App::Timer)(Extern)(COMRelay) msgers,&Msger::factory<COMRelay>)\
+    GENERATE_IMPORTS_LIST((PCOM) imports)	\
+    GENERATE_EXPORTS_LIST(exports)
+
+#define CWICLO_APP_L(A,msgers)	\
     CWICLO_MAIN(A)		\
-    BEGIN_MSGERS
-#define END_CWICLO_APP		END_MSGERS
+    GENERATE_MSGER_FACTORY_MAP((App::Timer) msgers,nullptr)\
+    const iid_t* App::s_imports = nullptr;\
+    const iid_t* App::s_exports = nullptr;
 
 } // namespace cwiclo
 //}}}-------------------------------------------------------------------

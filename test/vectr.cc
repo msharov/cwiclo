@@ -20,8 +20,7 @@ public:
     inline int		run (void);
 };
 
-BEGIN_CWICLO_APP (TestApp)
-END_CWICLO_APP
+CWICLO_APP_L (TestApp,)
 
 void TestApp::print_vector (const vector<int>& v) // static
 {

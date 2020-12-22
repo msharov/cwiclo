@@ -15,8 +15,7 @@ public:
     inline int		run (void);
 };
 
-BEGIN_CWICLO_APP (TestApp)
-END_CWICLO_APP
+CWICLO_APP_L (TestApp,)
 
 void TestApp::write_memblock (const memblock& l) // static
 {

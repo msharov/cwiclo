@@ -130,6 +130,8 @@ auto PExtern::launch_pipe (const char* exe, const char* arg) const -> fd_t
 //}}}-------------------------------------------------------------------
 //{{{ Extern
 
+IMPLEMENT_INTERFACES_D (Extern)
+
 Extern::Extern (const Msg::Link& l)
 : Msger (l)
 ,_sockfd (-1)
@@ -157,14 +159,6 @@ Extern::~Extern (void)
 	    rp.pRelay->on_msger_destroyed (msger_id());
 	rp.pRelay = nullptr;
     }
-}
-
-bool Extern::dispatch (Msg& msg)
-{
-    return PTimer::Reply::dispatch (this,msg)
-	|| PExtern::dispatch (this,msg)
-	|| PCOM::dispatch (this,msg)
-	|| Msger::dispatch (msg);
 }
 
 void Extern::queue_outgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid)
@@ -266,6 +260,22 @@ void Extern::ExtMsg::write_iovecs (iovec* iov, streamsize bw)
     iov[1].iov_len = _h.sz - bw;
 }
 
+iid_t Extern::ExtMsg::interface_in_list_by_name (const iid_t* il, const char* iname, streamsize inamesz) // static
+{
+    for (auto i = il; *i; ++i)
+	if (equal_n (iname, inamesz, *i, interface_name_size (*i)))
+	    return *i;
+    return nullptr;
+}
+
+iid_t Extern::ExtMsg::interface_by_name (const char* iname, streamsize inamesz) // static
+{
+    auto i = interface_in_list_by_name (App::imports(), iname, inamesz);
+    if (!i)
+	i = interface_in_list_by_name (App::exports(), iname, inamesz);
+    return i;
+}
+
 methodid_t Extern::ExtMsg::parse_method (void) const
 {
     zstr::cii mi (_hbuf, _h.hsz-sizeof(_h));
@@ -277,9 +287,9 @@ methodid_t Extern::ExtMsg::parse_method (void) const
 	return nullptr;
     auto methodend = *++mi;
     auto methodnamesz = methodend - methodname;
-    auto iface = App::interface_by_name (ifacename, methodname-ifacename);
+    auto iface = interface_by_name (ifacename, methodname-ifacename);
     if (!iface) {
-	DEBUG_PRINTF ("[XE] Extern message arrived for %s.%s, but the interface is not registered.\n\tDid you forget to REGISTER_EXTERN_MSGER it?\n\tRemember that reply interfaces must also be registered.\n", ifacename, methodname);
+	DEBUG_PRINTF ("[XE] Extern message arrived for %s.%s, but the interface is not registered.\n\tDid you forget to place it in the CWICLO_APP imports or exports list?\n", ifacename, methodname);
 	return nullptr;
     }
     return interface_lookup_method (iface, methodname, methodnamesz);
@@ -368,7 +378,7 @@ void Extern::COM_export (string elist)
 	if (!eic)
 	    eic = elist.end();
 	*eic = 0;
-	auto iid = App::interface_by_name (ei, eic+1-ei);
+	auto iid = ExtMsg::interface_by_name (ei, eic+1-ei);
 	if (iid)	// _einfo.imported only contains interfaces supported by this App
 	    _einfo.imported.push_back (iid);
 	ei = eic;
@@ -848,6 +858,8 @@ auto PExternServer::bind_user_local (const char* sockname, const iid_t* eifaces)
 //}}}-------------------------------------------------------------------
 //{{{ ExternServer
 
+IMPLEMENT_INTERFACES_D (ExternServer)
+
 bool ExternServer::on_error (mrid_t eid, const string& errmsg [[maybe_unused]])
 {
     if (_timer.dest() == eid || msger_id() == eid)
@@ -863,14 +875,6 @@ void ExternServer::on_msger_destroyed (mrid_t mid)
     remove_if (_conns, [&](const auto& e) { return e.dest() == mid; });
     if (_conns.empty() && !flag (f_ListenWhenEmpty))
 	set_unused();
-}
-
-bool ExternServer::dispatch (Msg& msg)
-{
-    return PTimer::Reply::dispatch (this, msg)
-	|| PExternServer::dispatch (this, msg)
-	|| PExtern::Reply::dispatch (this, msg)
-	|| Msger::dispatch (msg);
 }
 
 void ExternServer::Timer_timer (PTimer::fd_t)

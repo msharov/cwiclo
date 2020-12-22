@@ -28,7 +28,11 @@ class PPing : public Proxy {
     // sequence (method1,"s")(method2,"u")(method3,"x"). Note the absence
     // of commas between parenthesis groups.
     //
-    DECLARE_INTERFACE (Ping, (ping,"u"));
+    // The first argument to DECLARE_INTERFACE is the base class of this
+    // proxy. This is used to define base_class_t member type and recursive
+    // interface collection methods used to create the interface-Msger map.
+    //
+    DECLARE_INTERFACE (Proxy, Ping, (ping,"u"));
 public:
     // Proxies are constructed with the calling object's oid,
     // to let the remote object know where to send the replies.
@@ -98,9 +102,27 @@ public:
 
 //----------------------------------------------------------------------
 // Finally, a server object must be defined that will implement the
-// Ping interface by replying with the received argument.
+// Ping interface by replying with the received argument. Each such
+// object needs an IMPLEMENT_INTERFACES macro call, which will implement
+// the necessary API binding interfaces to this class and dispatching
+// the incoming messages to interface acceptor methods; here to Ping_ping.
+// The app will use this API to map interface to Msger factory to create
+// the destination object for messages sent to it.
+//
+// The arguments are first the base class, here Msger. Second the list
+// of invokable interfaces, as their proxy names. Remember that these
+// are preprocessor sequences (PPing)(PSome)(POther), with no commas.
+// The third argument is another preprocessor sequence specifying
+// interfaces that this Msger uses internally. These will usually be
+// reply interfaces, like (PPing::Reply).
+//
+// Alternatively there is the IMPLEMENT_INTERFACES_I/_D pair in case
+// you want to force interface methods inline, while defining their
+// bodies in the .cc file. Placing IMPLEMENT_INTERFACES_D(PingMsger)
+// there will generate the appropriate virtual PingMsger::dispatch.
 //
 class PingMsger : public Msger {
+    IMPLEMENT_INTERFACES (Msger, (PPing),)
 public:
     explicit		PingMsger (const Msg::Link& l)
 			    : Msger(l),_reply(l),_npings(0)
@@ -110,10 +132,6 @@ public:
     inline void		Ping_ping (uint32_t v) {
 			    LOG ("Ping%hu: %u, %u total\n", msger_id(), v, ++_npings);
 			    _reply.ping (v);
-			}
-    bool		dispatch (Msg& msg) override {
-			    return PPing::dispatch (this, msg)
-					|| Msger::dispatch (msg);
 			}
 private:
     PPing::Reply	_reply;

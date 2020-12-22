@@ -11,11 +11,10 @@
 // another process. The client side is implemented in ipcom.
 
 class TestApp : public App {
+    IMPLEMENT_INTERFACES (App,,(PExternServer))
 public:
     static auto&	instance (void) { static TestApp s_app; return s_app; }
     void		process_args (argc_t argc, argv_t argv);
-    bool		dispatch (Msg& msg) override
-			    { return PExtern::Reply::dispatch (this, msg) || App::dispatch (msg); }
     inline void		Extern_connected (const Extern::Info*);
 private:
 			TestApp (void) : App(), _eserver (mrid_App) {}
@@ -23,11 +22,7 @@ private:
     PExternServer	_eserver;
 };
 
-BEGIN_CWICLO_APP (TestApp)
-    REGISTER_MSGER (PPing, PingMsger)
-    REGISTER_MSGER (PExternServer, ExternServer)
-    REGISTER_EXTERNS
-END_CWICLO_APP
+CWICLO_APP (TestApp, (PingMsger)(ExternServer),,(PPing))
 
 //----------------------------------------------------------------------
 
@@ -45,12 +40,6 @@ void TestApp::process_args (argc_t argc, argv_t argv)
 	    exit (EXIT_SUCCESS);
 	}
     }
-    // When you run a msger server, you must specify a list of interfaces
-    // it is capable of instantiating. In this example, the only interface
-    // exported is Ping (see ping.h). The client side sends an empty export
-    // list when it only imports interfaces.
-    static const iid_t eil_Ping[] = { PPing::interface(), nullptr };
-
     // Object servers can be run on a UNIX socket or a TCP port. ipcom shows
     // the UNIX socket version. These sockets are created in system standard
     // locations; typically /run for root processes or /run/user/<uid> for
@@ -72,7 +61,7 @@ void TestApp::process_args (argc_t argc, argv_t argv)
     //
     // PExternServer calls return the fd of the new socket, -1 on failure.
     //
-    if (0 > _eserver.activate_user_local (c_IPCOM_socket_name, eil_Ping))
+    if (0 > _eserver.activate_user_local (c_IPCOM_socket_name, exports()))
 	return error_libc ("activate_user_local");
 }
 

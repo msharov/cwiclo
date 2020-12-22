@@ -88,6 +88,7 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 //}}}-------------------------------------------------------------------
 //{{{ Interface definition macros
 
+//{{{2 DECLARE_INTERFACE helper macros
 // Use these to define the i_Interface variable in a proxy
 // Example: DECLARE_INTERFACE (MyInterface, (Call1,"uix")(Call2,"x"))
 // Note that the method list is not comma-separated; it is a preprocessor
@@ -106,6 +107,7 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 
 #define DECLARE_INTERFACE_METHOD_ACCESSORS(iface,mname,sig)\
     static constexpr methodid_t m_##mname (void) { return i_##iface.method_##mname; }
+//}}}2
 
 // This creates an interface definition variable as a static string
 // block containing the name followed by method\0signature pairs.
@@ -113,7 +115,7 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 // obtaining interface name directly from the method name and to
 // speed up lookup of method by name.
 //
-#define DECLARE_INTERFACE(iface,methods)\
+#define DECLARE_INTERFACE(base,iface,methods)\
     struct I##iface {			\
 	uint8_t	name_size;		\
 	char	name [sizeof(#iface)];	\
@@ -131,7 +133,11 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
     };					\
     SEQ_FOR_EACH (methods, iface, DECLARE_INTERFACE_METHOD_ACCESSORS)\
 public:					\
-    static constexpr iid_t interface (void) { return i_##iface.name; }
+    using base_class_t = base;		\
+    static constexpr iid_t interface (void) { return i_##iface.name; }\
+    static constexpr auto n_interfaces (void) { return base_class_t::n_interfaces()+1; }\
+    static constexpr auto get_interfaces (iid_t* i)\
+	{ i = base_class_t::get_interfaces(i); *i++ = interface(); return i; }
 
 //}}}-------------------------------------------------------------------
 //{{{ Msg
@@ -257,6 +263,56 @@ private:
 };
 
 //}}}-------------------------------------------------------------------
+//{{{ Interface-msger binding macros
+//
+// IMPLEMENT_INTERFACES is used in a Msger to list implemented interfaces.
+// There are two lists; the first contains proxy class names for invokable
+// interfaces - the ones whose messages can create the Msger object. These
+// are the services the Msger object provides. The second argument contains
+// the list of reply interface proxies; these specify interfaces that the
+// Msger uses itself, receiving replies on them from other Msger objects.
+//
+
+//{{{2 IMPLEMENT_INTERFACES helper macros
+#define GENERATE_CALL_N_INTERFACES(arg,proxy) arg proxy::n_interfaces()
+#define GENERATE_CALL_GET_INTERFACES(arg,proxy) arg = proxy::get_interfaces(arg);
+#define GENERATE_CALL_DISPATCH_I_INTERFACES(o,proxy) || proxy::dispatch(o,msg)
+#define GENERATE_CALL_DISPATCH_R_INTERFACES(o,proxy) || proxy::Reply::dispatch(o,msg)
+#define IMPLEMENT_INTERFACES_I_M(base, invokable, reply)\
+public:\
+    using base_class_t = base;\
+    static constexpr auto n_interfaces (void)\
+	{ return 0 SEQ_FOR_EACH (invokable,+,GENERATE_CALL_N_INTERFACES); }\
+    static constexpr auto get_interfaces (iid_t* i)\
+	{ SEQ_FOR_EACH (invokable,i,GENERATE_CALL_GET_INTERFACES) return i; }\
+protected:\
+    template <typename M>\
+    inline static constexpr bool dispatch_interfaces (M* o, Msg& msg)\
+	{ return false\
+		SEQ_FOR_EACH (invokable, o, GENERATE_CALL_DISPATCH_I_INTERFACES)\
+		SEQ_FOR_EACH (reply, o, GENERATE_CALL_DISPATCH_R_INTERFACES); }
+
+#define IMPLEMENT_INTERFACES_D_B\
+    { return dispatch_interfaces(this,msg) || base_class_t::dispatch(msg); }
+//}}}2
+
+#define IMPLEMENT_INTERFACES(base, invokable, reply)\
+    IMPLEMENT_INTERFACES_I_M(base,invokable,reply)\
+    bool dispatch (Msg& msg) override IMPLEMENT_INTERFACES_D_B
+
+// The _I/_D variant is for defining Msger::dispatch in .cc file while
+// also declaring all the interface calls inline and and the .cc file.
+// When using IMPLEMENT_INTERFACES, the interface calls must either be
+// non-inline, or be in the header, both of which may be undesirable.
+//
+#define IMPLEMENT_INTERFACES_I(base, invokable, reply)\
+    IMPLEMENT_INTERFACES_I_M(base,invokable,reply)\
+    bool dispatch (Msg& msg) override;
+
+#define IMPLEMENT_INTERFACES_D(msger)\
+    bool msger::dispatch (Msg& msg) IMPLEMENT_INTERFACES_D_B
+
+//}}}-------------------------------------------------------------------
 //{{{ Msger
 
 class Msger {
@@ -289,6 +345,9 @@ protected:
     void		operator= (const Msger&) = delete;
     constexpr void	set_flag (unsigned f, bool v = true)	{ set_bit (_flags,f,v); }
     constexpr void	set_unused (bool v = true)	{ set_flag (f_Unused, v); }
+protected:
+    static constexpr auto n_interfaces (void)		{ return 0; }
+    static constexpr auto get_interfaces (iid_t* i)	{ return i; }
 private:
     Msg::Link		_link;
     uint32_t		_flags;
@@ -316,6 +375,9 @@ protected:
     protected:
 	constexpr	Reply (const Msg::Link& l) : ProxyB (l.dest, l.src) {}
     };
+protected:
+    static constexpr auto n_interfaces (void)		{ return 0; }
+    static constexpr auto get_interfaces (iid_t* i)	{ return i; }
 };
 
 } // namespace cwiclo

@@ -26,8 +26,7 @@ void App::Timer::Timer_watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t ti
     _nextfire = timeoutms + (timeoutms <= PTimer::TimerMax ? PTimer::now() : PTimer::TimerNone);
 }
 
-bool App::Timer::dispatch (Msg& msg)
-    { return PTimer::dispatch(this,msg) || Msger::dispatch(msg); }
+IMPLEMENT_INTERFACES_D (App::Timer)
 
 //}}}-------------------------------------------------------------------
 //{{{ App
@@ -59,14 +58,6 @@ App::~App (void)
 	delete_msger (mid);
     if (!_errors.empty())
 	fprintf (stderr, "Error: %s\n", _errors.c_str());
-}
-
-iid_t App::interface_by_name (const char* iname, streamsize inamesz) // static
-{
-    for (auto mii = s_msger_factories; mii->iface; ++mii)
-	if (equal_n (iname, inamesz, mii->iface, interface_name_size (mii->iface)))
-	    return mii->iface;
-    return nullptr;
 }
 
 //}}}-------------------------------------------------------------------

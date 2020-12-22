@@ -12,14 +12,9 @@
 // ipcom illustrates communicating with Msgers in another process
 
 class TestApp : public App {
+    IMPLEMENT_INTERFACES (App,,(PPing)(PExtern)(PSignal))
 public:
     static auto&	instance (void) { static TestApp s_app; return s_app; }
-    bool		dispatch (Msg& msg) override {
-			    return PPing::Reply::dispatch (this, msg)
-				|| PExtern::Reply::dispatch (this, msg)
-				|| PSignal::dispatch (this, msg)
-				|| App::dispatch (msg);
-			}
     void		on_msger_destroyed (mrid_t mid) override;
     void		process_args (argc_t argc, argv_t argv);
     inline void		Extern_connected (const Extern::Info* einfo);
@@ -32,10 +27,7 @@ private:
     PExtern		_eclient;
 };
 
-BEGIN_CWICLO_APP (TestApp)
-    REGISTER_EXTERN_MSGER (PPing)
-    REGISTER_EXTERNS
-END_CWICLO_APP
+CWICLO_APP (TestApp,,(PPing),)
 
 //----------------------------------------------------------------------
 

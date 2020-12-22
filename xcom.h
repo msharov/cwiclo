@@ -14,7 +14,7 @@ struct iovec;
 namespace cwiclo {
 
 class PCOM : public Proxy {
-    DECLARE_INTERFACE (COM, (error,"s")(export,"s")(delete,""))
+    DECLARE_INTERFACE (Proxy, COM, (error,"s")(export,"s")(delete,""))
 public:
     constexpr		PCOM (mrid_t src, mrid_t dest)	: Proxy (src, dest) {}
     explicit		PCOM (mrid_t src)		: Proxy (src) {}
@@ -44,6 +44,7 @@ public:
 	    return false;
 	return true;
     }
+    using Reply = PCOM;
 };
 
 //}}}-------------------------------------------------------------------
@@ -52,6 +53,7 @@ public:
 class Extern;
 
 class COMRelay : public Msger {
+    IMPLEMENT_INTERFACES_I_M (Msger, (PCOM),)
 public:
     explicit		COMRelay (const Msg::Link& l);
 			~COMRelay (void) override;
@@ -71,7 +73,7 @@ private:
 //{{{ PExtern
 
 class PExtern : public Proxy {
-    DECLARE_INTERFACE (Extern, (open,"xib")(close,"")(connected,"q"))
+    DECLARE_INTERFACE (Proxy, Extern, (open,"xib")(close,"")(connected,"q"))
 public:
     using fd_t = PTimer::fd_t;
     //{{{2 Info
@@ -139,6 +141,7 @@ public:
 //{{{ Extern
 
 class Extern : public Msger {
+    IMPLEMENT_INTERFACES_I (Msger, (PExtern), (PTimer)(PCOM))
 public:
     using fd_t = PExtern::fd_t;
     using Info = PExtern::Info;
@@ -146,7 +149,6 @@ public:
     explicit		Extern (const Msg::Link& l);
 			~Extern (void) override;
     auto&		info (void) const	{ return _einfo; }
-    bool		dispatch (Msg& msg) override;
     void		queue_outgoing (Msg&& msg, extid_t extid)
 			    { queue_outgoing (msg.method(), msg.move_body(), msg.fd_offset(), extid); }
     static Extern*	lookup_by_id (mrid_t id);
@@ -197,6 +199,8 @@ private:
 	void			write_iovecs (iovec* iov, streamsize bw);
 	constexpr auto		read (void) const		{ return istream (_body.data(), _body.size()); }
 	methodid_t		parse_method (void) const;
+	static iid_t		interface_by_name (const char* iname, streamsize inamesz);
+	static iid_t		interface_in_list_by_name (const iid_t* il, const char* iname, streamsize inamesz);
 	inline void		debug_dump (void) const;
     private:
 	constexpr auto		header_ptr (void) const		{ return begin(_hbuf)-sizeof(_h); }
@@ -275,7 +279,7 @@ constexpr bool PExtern::Reply::dispatch (O* o, const Msg& msg) { // static
 //{{{ PExternServer
 
 class PExternServer : public Proxy {
-    DECLARE_INTERFACE (ExternServer, (listen,"xib")(accept,"xi")(close,""))
+    DECLARE_INTERFACE (Proxy, ExternServer, (listen,"xib")(accept,"xi")(close,""))
 public:
     using fd_t = PExtern::fd_t;
     enum class WhenEmpty : uint8_t { Remain, Close };
@@ -331,6 +335,7 @@ private:
 //{{{ ExternServer
 
 class ExternServer : public Msger {
+    IMPLEMENT_INTERFACES_I (Msger, (PExternServer),(PTimer)(PExtern))
 public:
     using fd_t = PExternServer::fd_t;
     enum { f_ListenWhenEmpty = Msger::f_Last, f_Last };
@@ -339,7 +344,6 @@ public:
 			    : Msger(l),_conns(),_eifaces(),_timer (l.dest),_reply (l),_sockfd (-1) {}
     bool		on_error (mrid_t eid, const string& errmsg) override;
     void		on_msger_destroyed (mrid_t mid) override;
-    bool		dispatch (Msg& msg) override;
 private:
 			friend class PTimer::Reply;
     inline void		Timer_timer (fd_t);
