@@ -51,13 +51,6 @@ void TestApp::process_args (argc_t argc [[maybe_unused]], argv_t argv [[maybe_un
 	    if (opt == 'd')
 		set_flag (f_DebugMsgTrace);
     #endif
-    // Msger servers can be run on a UNIX socket or a TCP port. ipcom shows
-    // the UNIX socket version. These sockets are created in system standard
-    // locations; typically /run for root processes or /run/user/<uid> for
-    // processes launched by the user. If you also implement systemd socket
-    // activation (see below), any other sockets can be used.
-    static const char c_IPCOM_socket_name[] = "@ipcom.socket";
-
     // Communication between processes requires the use of the Extern
     // interface and auxillary factories for creating passthrough local
     // objects representing both the remote and local addressable objects.
@@ -69,13 +62,13 @@ void TestApp::process_args (argc_t argc [[maybe_unused]], argv_t argv [[maybe_un
     //
     // connect_user_local tries connecting to $XDG_RUNTIME_DIR/ipcom.socket
     //
-    if (0 > _eclient.connect_user_local (c_IPCOM_socket_name))
+    if (0 > _eclient.connect_user_local (PPing::interface_socket()))
 	//
 	// The return value is the opened fd. -1 if the open failed.
 	// Automated testing in the Makefile will run only ipcom, so
 	// the server is launched manually here on a private pipe.
 	//
-	if (0 > _eclient.launch_pipe ("ipcomsrv"))
+	if (0 > _eclient.launch_pipe (PPing::interface_program()))
 	    return error_libc ("launch_pipe");
 
     // Now wait for Extern_connected

@@ -40,13 +40,6 @@ void TestApp::process_args (argc_t argc, argv_t argv)
 	    exit (EXIT_SUCCESS);
 	}
     }
-    // Object servers can be run on a UNIX socket or a TCP port. ipcom shows
-    // the UNIX socket version. These sockets are created in system standard
-    // locations; typically /run for root processes or /run/user/<uid> for
-    // processes launched by the user. If you also implement systemd socket
-    // activation (see below), any other sockets can be used.
-    static const char c_IPCOM_socket_name[] = "@ipcom.socket";
-
     // When writing a server, it is recommended to use the ExternServer
     // object to manage the sockets being listened to. It will create
     // Extern objects for each accepted connection. For the purpose of
@@ -56,12 +49,12 @@ void TestApp::process_args (argc_t argc, argv_t argv)
     // The activate calls are the recommended implementation method.
     // They support systemd socket activation and will try that first.
     // If no sockets are passed in, then the named socket is created.
-    // Here, activate_user_local will create ipcom.socket in
-    // XDG_RUNTIME_DIR. Abstract sockets are supported with @names.
+    // Here, activate_user_local will create ping.socket in
+    // XDG_RUNTIME_DIR/cwiclo/test. @names are linux abstract sockets.
     //
     // PExternServer calls return the fd of the new socket, -1 on failure.
     //
-    if (0 > _eserver.activate_user_local (c_IPCOM_socket_name, exports()))
+    if (0 > _eserver.activate_user_local (PPing::interface_socket(), exports()))
 	return error_libc ("activate_user_local");
 }
 

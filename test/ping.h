@@ -32,7 +32,19 @@ class PPing : public Proxy {
     // proxy. This is used to define base_class_t member type and recursive
     // interface collection methods used to create the interface-Msger map.
     //
-    DECLARE_INTERFACE (Proxy, Ping, (ping,"u"));
+    // The fourth argument specifies the socket name on which this interface
+    // will be exported. The server process will listen on this socket,
+    // exporting Ping interface to connections, and the imports should
+    // connect to this socket to find this interface. This is roughly
+    // equivalent to a DBUS well-known bus name.
+    //
+    // The last argument specifies the program to launch when the socket
+    // is not available.
+    //
+    // For non-exported interfaces, DECLARE_INTERFACE macro could
+    // be used instead, omitting the socket and program arguments.
+    //
+    DECLARE_INTERFACE_E (Proxy, Ping, (ping,"u"), "@cwiclo/test/ping.socket", "ipcomsrv");
 public:
     // Proxies are constructed with the calling object's oid,
     // to let the remote object know where to send the replies.

@@ -82,6 +82,19 @@ static constexpr iid_t interface_of_method (methodid_t __restrict__ mid) {
     #endif
 }
 
+// Socket name and default program are at the end of the interface block
+static constexpr auto interface_socket_name (iid_t iid)
+{
+    methodid_t __restrict__ i = interface_first_method (iid);
+    for (uint8_t nextm = 0; (nextm = method_next_offset (i)); i += nextm) {}
+    return i+2;
+}
+static constexpr auto interface_program_name (iid_t iid)
+{
+    auto socket_name = interface_socket_name (iid);
+    return socket_name+__builtin_strlen(socket_name)+1;
+}
+
 // When unmarshalling a message, convert method name to local pointer in the interface
 methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, size_t mnamesz);
 
@@ -115,7 +128,7 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 // obtaining interface name directly from the method name and to
 // speed up lookup of method by name.
 //
-#define DECLARE_INTERFACE(base,iface,methods)\
+#define DECLARE_INTERFACE_E(base,iface,methods,socket,prog)\
     struct I##iface {			\
 	uint8_t	name_size;		\
 	char	name [sizeof(#iface)];	\
@@ -123,21 +136,29 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 	uint8_t	endzero;		\
 	uint8_t name_offset_low;	\
 	uint8_t name_offset_high;	\
+	char	socket_name [sizeof(socket)];\
+	char	program_name [sizeof(prog)];\
     };					\
     static constexpr const I##iface i_##iface = {\
 	sizeof(#iface), #iface,		\
 	SEQ_FOR_EACH (methods, iface, DEFINE_INTERFACE_METHOD_VALUES)\
 	0,				\
 	uint8_t(offsetof(I##iface, name_offset_low)-offsetof(I##iface, name)),\
-	uint8_t((offsetof(I##iface, name_offset_low)-offsetof(I##iface, name))>>8)\
+	uint8_t((offsetof(I##iface, name_offset_low)-offsetof(I##iface, name))>>8),\
+	socket, prog\
     };					\
     SEQ_FOR_EACH (methods, iface, DECLARE_INTERFACE_METHOD_ACCESSORS)\
 public:					\
     using base_class_t = base;		\
     static constexpr iid_t interface (void) { return i_##iface.name; }\
+    static constexpr auto interface_socket (void) { return i_##iface.socket_name; }\
+    static constexpr auto interface_program (void) { return i_##iface.program_name; }\
     static constexpr auto n_interfaces (void) { return base_class_t::n_interfaces()+1; }\
     static constexpr auto get_interfaces (iid_t* i)\
 	{ i = base_class_t::get_interfaces(i); *i++ = interface(); return i; }
+
+// The common case for socket-less interfaces
+#define DECLARE_INTERFACE(base,iface,methods) DECLARE_INTERFACE_E(base,iface,methods,"","")
 
 //}}}-------------------------------------------------------------------
 //{{{ Msg
