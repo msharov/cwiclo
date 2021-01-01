@@ -62,8 +62,8 @@ public:
 public:
     class Reply : public Proxy::Reply {
     public:
-	constexpr	Reply (const Msg::Link& l)	: Proxy::Reply (l) {}
-	void		timer (fd_t fd) const		{ send (m_timer(), fd); }
+	constexpr	Reply (Msg::Link l)	: Proxy::Reply (l) {}
+	void		timer (fd_t fd) const	{ send (m_timer(), fd); }
 
 	template <typename O>
 	inline static constexpr bool dispatch (O* o, const Msg& msg) {
@@ -117,17 +117,17 @@ public:
     static void		install_signal_handlers (void);
     void		process_args (argc_t, argv_t)	{ }
     int			run (void);
-    void		create_method_dest (methodid_t mid, const Msg::Link& l);
-    void		create_dest_with (iid_t iid, Msger::pfn_factory_t fac, const Msg::Link& l);
-    inline Msg&		create_msg (const Msg::Link& l, methodid_t mid, streamsize size, Msg::fdoffset_t fdo = Msg::NoFdIncluded)
+    void		create_method_dest (methodid_t mid, Msg::Link l);
+    void		create_dest_with (iid_t iid, Msger::pfn_factory_t fac, Msg::Link l);
+    inline Msg&		create_msg (Msg::Link l, methodid_t mid, streamsize size, Msg::fdoffset_t fdo = Msg::NoFdIncluded)
 			    { create_method_dest (mid,l); return _outq.emplace_back (l,mid,size,fdo); }
-    inline Msg&		create_msg (const Msg::Link& l, methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0)
+    inline Msg&		create_msg (Msg::Link l, methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0)
 			    { create_method_dest (mid,l); return _outq.emplace_back (l,mid,move(body),fdo,extid); }
     mrid_t		register_singleton_msger (Msger* m);
     static const iid_t*	imports (void)			{ return s_imports; }
     static const iid_t*	exports (void)			{ return s_exports; }
     msgq_t::size_type	has_messages_for (mrid_t mid) const;
-    Msg*		has_outq_msg (methodid_t mid, const Msg::Link& l);
+    Msg*		has_outq_msg (methodid_t mid, Msg::Link l);
     constexpr auto	has_timers (void) const		{ return _timers.size(); }
     bool		valid_msger_id (mrid_t id)const	{ assert (_msgers.size() == _creators.size()); return id <= _msgers.size(); }
     constexpr void	quit (void)			{ set_flag (f_Quitting); }
@@ -164,20 +164,19 @@ public:
     class Timer : public Msger {
 	IMPLEMENT_INTERFACES_I (Msger, (PTimer),)
     public:
-	explicit	Timer (const Msg::Link& l)
-			    : Msger(l),_nextfire(PTimer::TimerNone),_reply(l),_cmd(),_fd(-1)
+	explicit	Timer (Msg::Link l)
+			    : Msger(l),_nextfire(PTimer::TimerNone),_cmd(),_fd(-1)
 			    { App::instance().add_timer (this); }
 			~Timer (void) override;
 	inline void	Timer_watch (PTimer::WatchCmd cmd, PTimer::fd_t fd, mstime_t timeoutms);
 	constexpr void	stop (void)		{ set_flag (f_Unused); _cmd = PTimer::WatchCmd::Stop; _fd = -1; _nextfire = PTimer::TimerNone; }
-	void		fire (void)		{ _reply.timer (_fd); stop(); }
+	void		fire (void)		{ PTimer::Reply(creator_link()).timer (_fd); stop(); }
 	auto		fd (void) const		{ return _fd; }
 	auto		cmd (void) const	{ return _cmd; }
 	auto		next_fire (void) const	{ return _nextfire; }
 	auto		poll_mask (void) const	{ return _cmd; }
     public:
 	PTimer::mstime_t	_nextfire;
-	PTimer::Reply		_reply;
 	PTimer::WatchCmd	_cmd;
 	PTimer::fd_t		_fd;
     };
@@ -185,8 +184,8 @@ public:
 private:
     auto		msgerp_by_id (mrid_t id)	{ return _msgers[id]; }
     inline static auto	msger_factory_for (iid_t id);
-    [[nodiscard]] inline static Msger*	create_msger_with (const Msg::Link& l, iid_t iid, Msger::pfn_factory_t fac);
-    [[nodiscard]] inline static auto	create_msger (const Msg::Link& l, iid_t iid);
+    [[nodiscard]] inline static Msger*	create_msger_with (Msg::Link l, iid_t iid, Msger::pfn_factory_t fac);
+    [[nodiscard]] inline static auto	create_msger (Msg::Link l, iid_t iid);
     inline void		process_input_queue (void);
     inline void		delete_unused_msgers (void);
     inline void		forward_received_signals (void);
@@ -304,13 +303,13 @@ const iid_t* App::s_exports = s_exports_list.ia;
 
 #define CWICLO_APP(A,msgers,imports,exports)	\
     CWICLO_MAIN(A)				\
-    GENERATE_MSGER_FACTORY_MAP((App::Timer)(Extern)(COMRelay) msgers,&Msger::factory<COMRelay>)\
+    GENERATE_MSGER_FACTORY_MAP((App::Timer)(Extern) msgers,&COMRelay::factory<COMRelay>)\
     GENERATE_IMPORTS_LIST((PCOM) imports)	\
     GENERATE_EXPORTS_LIST(exports)
 
 #define CWICLO_APP_L(A,msgers)	\
     CWICLO_MAIN(A)		\
-    GENERATE_MSGER_FACTORY_MAP((App::Timer) msgers,nullptr)\
+    GENERATE_MSGER_FACTORY_MAP(msgers,nullptr)\
     const iid_t* App::s_imports = nullptr;\
     const iid_t* App::s_exports = nullptr;
 

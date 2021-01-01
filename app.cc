@@ -187,14 +187,14 @@ mrid_t App::register_singleton_msger (Msger* m)
     return id;
 }
 
-Msger* App::create_msger_with (const Msg::Link& l, iid_t iid [[maybe_unused]], Msger::pfn_factory_t fac) // static
+Msger* App::create_msger_with (Msg::Link l, iid_t iid [[maybe_unused]], Msger::pfn_factory_t fac) // static
 {
     Msger* r = fac ? (*fac)(l) : nullptr;
     #ifndef NDEBUG	// Log failure to create in debug mode
-	if (!r && (!iid || !iid[0] || iid[iid[-1]-1] != 'R')) { // reply messages do not recreate dead Msgers
+	if (!r && (!iid || !iid[0])) {
 	    if (!fac) {
 		DEBUG_PRINTF ("[E] No factory registered for interface %s\n", iid ? iid : "(iid_null)");
-		assert (!"Unable to find factory for the given interface. You must register a Msger for every interface you use using REGISTER_MSGER in the BEGIN_MSGER/END_MSGER block.");
+		assert (!"Unable to find factory for the given interface. You must add a Msger to CWICLO_APP for every interface you use.");
 	    } else {
 		DEBUG_PRINTF ("[E] Failed to create Msger for interface %s\n", iid ? iid : "(iid_null)");
 		assert (!"Failed to create Msger for the given destination. Msger constructors are not allowed to fail or throw.");
@@ -213,10 +213,10 @@ auto App::msger_factory_for (iid_t id) // static
     return mii->factory;
 }
 
-auto App::create_msger (const Msg::Link& l, iid_t iid) // static
+auto App::create_msger (Msg::Link l, iid_t iid) // static
     { return create_msger_with (l, iid, msger_factory_for (iid)); }
 
-void App::create_method_dest (methodid_t mid, const Msg::Link& l)
+void App::create_method_dest (methodid_t mid, Msg::Link l)
 {
     assert (valid_msger_id (l.src) && "You may only create links originating from an existing Msger");
     if (l.dest < _msgers.size() && !_msgers[l.dest]) {
@@ -227,7 +227,7 @@ void App::create_method_dest (methodid_t mid, const Msg::Link& l)
     }
 }
 
-void App::create_dest_with (iid_t iid, Msger::pfn_factory_t fac, const Msg::Link& l)
+void App::create_dest_with (iid_t iid, Msger::pfn_factory_t fac, Msg::Link l)
 {
     assert (valid_msger_id (l.src) && "You may only create links originating from an existing Msger");
     if (l.dest < _msgers.size() && !_msgers[l.dest])
@@ -316,7 +316,7 @@ void App::process_input_queue (void)
 	    auto accepted = msger->dispatch (msg);
 
 	    if (!accepted && msg.dest() != mrid_Broadcast)
-		DEBUG_PRINTF ("[E] Message delivered, but not accepted by the destination Msger.\nDid you forget to add the interface to the dispatch override?\n");
+		DEBUG_PRINTF ("[E] Message delivered, but not accepted by the destination Msger.\nDid you forget to add the interface to IMPLEMENT_INTERFACES?\n");
 
 	    // Check for errors generated during this dispatch
 	    if (!errors().empty() && !forward_error (mg, mg))
@@ -393,7 +393,7 @@ App::msgq_t::size_type App::has_messages_for (mrid_t mid) const
     return count_if (_outq, [=](auto& msg){ return msg.dest() == mid; });
 }
 
-Msg* App::has_outq_msg (methodid_t mid, const Msg::Link& l)
+Msg* App::has_outq_msg (methodid_t mid, Msg::Link l)
 {
     eachfor (mi, _outq)
 	if (mi->method() == mid && mi->link() == l)

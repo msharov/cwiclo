@@ -6,31 +6,24 @@
 #include "ping.h"
 
 class TestApp : public App {
+    //
+    // To use COM, each object must use IMPLEMENT_INTERFACES to declare
+    // the interfaces it uses. The arguments are the base class, the list
+    // of interfaces this Msger is created for, and the list of interfaces
+    // this Msger uses and gets replies from. The lists are preprocessor
+    // sequences with parentheses and no commas: (PPing)(POther)(PElse).
+    // The lists contain names of proxy classes defining the interfaces.
+    //
+    IMPLEMENT_INTERFACES (App,,(PPing))
 public:
     // Apps always use the singleton pattern
     static auto& instance (void) { static TestApp s_app; return s_app; }
-
-    bool dispatch (Msg& msg) override {
-	//
-	// Every Msger must implement the dispatch virtual,
-	// listing all interfaces it responds to. Here, the
-	// TestApp receives Ping messages. PPing::dispatch
-	// will accept messages for Ping interface and return
-	// true when they are handled.
-	//
-	return PPing::dispatch (this, msg)
-	    //
-	    // The base class dispatch will handle unrecognized
-	    // messages by returning false.
-	    //
-	    || App::dispatch (msg);
-    }
+    //
+    // This method is called by PPing::dispatch when a
+    // Ping message is received on a Ping interface.
+    // Note the naming convention.
+    //
     void Ping_ping (uint32_t v) {
-	//
-	// This method is called by PPing::dispatch when a
-	// Ping message is received on a Ping interface.
-	// Note the naming convention.
-	//
 	LOG ("Ping %u reply received in app\n", v);
 	if (++v < 5)
 	    _pinger.ping (v);
@@ -38,8 +31,6 @@ public:
 	    quit();
     }
 private:
-    TestApp (void)
-    : App()
     //
     // Remote Msgers are accessed through an interface proxy,
     // here of type PPing. The proxy will have methods that
@@ -52,7 +43,7 @@ private:
     // Usually the mrid is obtained by calling msger_id(), but
     // the App object is always mrid_App, so it can be used directly.
     //
-    ,_pinger (mrid_App)
+    TestApp (void) : App(),_pinger (mrid_App)
     {
 	// When ready, simply call the desired method.
 	// All method calls are asynchonous, never blocking.
@@ -65,7 +56,7 @@ private:
     PPing		_pinger;
 };
 
-// main is easiest to create by using these macros.
+// main should be created by using CWICLO_APP macros.
 // The arguments are the app class and the list of used msgers.
 // Here these are TestApp, and the PingMsger object with which
 // the app will communicate using the PPing proxy. PingMsger

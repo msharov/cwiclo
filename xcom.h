@@ -16,8 +16,9 @@ namespace cwiclo {
 class PCOM : public Proxy {
     DECLARE_INTERFACE (Proxy, COM, (error,"s")(export,"s")(delete,""))
 public:
-    constexpr		PCOM (mrid_t src, mrid_t dest)	: Proxy (src, dest) {}
     explicit		PCOM (mrid_t src)		: Proxy (src) {}
+    constexpr		PCOM (mrid_t src, mrid_t dest)	: Proxy (src, dest) {}
+    constexpr		PCOM (Msg::Link l)		: Proxy (l) {}
 			~PCOM (void)			{ }
     void		error (const string& errmsg) const	{ send (m_error(), errmsg); }
     void		export_ (const string& elist) const	{ send (m_export(), elist); }
@@ -55,7 +56,7 @@ class Extern;
 class COMRelay : public Msger {
     IMPLEMENT_INTERFACES_I_M (Msger, (PCOM),)
 public:
-    explicit		COMRelay (const Msg::Link& l);
+    explicit		COMRelay (Msg::Link l);
 			~COMRelay (void) override;
     bool		dispatch (Msg& msg) override;
     bool		on_error (mrid_t eid, const string& errmsg) override;
@@ -129,7 +130,7 @@ private:
 public:
     class Reply : public Proxy::Reply {
     public:
-	constexpr Reply (const Msg::Link& l) : Proxy::Reply(l) {}
+	constexpr Reply (Msg::Link l) : Proxy::Reply(l) {}
 	void connected (mrid_t extern_id) const { send (m_connected(), extern_id); }
 	template <typename O>
 	inline static constexpr bool dispatch (O* o, const Msg& msg);
@@ -146,7 +147,7 @@ public:
     using fd_t = PExtern::fd_t;
     using Info = PExtern::Info;
 public:
-    explicit		Extern (const Msg::Link& l);
+    explicit		Extern (Msg::Link l);
 			~Extern (void) override;
     auto&		info (void) const	{ return _einfo; }
     void		queue_outgoing (Msg&& msg, extid_t extid)
@@ -244,7 +245,6 @@ private:
 private:
     fd_t		_sockfd;
     PTimer		_timer;
-    PExtern::Reply	_reply;
     streamsize		_bwritten;
     vector<ExtMsg>	_outq;		// messages queued for export
     vector<RelayProxy>	_relays;
@@ -253,16 +253,6 @@ private:
     ExtMsg		_inmsg;		// currently incoming message
     fd_t		_infd;
 };
-
-//----------------------------------------------------------------------
-
-#define REGISTER_EXTERNS\
-    REGISTER_MSGER (PExtern, Extern)\
-    REGISTER_MSGER (PCOM, COMRelay)\
-    REGISTER_MSGER (PTimer, App::Timer)
-
-#define REGISTER_EXTERN_MSGER(proxy)\
-    REGISTER_MSGER (proxy, COMRelay)
 
 //----------------------------------------------------------------------
 
@@ -340,8 +330,8 @@ public:
     using fd_t = PExternServer::fd_t;
     enum { f_ListenWhenEmpty = Msger::f_Last, f_Last };
 public:
-    explicit		ExternServer (const Msg::Link& l)
-			    : Msger(l),_conns(),_eifaces(),_timer (l.dest),_reply (l),_sockfd (-1) {}
+    explicit		ExternServer (Msg::Link l)
+			    : Msger(l),_conns(),_eifaces(),_timer (l.dest),_sockfd (-1) {}
     bool		on_error (mrid_t eid, const string& errmsg) override;
     void		on_msger_destroyed (mrid_t mid) override;
 private:
@@ -357,7 +347,6 @@ private:
     vector<PExtern>	_conns;
     const iid_t*	_eifaces;
     PTimer		_timer;
-    PExternServer::Reply _reply;
     fd_t		_sockfd;
 };
 

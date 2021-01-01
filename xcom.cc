@@ -132,11 +132,10 @@ auto PExtern::launch_pipe (const char* exe, const char* arg) const -> fd_t
 
 IMPLEMENT_INTERFACES_D (Extern)
 
-Extern::Extern (const Msg::Link& l)
+Extern::Extern (Msg::Link l)
 : Msger (l)
 ,_sockfd (-1)
 ,_timer (msger_id())
-,_reply (l)
 ,_bwritten (0)
 ,_outq()
 ,_relays()
@@ -383,7 +382,7 @@ void Extern::COM_export (string elist)
 	    _einfo.imported.push_back (iid);
 	ei = eic;
     }
-    _reply.connected (msger_id());
+    PExtern::Reply(creator_link()).connected (msger_id());
 }
 
 void Extern::COM_delete (void)
@@ -630,7 +629,7 @@ bool Extern::accept_incoming_message (void)
 //}}}-------------------------------------------------------------------
 //{{{ COMRelay
 
-COMRelay::COMRelay (const Msg::Link& l)
+COMRelay::COMRelay (Msg::Link l)
 : Msger (l)
 //
 // COMRelays can be created either by local callers sending messages to
@@ -916,7 +915,7 @@ void ExternServer::ExternServer_close (void)
 
 void ExternServer::Extern_connected (const Extern::Info* einfo)
 {
-    _reply.connected (einfo ? einfo->extern_id : 0);
+    PExternServer::Reply(creator_link()).connected (einfo ? einfo->extern_id : 0);
 }
 
 } // namespace cwiclo

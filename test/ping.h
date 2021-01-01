@@ -83,19 +83,19 @@ public:
 	// Reply proxies are constructed from the owning object's creating
 	// link, copied from the message that created it. Messages from this
 	// proxy will send replies to the originating object.
-	constexpr Reply (const Msg::Link& l) : Proxy::Reply (l) {}
-			    // Using variadic Send is the easiest way to
-			    // create a message that only marshals arguments.
-			    // Because method signature is the same in both
-			    // directions, the same method pointer is reused.
+	//
+	constexpr Reply (Msg::Link l) : Proxy::Reply (l) {}
+	//
+	// Here an expanded marshalling example is given with direct
+	// stream access. Most of the time you should just use send.
+	//
 	void ping (uint32_t v) const {
-	    // Here an expanded marshalling example is given with direct
-	    // stream access. Most of the time you should just use send.
 	    auto& msg = create_msg (m_ping(), stream_sizeof(v));
 	    auto os = msg.write();
 	    os << v;
 	    commit_msg (msg, os);
 	}
+
 	template <typename O>
 	inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	    if (msg.method() == m_ping()) {
@@ -136,16 +136,21 @@ public:
 class PingMsger : public Msger {
     IMPLEMENT_INTERFACES (Msger, (PPing),)
 public:
-    explicit		PingMsger (const Msg::Link& l)
-			    : Msger(l),_reply(l),_npings(0)
+    explicit		PingMsger (Msg::Link l)
+			    : Msger(l),_npings(0)
 			    { LOG ("Created Ping%hu\n", msger_id()); }
 			~PingMsger (void) override
 			    { LOG ("Destroy Ping%hu\n", msger_id()); }
     inline void		Ping_ping (uint32_t v) {
 			    LOG ("Ping%hu: %u, %u total\n", msger_id(), v, ++_npings);
-			    _reply.ping (v);
+			    // Reply proxies should generally be created
+			    // when needed because the information in it
+			    // is already stored in Msger as creator_link.
+			    // This also allows correctly handling the case
+			    // of the creator being destroyed, when no further
+			    // messages should be sent to it.
+			    PPing::Reply(creator_link()).ping (v);
 			}
 private:
-    PPing::Reply	_reply;
     uint32_t		_npings;
 };

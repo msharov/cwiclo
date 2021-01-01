@@ -169,8 +169,11 @@ public:
 	mrid_t	src;
 	mrid_t	dest;
     public:
-	constexpr bool operator== (const Link& l) const { return *pointer_cast<uint32_t>(this) == *pointer_cast<uint32_t>(&l); }
-	constexpr bool operator!= (const Link& l) const { return !operator==(l); }
+	constexpr auto	to_int (void) const		{ union { Link l; uint32_t i; } c {*this}; return c.i; }
+	constexpr bool	operator== (const Link& l) const { return to_int() == l.to_int(); }
+	constexpr bool	operator!= (const Link& l) const { return !operator==(l); }
+	static constexpr auto	from_int (uint32_t i)	{ union { uint32_t i; Link l; } c {i}; return c.l; }
+	static constexpr auto	reverse (Link l)	{ return from_int (bit_ror (l.to_int(),16)); }
     };
     using Body		= memblaz;
     using value_type	= Body::value_type;
@@ -237,13 +240,14 @@ class Msger;
 class ProxyB {
 public:
     using fd_t = Msg::fd_t;
-    using pfn_factory_t = Msger* (*)(const Msg::Link& l);
+    using pfn_factory_t = Msger* (*)(Msg::Link l);
 public:
     constexpr auto&	link (void) const	{ return _link; }
     constexpr auto	src (void) const	{ return link().src; }
     constexpr auto	dest (void) const	{ return link().dest; }
 protected:
     constexpr		ProxyB (mrid_t from, mrid_t to) : _link {from,to} {}
+    constexpr		ProxyB (Msg::Link l)		: _link (Msg::Link::reverse(l)) {}
 			ProxyB (const ProxyB&) = delete;
     void		operator= (const ProxyB&) = delete;
     Msg&		create_msg (methodid_t imethod, streamsize sz) const;
@@ -341,7 +345,7 @@ public:
     enum { f_Unused, f_Static, f_Last };
     //{{{2 Msger factory template --------------------------------------
     template <typename M>
-    [[nodiscard]] static Msger* factory (const Msg::Link& l)
+    [[nodiscard]] static Msger* factory (Msg::Link l)
 	{ return new M (l); }
     using pfn_factory_t = ProxyB::pfn_factory_t;
     //}}}2--------------------------------------------------------------
@@ -357,9 +361,9 @@ public:
     virtual bool	on_error (mrid_t, const string&)
 			    { set_unused(); return false; }
     virtual void	on_msger_destroyed (mrid_t mid)
-			    { if (mid == creator_id()) set_unused(); }
+			    { if (mid == creator_id()) { _link.src = msger_id(); set_unused(); } }
 protected:
-    explicit constexpr	Msger (const Msg::Link& l)	:_link(l),_flags() {}
+    explicit constexpr	Msger (Msg::Link l)		:_link(l),_flags() {}
     explicit constexpr	Msger (mrid_t id)		:_link{mrid_App,id},_flags(bit_mask(f_Static)) {}
 			Msger (void);
 			Msger (const Msger&) = delete;
@@ -390,11 +394,12 @@ public:
     void		free_id (void);
 protected:
     constexpr		Proxy (mrid_t from, mrid_t to) : ProxyB (from,to) {}
+    constexpr		Proxy (Msg::Link l) : ProxyB (l) {}
     constexpr auto	set_dest (mrid_t dest) = delete;
 protected:
     class Reply : public ProxyB {
     protected:
-	constexpr	Reply (const Msg::Link& l) : ProxyB (l.dest, l.src) {}
+	constexpr	Reply (Msg::Link l) : ProxyB (l) {}
     };
 protected:
     static constexpr auto n_interfaces (void)		{ return 0; }
