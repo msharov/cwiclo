@@ -60,9 +60,9 @@ void TestApp::process_args (argc_t argc [[maybe_unused]], argv_t argv [[maybe_un
     // Imported interface instances can then be transparently created by
     // sending them a message with a proxy, just as if they were local.
     //
-    // connect_user_local tries connecting to $XDG_RUNTIME_DIR/ipcom.socket
+    // connect_local tries connecting to $XDG_RUNTIME_DIR/ipcom.socket
     //
-    if (0 > _eclient.connect_user_local (PPing::interface_socket()))
+    if (0 > _eclient.connect_local (PPing::interface_socket()))
 	//
 	// The return value is the opened fd. -1 if the open failed.
 	// Automated testing in the Makefile will run only ipcom, so

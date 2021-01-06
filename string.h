@@ -34,10 +34,10 @@ public:
     constexpr size_type	length (void) const				{ return wend()-wbegin(); }
     constexpr size_type	capacity (void) const				{ return memblock::capacity()-1; }
     inline void		push_back (char c)				{ resize(size()+1); back() = c; }
-    auto		insert (const_iterator ip, value_type c, size_type n = 1)	{ return fill_n (memblock::insert (ip, n), n, c); }
+    auto		insert (const_iterator ip, value_type c, size_type n = 1)	{ auto fi = memblock::insert (ip, n); fill_n (fi, n, c); return fi; }
     inline auto		insert (const_iterator ip, const_pointer s, size_type n)	{ return memblock::insert (ip, s, n); }
     inline auto		insert (const_iterator ip, const string& s)			{ return insert (ip, s.c_str(), s.size()); }
-    inline auto		insert (const_iterator ip, const_pointer s)			{ return insert (ip, s, strlen(s)); }
+    inline auto		insert (const_iterator ip, const_pointer s)			{ return insert (ip, s, __builtin_strlen(s)); }
     inline auto		insert (const_iterator ip, const_pointer f, const_iterator l)	{ return insert (ip, f, l-f); }
     iterator		insert (const_iterator ip, char32_t c);
     int			insertv (const_iterator ip, const char* fmt, va_list args);

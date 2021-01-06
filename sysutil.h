@@ -4,7 +4,7 @@
 // This file is free software, distributed under the ISC License.
 
 #pragma once
-#include "memory.h"
+#include "string.h"
 #include <sys/socket.h>
 
 namespace cwiclo {
@@ -79,6 +79,9 @@ struct SocketCredentials {
     #error "this platform does not support socket credentials passing"
 #endif
 
+string socket_path_from_name (const string_view& name);
+string substitute_environment_vars (const string_view& s);
+
 //----------------------------------------------------------------------
 
 } // namespace cwiclo
@@ -106,18 +109,7 @@ int sd_listen_fd_by_name (const char* name);
 const char* debug_socket_name (const struct sockaddr* addr);
 #endif
 
-int create_sockaddr_un (struct sockaddr_un* addr, const char* fmt, const char* path, const char* sockname);
-
-inline int create_sockaddr_local (struct sockaddr_un* addr, const char* sockname)
-    { return create_sockaddr_un (addr, "%s%s", "", sockname); }
-inline int create_sockaddr_system_local (struct sockaddr_un* addr, const char* sockname)
-    { return create_sockaddr_un (addr, "%s/%s", "/run", sockname); }
-inline int create_sockaddr_user_local (struct sockaddr_un* addr, const char* sockname)
-{
-    auto rundir = getenv ("XDG_RUNTIME_DIR");
-    return create_sockaddr_un (addr, "%s/%s", rundir ? rundir : "/tmp", sockname);
-}
-
+int create_sockaddr_un (struct sockaddr_un* addr, const char* sockname);
 int socket_enable_credentials_passing (int sockfd, bool enable);
 
 } // extern "C"

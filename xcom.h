@@ -108,8 +108,6 @@ public:
     void	open (fd_t fd) const	{ open (fd, nullptr, SocketSide::Client); }
     fd_t	connect (const struct sockaddr* addr, socklen_t addrlen) const;
     fd_t	connect_local (const char* path) const;
-    fd_t	connect_system_local (const char* sockname) const;
-    fd_t	connect_user_local (const char* sockname) const;
     fd_t	launch_pipe (const char* exe, const char* arg = nullptr) const;
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
@@ -125,8 +123,6 @@ public:
 	    return false;
 	return true;
     }
-private:
-    fd_t	connect_local (const char* fmt, const char* path, const char* sockname) const;
 public:
     class Reply : public Proxy::Reply {
     public:
@@ -284,16 +280,10 @@ public:
 
     fd_t	bind (const sockaddr* addr, socklen_t addrlen, const iid_t* eifaces) NONNULL();
     fd_t	bind_local (const char* path, const iid_t* eifaces) NONNULL();
-    fd_t	bind_user_local (const char* sockname, const iid_t* eifaces) NONNULL();
-    fd_t	bind_system_local (const char* sockname, const iid_t* eifaces) NONNULL();
 
     fd_t	activate (const iid_t* eifaces) NONNULL();
     fd_t	activate_local (const char* path, const iid_t* eifaces)
 		    { auto fd = activate (eifaces); return fd ? fd : bind_local (path, eifaces); }
-    fd_t	activate_user_local (const char* sockname, const iid_t* eifaces)
-		    { auto fd = activate (eifaces); return fd ? fd : bind_user_local (sockname, eifaces); }
-    fd_t	activate_system_local (const char* sockname, const iid_t* eifaces)
-		    { auto fd = activate (eifaces); return fd ? fd : bind_system_local (sockname, eifaces); }
 
     template <typename O>
     inline static bool dispatch (O* o, const Msg& msg) {

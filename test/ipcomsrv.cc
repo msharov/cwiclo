@@ -49,13 +49,12 @@ void TestApp::process_args (argc_t argc, argv_t argv)
     // The activate calls are the recommended implementation method.
     // They support systemd socket activation and will try that first.
     // If no sockets are passed in, then the named socket is created.
-    // Here, activate_user_local will create ping.socket in
-    // XDG_RUNTIME_DIR/cwiclo/test. @names are linux abstract sockets.
+    // Here, activate_local will create ping.socket in $XDG_RUNTIME_DIR.
     //
     // PExternServer calls return the fd of the new socket, -1 on failure.
     //
-    if (0 > _eserver.activate_user_local (PPing::interface_socket(), exports()))
-	return error_libc ("activate_user_local");
+    if (0 > _eserver.activate_local (PPing::interface_socket(), exports()))
+	return error_libc ("activate_local");
 }
 
 void TestApp::Extern_connected (const Extern::Info*)

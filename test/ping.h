@@ -44,7 +44,7 @@ class PPing : public Proxy {
     // For non-exported interfaces, DECLARE_INTERFACE macro could
     // be used instead, omitting the socket and program arguments.
     //
-    DECLARE_INTERFACE_E (Proxy, Ping, (ping,"u"), "@cwiclo/test/ping.socket", "ipcomsrv");
+    DECLARE_INTERFACE_E (Proxy, Ping, (ping,"u"), "@~cwiclo/test/ping.socket", "ipcomsrv");
 public:
     // Proxies are constructed with the calling object's oid,
     // to let the remote object know where to send the replies.

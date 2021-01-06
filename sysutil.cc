@@ -43,6 +43,79 @@ zstr::index_type zstr::index (const_pointer k, const_pointer p, difference_type 
 
 //----------------------------------------------------------------------
 
+string substitute_environment_vars (const string_view& s)
+{
+    string r = s;
+    string::iterator vars = nullptr;
+    bool inquote = false;
+    char lc = 0;
+    for (auto i = r.begin();; ++i) {
+	if (vars && (i >= r.end() || !(*i == '_' || (*i >= 'a' && *i <= 'z') || (*i >= 'A' && *i <= 'Z')))) {
+	    auto termc = exchange (*i, 0);
+	    const char* ev = getenv (1+vars);
+	    if (!ev)
+		ev = "";
+	    auto evn = strlen (ev);
+	    i = evn + r.replace (vars, i, ev, evn);
+	    *i = termc;
+	    vars = nullptr;
+	}
+	if (i >= r.end())
+	    return r;
+	if (*i == '\'' && lc != '\\')
+	    inquote = !inquote;
+	else if (!inquote && *i == '$' && lc != '\\')
+	    vars = i;
+	lc = *i;
+    }
+}
+
+string socket_path_from_name (const string_view& name)
+{
+    string r = substitute_environment_vars (name);
+    auto i = r.begin();
+
+    // Abstract sockets
+    if (*i == '@') {
+	#ifdef __linux__
+	    ++i;
+	#else // not supported on BSD; fallback to path
+	    i = r.erase (i);
+	#endif
+    }
+
+    // Absolute path name
+    char pathtype = *i;
+    if (pathtype == '/')
+	return r;
+
+    // System socket in /run
+    #ifdef __linux__
+	auto rundir = "/run";
+    #else // unless on BSD, where there is no /run
+	auto rundir = "/var/run";
+    #endif
+
+    // User socket in standard location, from $XDG_RUNTIME_DIR
+    if (pathtype == '~') {
+	rundir = getenv ("XDG_RUNTIME_DIR");
+	if (!rundir) {
+	    // XDG_RUNTIME_DIR is created by login; if it wasn't, the fallback
+	    // must be created in /tmp, the only other user-writable location.
+	    char uidt[8];
+	    auto uitp = uint_to_text (geteuid(), uidt);
+	    i = r.insert (i, uitp, end(uidt)-uitp);
+	    rundir = "/tmp/user/";
+	}
+	*i = '/';
+    } else
+	r.insert (i, '/');
+    r.insert (i, rundir);
+    return r;
+}
+
+//----------------------------------------------------------------------
+
 } // namespace cwiclo
 using namespace cwiclo;
 
@@ -163,7 +236,7 @@ const char* debug_socket_name (const struct sockaddr* addr)
 }
 #endif
 
-int create_sockaddr_un (struct sockaddr_un* addr, const char* fmt, const char* path, const char* sockname)
+int create_sockaddr_un (struct sockaddr_un* addr, const char* sockname)
 {
     addr->sun_family = PF_LOCAL;
     auto psockpath = begin (addr->sun_path);
@@ -175,11 +248,12 @@ int create_sockaddr_un (struct sockaddr_un* addr, const char* fmt, const char* p
 	    *psockpath++ = 0;
 	#endif
     }
-    unsigned pathlen = snprintf (psockpath, sockpathsz, fmt, path, sockname);
-    if (sockpathsz <= pathlen) {
+    auto pathlen = strlen (sockname);
+    if (pathlen >= sockpathsz) {
 	errno = ENAMETOOLONG;
 	return -1;
     }
+    copy_n (sockname, pathlen+1, psockpath);
     return psockpath+pathlen-pointer_cast<char>(addr);
 }
 

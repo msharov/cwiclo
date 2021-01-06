@@ -54,12 +54,12 @@ auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) const -> fd_t
     return fd;
 }
 
-auto PExtern::connect_local (const char* fmt, const char* path, const char* sockname) const -> fd_t
+auto PExtern::connect_local (const char* sockname) const -> fd_t
 {
     fd_t sfd = -1;
     sockaddr_un addr;
     do {
-	auto addrlen = create_sockaddr_un (&addr, fmt, path, sockname);
+	auto addrlen = create_sockaddr_un (&addr, socket_path_from_name(sockname).c_str());
 	if (addrlen < 0)
 	    return sfd;
 	sfd = connect (pointer_cast<sockaddr>(&addr), addrlen);
@@ -69,25 +69,6 @@ auto PExtern::connect_local (const char* fmt, const char* path, const char* sock
 	}
     } while (false);
     return sfd;
-}
-
-/// Create local socket with given path
-auto PExtern::connect_local (const char* path) const -> fd_t
-{
-    return connect_local ("%s%s", "", path);
-}
-
-/// Create local socket of the given name in the system standard location for such
-auto PExtern::connect_system_local (const char* sockname) const -> fd_t
-{
-    return connect_local ("%s/%s", "/run", sockname);
-}
-
-/// Create local socket of the given name in the user standard location for such
-auto PExtern::connect_user_local (const char* sockname) const -> fd_t
-{
-    auto rundir = getenv ("XDG_RUNTIME_DIR");
-    return connect_local ("%s/%s", rundir ? rundir : "/tmp", sockname);
 }
 
 auto PExtern::launch_pipe (const char* exe, const char* arg) const -> fd_t
@@ -825,30 +806,10 @@ auto PExternServer::bind (const sockaddr* addr, socklen_t addrlen, const iid_t* 
 }
 
 /// Create local socket with given path
-auto PExternServer::bind_local (const char* path, const iid_t* eifaces) -> fd_t
+auto PExternServer::bind_local (const char* sockname, const iid_t* eifaces) -> fd_t
 {
     sockaddr_un addr;
-    auto addrlen = create_sockaddr_local (&addr, path);
-    if (addrlen < 0)
-	return addrlen;
-    return bind (pointer_cast<sockaddr>(&addr), addrlen, eifaces);
-}
-
-/// Create local socket of the given name in the system standard location for such
-auto PExternServer::bind_system_local (const char* sockname, const iid_t* eifaces) -> fd_t
-{
-    sockaddr_un addr;
-    auto addrlen = create_sockaddr_system_local (&addr, sockname);
-    if (addrlen < 0)
-	return addrlen;
-    return bind (pointer_cast<sockaddr>(&addr), addrlen, eifaces);
-}
-
-/// Create local socket of the given name in the user standard location for such
-auto PExternServer::bind_user_local (const char* sockname, const iid_t* eifaces) -> fd_t
-{
-    sockaddr_un addr;
-    auto addrlen = create_sockaddr_user_local (&addr, sockname);
+    auto addrlen = create_sockaddr_un (&addr, socket_path_from_name(sockname).c_str());
     if (addrlen < 0)
 	return addrlen;
     return bind (pointer_cast<sockaddr>(&addr), addrlen, eifaces);
