@@ -4,5 +4,5 @@
 // This file is free software, distributed under the ISC License.
 
 #pragma once
-#include "cwiclo/xcom.h"
+#include "cwiclo/xtern.h"
 #include "cwiclo/multiset.h"

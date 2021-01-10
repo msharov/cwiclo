@@ -343,6 +343,7 @@ protected:\
 class Msger {
 public:
     enum { f_Unused, f_Static, f_Last };
+    using fd_t = Msg::fd_t;
     //{{{2 Msger factory template --------------------------------------
     template <typename M>
     [[nodiscard]] static Msger* factory (Msg::Link l)

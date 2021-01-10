@@ -4,7 +4,7 @@
 // This file is free software, distributed under the ISC License.
 
 #include "msg.h"
-#include "app.h"
+#include "appl.h"
 #include <stdarg.h>
 
 namespace cwiclo {
@@ -151,14 +151,14 @@ streamsize Msg::validate_signature (istream is, const char* sig) // static
 //----------------------------------------------------------------------
 
 Msg& ProxyB::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo) const
-    { return App::instance().create_msg (link(), mid, sz, fdo); }
+    { return AppL::instance().create_msg (link(), mid, sz, fdo); }
 Msg& ProxyB::create_msg (methodid_t mid, streamsize sz) const
     { return create_msg (mid, sz, Msg::NoFdIncluded); }
 Msg& ProxyB::create_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid) const
-    { return App::instance().create_msg (link(), imethod, move(body), fdo, extid); }
+    { return AppL::instance().create_msg (link(), imethod, move(body), fdo, extid); }
 
 Msg* ProxyB::get_outgoing_msg (methodid_t imethod) const
-    { return App::instance().has_outq_msg (imethod, link()); }
+    { return AppL::instance().has_outq_msg (imethod, link()); }
 
 Msg& ProxyB::recreate_msg (methodid_t imethod, streamsize sz) const
 {
@@ -186,24 +186,24 @@ Proxy::Proxy (mrid_t from)
 }
 
 mrid_t Proxy::allocate_id (mrid_t src) // static
-    { return App::instance().allocate_mrid (src); }
+    { return AppL::instance().allocate_mrid (src); }
 void Proxy::free_id (void)
-    { App::instance().free_mrid (ProxyB::set_dest (mrid_Broadcast)); }
+    { AppL::instance().free_mrid (ProxyB::set_dest (mrid_Broadcast)); }
 
 void Proxy::create_dest_for (iid_t iid) const
 {
-    App::instance().create_method_dest (interface_first_method(iid), link());
+    AppL::instance().create_method_dest (interface_first_method(iid), link());
 }
 
 void Proxy::create_dest_with (pfn_factory_t fac, iid_t iid) const
 {
-    App::instance().create_dest_with (iid, fac, link());
+    AppL::instance().create_dest_with (iid, fac, link());
 }
 
 //----------------------------------------------------------------------
 
 Msger::Msger (void)
-: Msger (App::instance().register_singleton_msger (this))
+: Msger (AppL::instance().register_singleton_msger (this))
 {
 }
 
@@ -211,7 +211,7 @@ void Msger::error (const char* fmt, ...) // static
 {
     va_list args;
     va_start (args, fmt);
-    App::instance().errorv (fmt, args);
+    AppL::instance().errorv (fmt, args);
     va_end (args);
 }
 

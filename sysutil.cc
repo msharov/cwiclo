@@ -102,7 +102,7 @@ string socket_path_from_name (const string_view& name)
 	if (!rundir) {
 	    // XDG_RUNTIME_DIR is created by login; if it wasn't, the fallback
 	    // must be created in /tmp, the only other user-writable location.
-	    char uidt[8];
+	    char uidt[12];
 	    auto uitp = uint_to_text (geteuid(), uidt);
 	    i = r.insert (i, uitp, end(uidt)-uitp);
 	    rundir = "/tmp/user/";

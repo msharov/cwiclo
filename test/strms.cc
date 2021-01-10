@@ -3,12 +3,12 @@
 // Copyright (c) 2018 by Mike Sharov <msharov@users.sourceforge.net>
 // This file is free software, distributed under the ISC License.
 
-#include "../app.h"
+#include "../appl.h"
 #include "../multiset.h"
 using namespace cwiclo;
 
-class TestApp : public App {
-    inline		TestApp (void) : App() {}
+class TestApp : public AppL {
+    inline		TestApp (void) : AppL() {}
 public:
     static auto&	instance (void) { static TestApp s_app; return s_app; }
     inline int		run (void);

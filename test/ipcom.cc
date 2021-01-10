@@ -4,7 +4,7 @@
 // This file is free software, distributed under the ISC License.
 
 #include "ping.h"
-#include "../xcom.h"
+#include "../xtern.h"
 #include <sys/wait.h>
 #include <signal.h>
 

@@ -1,11 +1,11 @@
 Connected to server. Imported 1 interface: Ping
-Created Ping6
-Ping6: 1, 1 total
+Created Ping4
+Ping4: 1, 1 total
 Ping 1 reply received in app
-Ping6: 2, 2 total
+Ping4: 2, 2 total
 Ping 2 reply received in app
-Ping6: 3, 3 total
+Ping4: 3, 3 total
 Ping 3 reply received in app
-Ping6: 4, 4 total
+Ping4: 4, 4 total
 Ping 4 reply received in app
-Destroy Ping6
+Destroy Ping4

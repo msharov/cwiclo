@@ -5,7 +5,7 @@
 
 #include "ping.h"
 
-class TestApp : public App {
+class TestApp : public AppL {
     //
     // To use COM, each object must use IMPLEMENT_INTERFACES to declare
     // the interfaces it uses. The arguments are the base class, the list
@@ -14,7 +14,7 @@ class TestApp : public App {
     // sequences with parentheses and no commas: (PPing)(POther)(PElse).
     // The lists contain names of proxy classes defining the interfaces.
     //
-    IMPLEMENT_INTERFACES (App,,(PPing))
+    IMPLEMENT_INTERFACES (AppL,,(PPing))
 public:
     // Apps always use the singleton pattern
     static auto& instance (void) { static TestApp s_app; return s_app; }
@@ -43,7 +43,7 @@ private:
     // Usually the mrid is obtained by calling msger_id(), but
     // the App object is always mrid_App, so it can be used directly.
     //
-    TestApp (void) : App(),_pinger (mrid_App)
+    TestApp (void) : AppL(),_pinger (mrid_App)
     {
 	// When ready, simply call the desired method.
 	// All method calls are asynchonous, never blocking.

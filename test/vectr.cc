@@ -3,15 +3,15 @@
 // Copyright (c) 2018 by Mike Sharov <msharov@users.sourceforge.net>
 // This file is free software, distributed under the ISC License.
 
-#include "../app.h"
+#include "../appl.h"
 using namespace cwiclo;
 
-class TestApp : public App {
+class TestApp : public AppL {
     struct A {
 	A (void) { puts ("A::A"); }
 	~A (void) { puts ("A::~A"); }
     };
-    inline		TestApp (void) : App() {}
+    inline		TestApp (void) : AppL() {}
 public:
     static auto&	instance (void) { static TestApp s_app; return s_app; }
     static void		print_vector (const vector<int>& v);
