@@ -180,7 +180,7 @@ Extern* App::create_extern_dest_for (iid_t iid)
     for (auto& is : _isock) {
 	auto e = pointer_cast<Extern>(msger_by_id (is.dest()));
 	auto& info = e->info();
-	if (info.imported.empty() && !info.creds.pid)
+	if (!info.is_connected)
 	    ee = e;	// ee has not established the connection yet
 	else if (info.is_importing (iid))
 	    return e;

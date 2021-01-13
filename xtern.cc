@@ -60,8 +60,10 @@ Extern::RelayProxy* Extern::relay_proxy_by_extid (extid_t extid)
 extid_t Extern::register_relay (COMRelay* relay)
 {
     auto rp = relay_proxy_by_id (relay->msger_id());
-    if (!rp)
+    if (!rp) {
 	rp = &_relays.emplace_back (msger_id(), relay->msger_id(), create_extid_from_relay_id (relay->msger_id()));
+	set_unused (false);
+    }
     rp->pRelay = relay;
     return rp->extid;
 }
@@ -69,8 +71,11 @@ extid_t Extern::register_relay (COMRelay* relay)
 void Extern::unregister_relay (const COMRelay* relay)
 {
     auto rp = relay_proxy_by_id (relay->msger_id());
-    if (rp)
+    if (rp) {
 	_relays.erase (rp);
+	if (_relays.empty() && info().side == PExtern::SocketSide::Client && !info().exported)
+	    set_unused();
+    }
 }
 
 void Extern::requeue_pending (void)
@@ -176,6 +181,7 @@ void Extern::Extern_close (void)
 {
     requeue_pending();
     set_unused();
+    _einfo.is_connected = false;
     if (_infd >= 0)
 	close (exchange (_infd, -1));
     if (_sockfd >= 0)
