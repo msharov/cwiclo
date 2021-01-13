@@ -43,8 +43,7 @@ private:
     // Usually the mrid is obtained by calling msger_id(), but
     // the App object is always mrid_App, so it can be used directly.
     //
-    TestApp (void) : AppL(),_pinger (mrid_App)
-    {
+    TestApp (void) : AppL(),_pinger (mrid_App) {
 	// When ready, simply call the desired method.
 	// All method calls are asynchonous, never blocking.
 	// Replies arrive to Ping_ping above when sent
@@ -53,7 +52,7 @@ private:
 	_pinger.ping (1);
     }
 private:
-    PPing		_pinger;
+    PPing _pinger;
 };
 
 // main should be created by using CWICLO_APP macros.

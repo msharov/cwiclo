@@ -40,6 +40,7 @@ public:
 			    msg.write() << errmsg;
 			    return msg;
 			}
+    static constexpr bool allowed_before_auth (methodid_t mid) { return mid == m_export(); }
     static Msg		export_msg (const string& elstr) {
 			    Msg msg (Msg::Link{}, PCOM::m_export(), stream_sizeof(elstr), Msg::NoFdIncluded);
 			    msg.write() << elstr;
@@ -68,7 +69,7 @@ public:
 //{{{ PExtern
 
 class PExtern : public Proxy {
-    DECLARE_INTERFACE (Proxy, Extern, (open,"xib")(close,"")(connected,"q"))
+    DECLARE_INTERFACE (Proxy, Extern, (open,"xib")(close,""))
 public:
     //{{{2 Info
     enum class SocketSide : bool { Client, Server };
@@ -78,9 +79,11 @@ public:
 	vector<iid_t>	imported;
 	const iid_t*	exported;
 	Credentials	creds;
+	uid_t		filter_uid;
 	mrid_t		extern_id;
 	SocketSide	side;
-	bool		is_unix_socket;
+	bool		is_local_socket;
+	bool		is_connected;
     public:
 	constexpr auto is_importing (iid_t iid) const
 	    { return find (imported, iid); }
@@ -116,15 +119,6 @@ public:
 	    return false;
 	return true;
     }
-public:
-    class Reply : public Proxy::Reply {
-    public:
-	constexpr Reply (Msg::Link l) : Proxy::Reply(l) {}
-	void connected (mrid_t extern_id) const { send (m_connected(), extern_id); }
-	template <typename O>
-	static constexpr bool dispatch (O* o, const Msg& msg);
-	    // body below Extern because it calls Extern::lookup_by_id
-    };
 };
 
 } // namespace cwiclo

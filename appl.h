@@ -114,7 +114,7 @@ public:
 public:
     static auto&	instance (void)			{ return *s_pApp; }
     static void		install_signal_handlers (void);
-    void		process_args (argc_t, argv_t)	{ }
+    inline void		process_args (argc_t argc, argv_t argv);
     int			run (void);
     void		create_method_dest (methodid_t mid, Msg::Link l);
     void		create_dest_with (iid_t iid, Msger::pfn_factory_t fac, Msg::Link l);
@@ -122,11 +122,13 @@ public:
 			    { create_method_dest (mid,l); return _outq.emplace_back (l,mid,size,fdo); }
     inline Msg&		create_msg (Msg::Link l, methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0)
 			    { create_method_dest (mid,l); return _outq.emplace_back (l,mid,move(body),fdo,extid); }
+    void		requeue_msg (Msg&& msg)		{ _outq.emplace_back (move(msg)); }
     mrid_t		register_singleton_msger (Msger* m);
     msgq_t::size_type	has_messages_for (mrid_t mid) const;
     Msg*		has_outq_msg (methodid_t mid, Msg::Link l);
     constexpr auto	has_timers (void) const		{ return _timers.size(); }
-    bool		valid_msger_id (mrid_t id)const	{ assert (_msgers.size() == _creators.size()); return id <= _msgers.size(); }
+    bool		valid_msger_id (mrid_t id)const	{ assert (_msgers.size() == _creators.size()); return id < _msgers.size(); }
+    Msger*		msger_by_id (mrid_t id)	const	{ return valid_msger_id(id) ? _msgers[id] : nullptr; }
     constexpr void	quit (void)			{ set_flag (f_Quitting); }
     constexpr void	quit (int ec)			{ s_exit_code = ec; quit(); }
     auto		exit_code (void) const		{ return s_exit_code; }
@@ -138,11 +140,7 @@ public:
     unsigned		get_poll_timer_list (pollfd* pfd, unsigned pfdsz, int& timeout) const;
     void		check_poll_timers (const pollfd* fds);
     bool		forward_error (mrid_t oid, mrid_t eoid);
-#ifdef NDEBUG
-    void		errorv (const char* fmt, va_list args)	{ _errors.appendv (fmt, args); }
-#else
-    void		errorv (const char* fmt, va_list args);
-#endif
+    inline void		errorv (const char* fmt, va_list args);
 protected:
 			AppL (void);
 			~AppL (void) override;
@@ -179,7 +177,6 @@ public:
     };
     //}}}2--------------------------------------------------------------
 private:
-    auto		msgerp_by_id (mrid_t id)	{ return _msgers[id]; }
     inline static auto	msger_factory_for (iid_t id);
     [[nodiscard]] inline static Msger*	create_msger_with (Msg::Link l, iid_t iid, Msger::pfn_factory_t fac);
     [[nodiscard]] inline static auto	create_msger (Msg::Link l, iid_t iid);
@@ -201,6 +198,33 @@ private:
     static uint32_t	s_received_signals;
     static const MsgerFactoryMap* s_msger_factories;
 };
+
+//----------------------------------------------------------------------
+
+void AppL::process_args (argc_t argc [[maybe_unused]], argv_t argv [[maybe_unused]])
+{
+    #ifndef NDEBUG
+	// Debug tracing is very useful in asynchronous apps, since backtraces
+	// no longer have much meaning. A list of messages exchanged is the
+	// usual debugging tool, used much like a network packet sniffer.
+	for (int opt; 0 < (opt = getopt (argc, argv, "d"));)
+	    if (opt == 'd')
+		set_flag (f_DebugMsgTrace);
+    #endif
+}
+
+void AppL::errorv (const char* fmt, va_list args)
+{
+#ifndef NDEBUG
+    bool is_first = _errors.empty();
+#endif
+    _errors.appendv (fmt, args);
+#ifndef NDEBUG
+    DEBUG_PRINTF ("[E] Error: %s\n", _errors.c_str());
+    if (is_first)
+	print_backtrace();
+#endif
+}
 
 //}}}-------------------------------------------------------------------
 //{{{ CWICLO_APP_L

@@ -37,7 +37,7 @@ bool App::accept_socket_activation (void)
 
     // Not having LISTEN_FDS or having too many are errors
     unsigned nfds = 0;
-    if (auto e = getenv("LISTEN_FDS"); !e || 32 < (nfds = atoi(e))) {
+    if (auto e = getenv("LISTEN_FDS"); !e || 64 < (nfds = atoi(e))) {
 	error ("invalid LISTEN_FDS");
 	return true;
     }
@@ -67,7 +67,9 @@ bool App::accept_socket_activation (void)
 
 void App::create_extern_socket (const char* sockname)
 {
-    auto sockpath = socket_path_from_name(sockname);
+    auto sockpath = socket_path_from_name (sockname);
+    if (sockpath.empty())
+	return;	// some exported interfaces may not have a specific associated socket
     sockaddr_un addr;
     auto addrlen = create_sockaddr_un (&addr, sockpath.c_str());
     if (addrlen < 0)
@@ -141,6 +143,82 @@ void App::add_extern_connection (int fd)
     if (_isock.empty())
 	set_flag (f_Quitting, false);
     _isock.emplace_back (msger_id()).open (fd, exports());
+}
+
+iid_t App::listed_interface_by_name (const iid_t* il, const char* is, size_t islen) // static
+{
+    for (auto i = il; *i; ++i)
+	if (equal_n (*i, interface_name_size(*i), is, islen))
+	    return *i;
+    return nullptr;
+}
+
+iid_t App::extern_interface_by_name (const char* is, size_t islen) const
+{
+    auto iid = listed_interface_by_name (imports(), is, islen);
+    if (!iid)
+	iid = listed_interface_by_name (exports(), is, islen);
+    return iid;
+}
+
+Extern* App::extern_by_id (mrid_t eid) const
+{
+    for (auto& is : _isock)
+	if (is.dest() == eid)
+	    return pointer_cast<Extern>(msger_by_id (is.dest()));
+    return nullptr;
+}
+
+Extern* App::create_extern_dest_for (iid_t iid)
+{
+    // Verify that it is on the imports list
+    if (!extern_interface_by_name (iid, interface_name_size(iid)))
+	return nullptr;
+
+    // Check if an existing Extern object imports it
+    Extern* ee = nullptr;
+    for (auto& is : _isock) {
+	auto e = pointer_cast<Extern>(msger_by_id (is.dest()));
+	auto& info = e->info();
+	if (info.imported.empty() && !info.creds.pid)
+	    ee = e;	// ee has not established the connection yet
+	else if (info.is_importing (iid))
+	    return e;
+    }
+
+    // Check if an Extern object has recently been launched.
+    // It may or may not be importing iid, but giving messages to it
+    // prevents launching multiple server processes for the same iid.
+    // When the connection is established, Extern will check the imports
+    // list and will return incompatible messages.
+    if (ee)
+	return ee;
+
+    // No Extern objects supporting the interface exist. Try to create one.
+    auto isockname = interface_socket_name (iid);
+    auto iprogname = interface_program_name (iid);
+    if (!isockname[0] && !iprogname[0])
+	return nullptr;	// no connection information specified
+
+    auto& extp = _isock.emplace_back (msger_id());
+    auto sfd = -1;
+
+    // First try to connect to the interface-specified socket name.
+    if (isockname[0])
+	sfd = extp.connect_local (isockname);
+
+    // Then try to launch the default server program
+    if (sfd < 0 && iprogname[0])
+	sfd = extp.launch_pipe (iprogname);
+
+    // If both failed, there is nothing more that can be done
+    if (sfd < 0) {
+	_isock.pop_back();
+	return nullptr;
+    }
+
+    // Otherwise, the Extern object will have been created at this point
+    return pointer_cast<Extern>(msger_by_id (extp.dest()));
 }
 
 } // namespace cwiclo

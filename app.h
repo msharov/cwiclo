@@ -9,8 +9,10 @@
 
 namespace cwiclo {
 
+class Extern;
+
 class App : public AppL {
-    IMPLEMENT_INTERFACES_I (AppL,,(PTimer)(PExtern))
+    IMPLEMENT_INTERFACES_I (AppL,,(PTimer))
 public:
     enum class WhenEmpty : uint8_t { Remain, Close };
     enum { f_ListenWhenEmpty = base_class_t::f_Last, f_Last };
@@ -21,13 +23,15 @@ public:
     int			run (void);
     bool		on_error (mrid_t eid, const string& errmsg) override;
     void		on_msger_destroyed (mrid_t mid) override;
+    iid_t		extern_interface_by_name (const char* is, size_t islen) const;
+    Extern*		extern_by_id (mrid_t eid) const;
+    Extern*		create_extern_dest_for (iid_t iid);
 protected:
 			App (void)	: base_class_t(),_isock(),_esock() {}
 			friend class PTimer::Reply;
     inline void		Timer_timer (fd_t fd);
-			friend class PExtern::Reply;
-    inline void		Extern_connected (const PExtern::Info* einfo [[maybe_unused]]) {}
 private:
+    //{{{ PListener
     class PListener : public PTimer {
     public:
 	explicit	PListener (void)	: PTimer (mrid_App),_sockfd(-1),_sockname() {}
@@ -42,7 +46,9 @@ private:
 	fd_t		_sockfd;
 	string		_sockname;
     };
+    //}}}
 private:
+    static iid_t	listed_interface_by_name (const iid_t* il, const char* is, size_t islen);
     bool		accept_socket_activation (void);
     void		create_extern_socket (const char* path);
     void		add_extern_socket (fd_t fd, const char* sockname = "", WhenEmpty whenempty = WhenEmpty::Close);

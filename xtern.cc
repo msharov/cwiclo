@@ -4,6 +4,8 @@
 // This file is free software, distributed under the ISC License.
 
 #include "xtern.h"
+#include <sys/stat.h>
+#include <sys/un.h>
 
 //{{{ Extern -----------------------------------------------------------
 namespace cwiclo {
@@ -17,19 +19,18 @@ Extern::Extern (Msg::Link l)
 ,_bwritten (0)
 ,_outq()
 ,_relays()
+,_pending()
 ,_einfo{}
 ,_bread (0)
 ,_inmsg()
 ,_infd (-1)
 {
     _relays.emplace_back (msger_id(), msger_id(), extid_COM);
-    extern_list().push_back (this);
 }
 
 Extern::~Extern (void)
 {
     Extern_close();
-    remove (extern_list(), this);
     // Outgoing connections do not create a link from relay to extern and so need to be notified explicitly of extern's destruction.
     for (auto& rp : _relays) {
 	if (rp.pRelay)
@@ -38,9 +39,9 @@ Extern::~Extern (void)
     }
 }
 
-void Extern::queue_outgoing (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid)
+void Extern::queue_outgoing (Msg&& msg, extid_t extid)
 {
-    _outq.emplace_back (mid, move(body), fdo, extid);
+    _outq.emplace_back (move(msg), extid);
     Timer_timer (_sockfd);
 }
 
@@ -72,33 +73,22 @@ void Extern::unregister_relay (const COMRelay* relay)
 	_relays.erase (rp);
 }
 
-Extern* Extern::lookup_by_id (mrid_t id) // static
+void Extern::requeue_pending (void)
 {
-    auto ep = find_if (extern_list(), [&](const auto e)
-		{ return e->msger_id() == id; });
-    return ep ? *ep : nullptr;
-}
-
-Extern* Extern::lookup_by_imported (iid_t iid) // static
-{
-    auto ep = find_if (extern_list(), [&](const auto e)
-		{ return e->info().is_importing(iid); });
-    return ep ? *ep : nullptr;
-}
-
-Extern* Extern::lookup_by_relay_id (mrid_t rid) // static
-{
-    auto ep = find_if (extern_list(), [&](const auto e)
-		{ return nullptr != e->relay_proxy_by_id (rid); });
-    return ep ? *ep : nullptr;
+    auto& app = App::instance();
+    for (auto& msg : _pending) {
+	DEBUG_PRINTF ("[X] %hu.Extern returning %hu -> %hu.%s.%s message to main queue\n", msger_id(), msg.src(), msg.dest(), msg.interface(), msg.method());
+	app.requeue_msg (move(msg));
+    }
+    _pending.clear();
 }
 
 //}}}-------------------------------------------------------------------
 //{{{ Extern::ExtMsg
 
-Extern::ExtMsg::ExtMsg (methodid_t mid, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid)
-:_body (move(body))
-,_h { ceilg (_body.size(), Msg::Alignment::Body), extid, fdo, write_header_strings(mid) }
+Extern::ExtMsg::ExtMsg (Msg&& msg, extid_t extid)
+:_body (msg.move_body())
+,_h { ceilg (_body.size(), Msg::Alignment::Body), extid, msg.fd_offset(), write_header_strings(msg.method()) }
 {
     assert (_body.capacity() >= _h.sz && "message body must be created aligned to Msg::Alignment::Body");
     _body.shrink (_h.sz);
@@ -137,23 +127,7 @@ void Extern::ExtMsg::write_iovecs (iovec* iov, streamsize bw)
     iov[1].iov_len = _h.sz - bw;
 }
 
-iid_t Extern::ExtMsg::interface_in_list_by_name (const iid_t* il, const char* iname, streamsize inamesz) // static
-{
-    for (auto i = il; *i; ++i)
-	if (equal_n (iname, inamesz, *i, interface_name_size (*i)))
-	    return *i;
-    return nullptr;
-}
-
-iid_t Extern::ExtMsg::interface_by_name (const char* iname, streamsize inamesz) // static
-{
-    auto i = interface_in_list_by_name (App::imports(), iname, inamesz);
-    if (!i)
-	i = interface_in_list_by_name (App::exports(), iname, inamesz);
-    return i;
-}
-
-methodid_t Extern::ExtMsg::parse_method (void) const
+methodid_t Extern::ExtMsg::parse_method (void)
 {
     zstr::cii mi (_hbuf, _h.hsz-sizeof(_h));
     auto ifacename = *mi;
@@ -164,7 +138,7 @@ methodid_t Extern::ExtMsg::parse_method (void) const
 	return nullptr;
     auto methodend = *++mi;
     auto methodnamesz = methodend - methodname;
-    auto iface = interface_by_name (ifacename, methodname-ifacename);
+    auto iface = App::instance().extern_interface_by_name (ifacename, methodname-ifacename);
     if (!iface) {
 	DEBUG_PRINTF ("[XE] Extern message arrived for %s.%s, but the interface is not registered.\n\tDid you forget to place it in the CWICLO_APP imports or exports list?\n", ifacename, methodname);
 	return nullptr;
@@ -175,10 +149,10 @@ methodid_t Extern::ExtMsg::parse_method (void) const
 void Extern::ExtMsg::debug_dump (void) const
 {
     if (DEBUG_MSG_TRACE) {
-	DEBUG_PRINTF ("[X] Incoming message for extid %u of size %u = {{{\n", _h.extid, _h.sz);
+	DEBUG_PRINTF ("[X] Incoming message for extid %u of size %u = {""{{\n", _h.extid, _h.sz);
 	hexdump (header_ptr(), _h.hsz);
 	hexdump (_body);
-	DEBUG_PRINTF ("}}}\n");
+	DEBUG_PRINTF ("}""}}\n");
     }
 }
 
@@ -200,6 +174,7 @@ void Extern::Extern_open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide sid
 
 void Extern::Extern_close (void)
 {
+    requeue_pending();
     set_unused();
     if (_infd >= 0)
 	close (exchange (_infd, -1));
@@ -220,10 +195,30 @@ bool Extern::attach_to_socket (fd_t fd)
     l = sizeof(ss);
     if (getsockname (fd, pointer_cast<sockaddr>(&ss), &l) < 0)
 	return false;
-    _einfo.is_unix_socket = false;
-    if (ss.ss_family == PF_LOCAL)
-	_einfo.is_unix_socket = true;
-    else if (ss.ss_family != PF_INET)
+    _einfo.is_local_socket = false;
+    _einfo.filter_uid = 0;
+    if (ss.ss_family == PF_LOCAL) {
+	_einfo.is_local_socket = true;
+	//
+	// Abstract sockets live outside the filesystem,
+	// so the server side must do manual permissions checking.
+	//
+	sockaddr_un* sun = pointer_cast<sockaddr_un>(&ss);
+	if (_einfo.side == PExtern::SocketSide::Server && !sun->sun_path[0]) {
+	    // Find existing path component and use its uid as filter
+	    auto pdirn = &sun->sun_path[1];
+	    DEBUG_PRINTF ("[X] Extern.%hu: using abstract socket %s\n", msger_id(), pdirn);
+	    auto pdire = pointer_cast<char>(&ss)+l;
+	    while (--pdire > pdirn) {
+		struct stat st;
+		if (exchange (*pdire, 0) == '/' && 0 == stat (pdirn, &st) && S_ISDIR(st.st_mode)) {
+		    _einfo.filter_uid = st.st_uid;
+		    DEBUG_PRINTF ("[X] Extern.%hu: setting filter uid from %s to %u\n", msger_id(), pdirn, _einfo.filter_uid);
+		    break;
+		}
+	    }
+	}
+    } else if (ss.ss_family != PF_INET)
 	return false;
 
     // If matches, need to set the fd nonblocking for the poll loop to work
@@ -232,7 +227,7 @@ bool Extern::attach_to_socket (fd_t fd)
 
 void Extern::enable_credentials_passing (bool enable)
 {
-    if (_sockfd >= 0 && _einfo.is_unix_socket)
+    if (_sockfd >= 0 && _einfo.is_local_socket)
 	if (0 > socket_enable_credentials_passing (_sockfd, enable))
 	    return error_libc ("setsockopt(SO_PASSCRED)");
 }
@@ -249,18 +244,23 @@ void Extern::COM_error (const string_view& errmsg)
 void Extern::COM_export (string elist)
 {
     // Other side of the socket listing exported interfaces as a comma-separated list
+    _einfo.is_connected = true;
     _einfo.imported.clear();
+    DEBUG_PRINTF ("[X] %hu.Extern receives import list:", msger_id());
     foreach (ei, elist) {
 	auto eic = elist.find (',', ei);
 	if (!eic)
 	    eic = elist.end();
 	*eic = 0;
-	auto iid = ExtMsg::interface_by_name (ei, eic+1-ei);
-	if (iid)	// _einfo.imported only contains interfaces supported by this App
+	auto iid = App::instance().extern_interface_by_name (ei, eic+1-ei);
+	if (iid) {	// _einfo.imported only contains interfaces supported by this App
+	    DEBUG_PRINTF (" %s", iid);
 	    _einfo.imported.push_back (iid);
+	}
 	ei = eic;
     }
-    PExtern::Reply(creator_link()).connected (msger_id());
+    DEBUG_PRINTF ("\n");
+    requeue_pending();
 }
 
 void Extern::COM_delete (void)
@@ -447,8 +447,8 @@ void Extern::read_incoming (void)
 	    auto& h = _inmsg.header();
 	    if (h.hsz < ExtMsg::MinHeaderSize
 		    || !divisible_by (h.hsz, Msg::Alignment::Header)
-		    || h.sz > ExtMsg::MaxBodySize
 		    || !divisible_by (h.sz, Msg::Alignment::Body)
+		    || h.sz > ExtMsg::MaxBodySize
 		    || (h.fdoffset != Msg::NoFdIncluded
 			&& (_infd < 0	// the fd must be passed at this point
 			    || h.fdoffset+sizeof(_infd) > h.sz
@@ -468,6 +468,12 @@ bool Extern::accept_incoming_message (void)
     auto method = _inmsg.parse_method();
     if (!method) {
 	DEBUG_PRINTF ("[XE] Incoming message has invalid header strings\n");
+	return false;
+    }
+    if (info().filter_uid
+	&& info().creds.uid != info().filter_uid
+	&& !PCOM::allowed_before_auth(method)) {
+	DEBUG_PRINTF ("[XE] Incoming message %s.%s from process %u with uid %u is disallowed by filter_uid %u\n", interface_of_method(method), method, info().creds.pid, info().creds.uid, info().filter_uid);
 	return false;
     }
     auto msgis = _inmsg.read();
@@ -514,7 +520,7 @@ COMRelay::COMRelay (Msg::Link l)
 // imported interfaces, or by an Extern delivering messages to local
 // instances of exported interfaces.
 //
-,_pExtern (Extern::lookup_by_id (l.src))
+,_pExtern (App::instance().extern_by_id (l.src))
 //
 // Messages coming from an extern will require creating a local Msger,
 // while messages going to the extern from l.src local caller.
@@ -557,9 +563,18 @@ bool COMRelay::dispatch (Msg& msg)
     // that imports it. The interface was unavailable in ctor, so here.
     if (!_pExtern) {	// If null here, then this relay was created by a local Msger
 	auto iface = msg.interface();
-	if (!(_pExtern = Extern::lookup_by_imported (iface))) {
+	_pExtern = App::instance().create_extern_dest_for (iface);
+	if (!_pExtern) {
 	    error ("interface %s has not been imported", iface);
 	    return false;	// the caller should have waited for Extern connected reply before creating this
+	} else if (!_pExtern->info().is_connected) {
+	    // The connection has not been completed yet, so it is not known
+	    // whether the interface is imported through it. Queue it in the
+	    // Extern object. It will be returned here when connected.
+	    DEBUG_PRINTF ("[X] %hu.%s.%s message now pending at %hu.Extern\n", msger_id(), msg.interface(), msg.method(), _pExtern->msger_id());
+	    _pExtern->queue_pending (move(msg));
+	    _pExtern = nullptr;
+	    return true;
 	}
     }
     // Now that the interface is known and extern pointer is available,
@@ -574,9 +589,11 @@ bool COMRelay::dispatch (Msg& msg)
     }
 
     // Forward the message in the direction opposite which it was received
-    if (msg.src() == _localp.dest())
+    if (msg.src() == _localp.dest()) {
+	DEBUG_PRINTF ("[X] %hu.%s.%s message queued for export at %hu.Extern\n", msger_id(), msg.interface(), msg.method(), _pExtern->msger_id());
 	_pExtern->queue_outgoing (move(msg), _extid);
-    else {
+    } else {
+	DEBUG_PRINTF ("[X] %hu.%s.%s message forwarded to %hu\n", msger_id(), msg.interface(), msg.method(), _localp.dest());
 	assert (msg.extid() == _extid && "Extern routed a message to the wrong relay");
 	_localp.forward_msg (move(msg));
     }
@@ -621,7 +638,7 @@ void COMRelay::COM_error (const string_view& errmsg)
     // a local error and send it to the local object.
     //
     error ("%s", errmsg.c_str());
- 
+
     // Because the local object may not be the creator of this relay, the
     // error must be forwarded there manually.
     //

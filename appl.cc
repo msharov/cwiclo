@@ -109,20 +109,9 @@ void AppL::msg_signal_handler (int sig) // static
     }
 }
 
-#ifndef NDEBUG
-void AppL::errorv (const char* fmt, va_list args)
-{
-    bool is_first = _errors.empty();
-    _errors.appendv (fmt, args);
-    DEBUG_PRINTF ("[E] Error: %s\n", _errors.c_str());
-    if (is_first)
-	print_backtrace();
-}
-#endif
-
 bool AppL::forward_error (mrid_t oid, mrid_t eoid)
 {
-    auto m = msgerp_by_id (oid);
+    auto m = msger_by_id (oid);
     if (!m)
 	return false;
     if (m->on_error (eoid, errors())) {
@@ -141,7 +130,6 @@ bool AppL::forward_error (mrid_t oid, mrid_t eoid)
 
 mrid_t AppL::allocate_mrid (mrid_t creator)
 {
-    assert (valid_msger_id (creator));
     mrid_t id = 0;
     for (; id < _creators.size(); ++id)
 	if (_creators[id] == id && !_msgers[id])
@@ -151,10 +139,13 @@ mrid_t AppL::allocate_mrid (mrid_t creator)
 	error ("no more mrids");
 	return id;
     } else if (id == _creators.size()) {
+	assert (valid_msger_id (creator) || creator == id);
 	_msgers.push_back (nullptr);
 	_creators.push_back (creator);
-    } else
+    } else {
+	assert (valid_msger_id (creator));
 	_creators[id] = creator;
+    }
     return id;
 }
 
