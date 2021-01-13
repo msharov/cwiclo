@@ -102,7 +102,7 @@ string socket_path_from_name (const string_view& name)
 	    rundir = urdir;
 	*i = '/';
     } else
-	r.insert (i, '/');
+	i = r.insert (i, '/');
     r.insert (i, rundir);
     return r;
 }
