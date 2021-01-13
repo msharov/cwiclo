@@ -14,7 +14,6 @@ class Extern;
 class App : public AppL {
     IMPLEMENT_INTERFACES_I (AppL,,(PTimer))
 public:
-    enum class WhenEmpty : uint8_t { Remain, Close };
     enum { f_ListenWhenEmpty = base_class_t::f_Last, f_Last };
 public:
     static auto&	instance (void)	{ return static_cast<App&>(base_class_t::instance()); }
@@ -30,6 +29,11 @@ protected:
 			App (void)	: base_class_t(),_isock(),_esock() {}
 			friend class PTimer::Reply;
     inline void		Timer_timer (fd_t fd);
+    static iid_t	listed_interface_by_name (const iid_t* il, const char* is, size_t islen);
+    bool		accept_socket_activation (void);
+    void		create_extern_socket (const char* path);
+    void		add_extern_socket (fd_t fd, const char* sockname = "");
+    void		add_extern_connection (fd_t fd);
 private:
     //{{{ PListener
     class PListener : public PTimer {
@@ -47,12 +51,6 @@ private:
 	string		_sockname;
     };
     //}}}
-private:
-    static iid_t	listed_interface_by_name (const iid_t* il, const char* is, size_t islen);
-    bool		accept_socket_activation (void);
-    void		create_extern_socket (const char* path);
-    void		add_extern_socket (fd_t fd, const char* sockname = "", WhenEmpty whenempty = WhenEmpty::Close);
-    void		add_extern_connection (fd_t fd);
 private:
     vector<PExtern>	_isock;
     vector<PListener>	_esock;

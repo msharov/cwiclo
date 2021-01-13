@@ -73,7 +73,7 @@ void Extern::unregister_relay (const COMRelay* relay)
     auto rp = relay_proxy_by_id (relay->msger_id());
     if (rp) {
 	_relays.erase (rp);
-	if (_relays.empty() && info().side == PExtern::SocketSide::Client && !info().exported)
+	if (_relays.size() <= 1 && info().side == PExtern::SocketSide::Client && !info().exported)
 	    set_unused();
     }
 }

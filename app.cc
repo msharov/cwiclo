@@ -88,7 +88,8 @@ void App::create_extern_socket (const char* sockname)
     }
     if (addr.sun_path[0])
 	chmod (addr.sun_path, DEFFILEMODE);
-    add_extern_socket (fd, addr.sun_path, WhenEmpty::Remain);
+    set_flag (f_ListenWhenEmpty);
+    add_extern_socket (fd, addr.sun_path);
 }
 
 bool App::on_error (mrid_t eid, const string& errmsg)
@@ -128,11 +129,10 @@ void App::Timer_timer (fd_t fd)
     }
 }
 
-void App::add_extern_socket (int fd, const char* sockname, WhenEmpty closeWhenEmpty)
+void App::add_extern_socket (int fd, const char* sockname)
 {
     if (make_fd_nonblocking (fd))
 	return error_libc ("make_fd_nonblocking");
-    set_flag (f_ListenWhenEmpty, !bool(closeWhenEmpty));
     _esock.emplace_back (fd, sockname);
     Timer_timer (fd);
 }
