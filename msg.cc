@@ -150,17 +150,17 @@ streamsize Msg::validate_signature (istream is, const char* sig) // static
 
 //----------------------------------------------------------------------
 
-Msg& ProxyB::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo) const
+Msg& IBase::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo) const
     { return AppL::instance().create_msg (link(), mid, sz, fdo); }
-Msg& ProxyB::create_msg (methodid_t mid, streamsize sz) const
+Msg& IBase::create_msg (methodid_t mid, streamsize sz) const
     { return create_msg (mid, sz, Msg::NoFdIncluded); }
-Msg& ProxyB::create_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid) const
+Msg& IBase::create_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid) const
     { return AppL::instance().create_msg (link(), imethod, move(body), fdo, extid); }
 
-Msg* ProxyB::get_outgoing_msg (methodid_t imethod) const
+Msg* IBase::get_outgoing_msg (methodid_t imethod) const
     { return AppL::instance().has_outq_msg (imethod, link()); }
 
-Msg& ProxyB::recreate_msg (methodid_t imethod, streamsize sz) const
+Msg& IBase::recreate_msg (methodid_t imethod, streamsize sz) const
 {
     if (auto msg = get_outgoing_msg (imethod); msg) {
 	msg->resize_body (sz);
@@ -169,7 +169,7 @@ Msg& ProxyB::recreate_msg (methodid_t imethod, streamsize sz) const
     return create_msg (imethod, sz);
 }
 
-Msg& ProxyB::recreate_msg (methodid_t imethod, Msg::Body&& body) const
+Msg& IBase::recreate_msg (methodid_t imethod, Msg::Body&& body) const
 {
     if (auto msg = get_outgoing_msg (imethod); msg) {
 	msg->replace_body (move(body));
@@ -180,22 +180,22 @@ Msg& ProxyB::recreate_msg (methodid_t imethod, Msg::Body&& body) const
 
 //----------------------------------------------------------------------
 
-Proxy::Proxy (mrid_t from)
-: ProxyB (from, allocate_id (from))
+Interface::Interface (mrid_t from)
+: IBase (from, allocate_id (from))
 {
 }
 
-mrid_t Proxy::allocate_id (mrid_t src) // static
+mrid_t Interface::allocate_id (mrid_t src) // static
     { return AppL::instance().allocate_mrid (src); }
-void Proxy::free_id (void)
-    { AppL::instance().free_mrid (ProxyB::set_dest (mrid_Broadcast)); }
+void Interface::free_id (void)
+    { AppL::instance().free_mrid (IBase::set_dest (mrid_Broadcast)); }
 
-void Proxy::create_dest_for (iid_t iid) const
+void Interface::create_dest_for (iid_t iid) const
 {
     AppL::instance().create_method_dest (interface_first_method(iid), link());
 }
 
-void Proxy::create_dest_with (pfn_factory_t fac, iid_t iid) const
+void Interface::create_dest_with (pfn_factory_t fac, iid_t iid) const
 {
     AppL::instance().create_dest_with (iid, fac, link());
 }

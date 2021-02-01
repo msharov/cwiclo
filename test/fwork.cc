@@ -11,15 +11,15 @@ class TestApp : public AppL {
     // the interfaces it uses. The arguments are the base class, the list
     // of interfaces this Msger is created for, and the list of interfaces
     // this Msger uses and gets replies from. The lists are preprocessor
-    // sequences with parentheses and no commas: (PPing)(POther)(PElse).
-    // The lists contain names of proxy classes defining the interfaces.
+    // sequences with parentheses and no commas: (IPing)(POther)(PElse).
+    // The lists contain names of interface classes.
     //
-    IMPLEMENT_INTERFACES (AppL,,(PPing))
+    IMPLEMENT_INTERFACES (AppL,,(IPing))
 public:
     // Apps always use the singleton pattern
     static auto& instance (void) { static TestApp s_app; return s_app; }
     //
-    // This method is called by PPing::dispatch when a
+    // This method is called by IPing::dispatch when a
     // Ping message is received on a Ping interface.
     // Note the naming convention.
     //
@@ -32,13 +32,12 @@ public:
     }
 private:
     //
-    // Remote Msgers are accessed through an interface proxy,
-    // here of type PPing. The proxy will have methods that
-    // are called as if it were a real object, but will instead
-    // marshal the arguments and send them to the remote
-    // interface instance.
+    // Remote Msgers are accessed through an interface object,
+    // here of type IPing. The interface object will have methods that
+    // are called as if it were a real object, but will instead marshal
+    // the arguments and send them to the remote interface instance.
     //
-    // Proxies require the source mrid, to tell the destination
+    // Interface objects require the source mrid, to tell the destination
     // Msger where the message came from and where to reply.
     // Usually the mrid is obtained by calling msger_id(), but
     // the App object is always mrid_App, so it can be used directly.
@@ -52,13 +51,13 @@ private:
 	_pinger.ping (1);
     }
 private:
-    PPing _pinger;
+    IPing _pinger;
 };
 
 // main should be created by using CWICLO_APP macros.
 // The arguments are the app class and the list of used msgers.
 // Here these are TestApp, and the PingMsger object with which
-// the app will communicate using the PPing proxy. PingMsger
+// the app will communicate using the IPing object. PingMsger
 // lists the Ping interface as invokable, so this macro here
 // will map the Ping interface to PingMsger factory.
 //

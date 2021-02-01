@@ -9,7 +9,7 @@
 
 namespace cwiclo {
 
-auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) const -> fd_t
+auto IExtern::connect (const sockaddr* addr, socklen_t addrlen) const -> fd_t
 {
     DEBUG_PRINTF ("[X] Connecting to socket %s\n", debug_socket_name(addr));
     auto fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, 0);
@@ -24,7 +24,7 @@ auto PExtern::connect (const sockaddr* addr, socklen_t addrlen) const -> fd_t
     return fd;
 }
 
-auto PExtern::connect_local (const char* sockname) const -> fd_t
+auto IExtern::connect_local (const char* sockname) const -> fd_t
 {
     fd_t sfd = -1;
     sockaddr_un addr;
@@ -41,7 +41,7 @@ auto PExtern::connect_local (const char* sockname) const -> fd_t
     return sfd;
 }
 
-auto PExtern::launch_pipe (const char* exe, const char* arg) const -> fd_t
+auto IExtern::launch_pipe (const char* exe, const char* arg) const -> fd_t
 {
     // Create socket pipe, will be connected to stdin in server
     enum { socket_ClientSide, socket_ServerSide, socket_N };

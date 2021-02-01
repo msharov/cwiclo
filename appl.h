@@ -21,8 +21,8 @@ namespace cwiclo {
 //}}}-------------------------------------------------------------------
 //{{{ Timer interface
 
-class PTimer : public Proxy {
-    DECLARE_INTERFACE (Proxy, Timer, (watch,"uix")(timer,"i"))
+class ITimer : public Interface {
+    DECLARE_INTERFACE (Interface, Timer, (watch,"uix")(timer,"i"))
 public:
     enum class WatchCmd : uint32_t {
 	Stop		= 0,
@@ -38,7 +38,7 @@ public:
     static constexpr mstime_t TimerMax = INT64_MAX;
     static constexpr mstime_t TimerNone = UINT64_MAX;
 public:
-    explicit	PTimer (mrid_t caller) : Proxy (caller) {}
+    explicit	ITimer (mrid_t caller) : Interface (caller) {}
     void	watch (WatchCmd cmd, fd_t fd, mstime_t timeoutms = TimerNone) const;
     void	stop (void) const				{ watch (WatchCmd::Stop, -1, TimerNone); }
     void	timer (mstime_t timeoutms) const		{ watch (WatchCmd::Timer, -1, timeoutms); }
@@ -59,9 +59,9 @@ public:
 	return true;
     }
 public:
-    class Reply : public Proxy::Reply {
+    class Reply : public Interface::Reply {
     public:
-	constexpr	Reply (Msg::Link l)	: Proxy::Reply (l) {}
+	constexpr	Reply (Msg::Link l)	: Interface::Reply (l) {}
 	void		timer (fd_t fd) const	{ send (m_timer(), fd); }
 
 	template <typename O>
@@ -77,9 +77,9 @@ public:
 //}}}-------------------------------------------------------------------
 //{{{ Signal interface
 
-class PSignal : public Proxy {
+class ISignal : public Interface {
     #define SIGNATURE_Signal_Info	"(iiii)"
-    DECLARE_INTERFACE (Proxy, Signal, (signal,SIGNATURE_Signal_Info))
+    DECLARE_INTERFACE (Interface, Signal, (signal,SIGNATURE_Signal_Info))
 public:
     struct Info {
 	int32_t	sig;
@@ -88,7 +88,7 @@ public:
 	int32_t	uid;
     };
 public:
-    constexpr	PSignal (mrid_t caller)	: Proxy (caller, mrid_Broadcast) {}
+    constexpr	ISignal (mrid_t caller)	: Interface (caller, mrid_Broadcast) {}
     void	signal (const Info& si) const	{ send (m_signal(), si); }
 
     template <typename O>
@@ -98,7 +98,7 @@ public:
 	o->Signal_signal (msg.read().read<Info>());
 	return true;
     }
-    using Reply = PSignal;
+    using Reply = ISignal;
 };
 
 //}}}-------------------------------------------------------------------
@@ -108,7 +108,7 @@ class AppL : public Msger {
 public:
     using argc_t	= int;
     using argv_t	= char* const*;
-    using mstime_t	= PTimer::mstime_t;
+    using mstime_t	= ITimer::mstime_t;
     using msgq_t	= vector<Msg>;
     enum { f_Quitting = Msger::f_Last, f_DebugMsgTrace, f_Last };
 public:
@@ -157,22 +157,22 @@ public:
     //{{{2 Timer
     friend class Timer;
     class Timer : public Msger {
-	IMPLEMENT_INTERFACES_I (Msger, (PTimer),)
+	IMPLEMENT_INTERFACES_I (Msger, (ITimer),)
     public:
 	explicit	Timer (Msg::Link l)
-			    : Msger(l),_nextfire(PTimer::TimerNone),_cmd(),_fd(-1)
+			    : Msger(l),_nextfire(ITimer::TimerNone),_cmd(),_fd(-1)
 			    { AppL::instance().add_timer (this); }
 			~Timer (void) override;
-	inline void	Timer_watch (PTimer::WatchCmd cmd, fd_t fd, mstime_t timeoutms);
-	constexpr void	stop (void)		{ set_flag (f_Unused); _cmd = PTimer::WatchCmd::Stop; _fd = -1; _nextfire = PTimer::TimerNone; }
-	void		fire (void)		{ PTimer::Reply(creator_link()).timer (_fd); stop(); }
+	inline void	Timer_watch (ITimer::WatchCmd cmd, fd_t fd, mstime_t timeoutms);
+	constexpr void	stop (void)		{ set_flag (f_Unused); _cmd = ITimer::WatchCmd::Stop; _fd = -1; _nextfire = ITimer::TimerNone; }
+	void		fire (void)		{ ITimer::Reply(creator_link()).timer (_fd); stop(); }
 	auto		fd (void) const		{ return _fd; }
 	auto		cmd (void) const	{ return _cmd; }
 	auto		next_fire (void) const	{ return _nextfire; }
 	auto		poll_mask (void) const	{ return _cmd; }
     public:
-	PTimer::mstime_t	_nextfire;
-	PTimer::WatchCmd	_cmd;
+	ITimer::mstime_t	_nextfire;
+	ITimer::WatchCmd	_cmd;
 	fd_t			_fd;
     };
     //}}}2--------------------------------------------------------------

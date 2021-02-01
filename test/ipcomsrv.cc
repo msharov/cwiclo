@@ -16,4 +16,4 @@ public:
     static auto&	instance (void) { static TestApp s_app; return s_app; }
 };
 
-CWICLO_APP (TestApp, (PingMsger),,(PPing))
+CWICLO_APP (TestApp, (PingMsger),,(IPing))

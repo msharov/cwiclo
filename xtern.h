@@ -16,7 +16,7 @@ namespace cwiclo {
 class Extern;
 
 class COMRelay : public Msger {
-    IMPLEMENT_INTERFACES_I_M (Msger, (PCOM),)
+    IMPLEMENT_INTERFACES_I_M (Msger, (ICOM),)
 public:
     explicit		COMRelay (Msg::Link l);
 			~COMRelay (void) override;
@@ -28,7 +28,7 @@ public:
     void		COM_delete (void);
 private:
     Extern*	_pExtern;	// Outgoing connection object
-    PCOM	_localp;	// Proxy to the local object
+    ICOM	_localp;	// Interface to the local object
     extid_t	_extid;		// Extern link id
 };
 
@@ -36,9 +36,9 @@ private:
 //{{{ Extern
 
 class Extern : public Msger {
-    IMPLEMENT_INTERFACES_I (Msger, (PExtern), (PTimer)(PCOM))
+    IMPLEMENT_INTERFACES_I (Msger, (IExtern), (ITimer)(ICOM))
 public:
-    using Info = PExtern::Info;
+    using Info = IExtern::Info;
 public:
     explicit		Extern (Msg::Link l);
 			~Extern (void) override;
@@ -47,7 +47,7 @@ public:
     void		queue_pending (Msg&& msg) { _pending.emplace_back (move(msg)); }
     extid_t		register_relay (COMRelay* relay);
     void		unregister_relay (const COMRelay* relay);
-    inline void		Extern_open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide side);
+    inline void		Extern_open (fd_t fd, const iid_t* eifaces, IExtern::SocketSide side);
     void		Extern_close (void);
     inline void		COM_error (const string_view& errmsg);
     inline void		COM_export (string elist);
@@ -101,27 +101,27 @@ private:
 	char			_hbuf [MaxHeaderSize];
     };
     //}}}2--------------------------------------------------------------
-    //{{{2 RelayProxy
-    struct RelayProxy {
+    //{{{2 PRelay
+    struct PRelay {
 	COMRelay*	pRelay;
-	PCOM		relay;
+	ICOM		relay;
 	extid_t		extid;
     public:
-	constexpr RelayProxy (mrid_t src, mrid_t dest, mrid_t eid)
+	constexpr PRelay (mrid_t src, mrid_t dest, mrid_t eid)
 	    : pRelay(), relay(src,dest), extid(eid) {}
-	RelayProxy (mrid_t src, mrid_t eid)
+	PRelay (mrid_t src, mrid_t eid)
 	    : pRelay(), relay(src), extid(eid) {}
-	~RelayProxy (void)	// Free ids for relays created by this Extern
+	~PRelay (void)	// Free ids for relays created by this Extern
 	    { if (pRelay && pRelay->creator_id() == relay.src()) relay.free_id(); }
-	RelayProxy (const RelayProxy&) = delete;
-	void operator= (const RelayProxy&) = delete;
+	PRelay (const PRelay&) = delete;
+	void operator= (const PRelay&) = delete;
     };
     //}}}2--------------------------------------------------------------
 private:
     constexpr extid_t	create_extid_from_relay_id (mrid_t id) const
-			    { return id + ((_einfo.side == PExtern::SocketSide::Client) ? extid_ClientBase : extid_ServerBase); }
-    RelayProxy*		relay_proxy_by_extid (extid_t extid);
-    RelayProxy*		relay_proxy_by_id (mrid_t id);
+			    { return id + ((_einfo.side == IExtern::SocketSide::Client) ? extid_ClientBase : extid_ServerBase); }
+    PRelay*		prelay_by_extid (extid_t extid);
+    PRelay*		prelay_by_id (mrid_t id);
     void		requeue_pending (void);
     bool		write_outgoing (void);
     void		read_incoming (void);
@@ -130,10 +130,10 @@ private:
     void		enable_credentials_passing (bool enable);
 private:
     fd_t		_sockfd;
-    PTimer		_timer;
+    ITimer		_timer;
     streamsize		_bwritten;
     vector<ExtMsg>	_outq;		// messages queued for export
-    vector<RelayProxy>	_relays;
+    vector<PRelay>	_relays;
     AppL::msgq_t	_pending;	// messages that created this connection
     Info		_einfo;
     streamsize		_bread;

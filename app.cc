@@ -20,7 +20,7 @@ int App::run (void)
     return AppL::run();
 }
 
-App::PListener::~PListener (void)
+App::IListener::~IListener (void)
 {
     if (_sockfd >= 0)
 	close (exchange (_sockfd, -1));

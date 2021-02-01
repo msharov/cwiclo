@@ -10,7 +10,7 @@
 //{{{ Timer and Signal interfaces --------------------------------------
 namespace cwiclo {
 
-void PTimer::watch (WatchCmd cmd, fd_t fd, mstime_t timeoutms) const
+void ITimer::watch (WatchCmd cmd, fd_t fd, mstime_t timeoutms) const
     { send (m_watch(), cmd, fd, timeoutms); }
 
 //----------------------------------------------------------------------
@@ -18,12 +18,12 @@ void PTimer::watch (WatchCmd cmd, fd_t fd, mstime_t timeoutms) const
 AppL::Timer::~Timer (void)
     { AppL::instance().remove_timer (this); }
 
-void AppL::Timer::Timer_watch (PTimer::WatchCmd cmd, fd_t fd, mstime_t timeoutms)
+void AppL::Timer::Timer_watch (ITimer::WatchCmd cmd, fd_t fd, mstime_t timeoutms)
 {
     _cmd = cmd;
-    set_unused (_cmd == PTimer::WatchCmd::Stop);
+    set_unused (_cmd == ITimer::WatchCmd::Stop);
     _fd = fd;
-    _nextfire = timeoutms + (timeoutms <= PTimer::TimerMax ? PTimer::now() : PTimer::TimerNone);
+    _nextfire = timeoutms + (timeoutms <= ITimer::TimerMax ? ITimer::now() : ITimer::TimerNone);
 }
 
 IMPLEMENT_INTERFACES_D (AppL::Timer)
@@ -363,11 +363,11 @@ void AppL::forward_received_signals (void)
     auto oldrs = s_received_signals;
     if (!oldrs)
 	return;
-    PSignal psig (mrid_App);
+    ISignal psig (mrid_App);
     for (auto i = 0u; i < sizeof(s_received_signals)*8; ++i) {
 	if (!get_bit (oldrs, i))
 	    continue;
-	PSignal::Info si = {};
+	ISignal::Info si = {};
 	if ((si.sig = i) == SIGCHLD) {
 	    if (0 >= (si.pid = waitpid (-1, &si.status, WNOHANG)))
 		continue;
@@ -401,9 +401,9 @@ unsigned AppL::get_poll_timer_list (pollfd* pfd, unsigned pfdsz, int& timeout) c
     // Note that there may be a timeout without any fds
     //
     auto npfd = 0u;
-    auto nearest = PTimer::TimerMax;
+    auto nearest = ITimer::TimerMax;
     for (auto t : _timers) {
-	if (t->cmd() == PTimer::WatchCmd::Stop)
+	if (t->cmd() == ITimer::WatchCmd::Stop)
 	    continue;
 	nearest = min (nearest, t->next_fire());
 	if (t->fd() >= 0) {
@@ -416,10 +416,10 @@ unsigned AppL::get_poll_timer_list (pollfd* pfd, unsigned pfdsz, int& timeout) c
     }
     if (!_outq.empty())
 	timeout = 0;	// do not wait if there are messages to process
-    else if (nearest == PTimer::TimerMax)	// wait indefinitely
+    else if (nearest == ITimer::TimerMax)	// wait indefinitely
 	timeout = -!!npfd;	// if no fds, then don't wait at all
     else // get current time and compute timeout to nearest
-	timeout = max (nearest - PTimer::now(), 0);
+	timeout = max (nearest - ITimer::now(), 0);
     return npfd;
 }
 
@@ -427,11 +427,11 @@ void AppL::check_poll_timers (const pollfd* fds)
 {
     // Poll errors are checked for each fd with POLLERR. Other errors are ignored.
     // poll will exit when there are fds available or when the timer expires
-    auto now = PTimer::now();
+    auto now = ITimer::now();
     const auto* cfd = fds;
     for (auto t : _timers) {
 	bool expired = t->next_fire() <= now,
-	    hasfd = (t->fd() >= 0 && t->cmd() != PTimer::WatchCmd::Stop),
+	    hasfd = (t->fd() >= 0 && t->cmd() != ITimer::WatchCmd::Stop),
 	    fdon = hasfd && (cfd->revents & (POLLERR| int(t->cmd())));
 
 	// Log the firing if tracing

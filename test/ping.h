@@ -14,12 +14,12 @@ using namespace cwiclo;
 //----------------------------------------------------------------------
 // For communication between objects, interfaces must be defined for
 // both sides of the link, as well as method marshalling and dispatch.
-// The proxy "object" is used to send messages to the remote object, and
+// The interface object is used to send messages to the remote object, and
 // contains methods mirroring those on the remote object, implemented
 // by marshalling the arguments into a message. The remote object is
 // created by the framework, using the a factory created by registration.
 //
-class PPing : public Proxy {
+class IPing : public Interface {
     //
     // The interface is a char block built by the DECLARE_INTERFACE macro.
     // This creates the name of the interface followed by methods and
@@ -28,8 +28,8 @@ class PPing : public Proxy {
     // sequence (method1,"s")(method2,"u")(method3,"x"). Note the absence
     // of commas between parenthesis groups.
     //
-    // The first argument to DECLARE_INTERFACE is the base class of this
-    // proxy. This is used to define base_class_t member type and recursive
+    // The first argument to DECLARE_INTERFACE is the base class.
+    // This is used to define base_class_t member type and recursive
     // interface collection methods used to create the interface-Msger map.
     //
     // The fourth argument specifies the socket name on which this interface
@@ -44,17 +44,19 @@ class PPing : public Proxy {
     // For non-exported interfaces, DECLARE_INTERFACE macro could
     // be used instead, omitting the socket and program arguments.
     //
-    DECLARE_INTERFACE_E (Proxy, Ping, (ping,"u"), "@~cwiclo/test/ping.socket", "ipcomsrv");
+    DECLARE_INTERFACE_E (Interface, Ping, (ping,"u"), "@~cwiclo/test/ping.socket", "ipcomsrv");
 public:
-    // Proxies are constructed with the calling object's oid,
+    // Interfaces are constructed with the calling object's oid,
     // to let the remote object know where to send the replies.
     // The remote object is created when the first message is
-    // sent through this proxy.
+    // sent through this interface.
     //
-    explicit PPing (mrid_t caller) : Proxy (caller) {}
+    explicit IPing (mrid_t caller) : Interface (caller) {}
 
     // Methods are implemented by marshalling the arguments into a message.
-    // m_ping() is defined by DECLARE_INTERFACE above and returns the methodid_t of the Ping call.
+    // m_ping() is defined by DECLARE_INTERFACE above and returns the
+    // methodid_t of the Ping call.
+    //
     void ping (uint32_t v) const { send (m_ping(), v); }
 
     // The dispatch method is called from the destination object's
@@ -66,25 +68,27 @@ public:
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_ping())
 	    return false;	// protocol errors are handled by caller
+	//
 	// Each method unmarshals the arguments and calls the handling object
 	// Name the handlers Interface_method by convention
+	//
 	o->Ping_ping (msg.read().read<uint32_t>());
 	return true;
     }
 public:
-    // Proxies are always one-way. If replies are desired, a separate proxy
-    // must be implemented. This is Ping's reply proxy. Because replies must
-    // necessarily be created in response to some request, reply interface
-    // methods are part of the request interface, and the reply proxy is always
-    // a member class of the request proxy, named Reply.
+    // Interfaces are always one-way. If replies are desired, a separate
+    // interface must be implemented. This is Ping's reply interface. Because
+    // replies must necessarily be created in response to some request, reply
+    // interface methods are part of the request interface, and the reply
+    // interface is always a member Reply class of the request interface.
     //
-    class Reply : public Proxy::Reply {
+    class Reply : public Interface::Reply {
     public:
-	// Reply proxies are constructed from the owning object's creating
+	// Reply interfaces are constructed from the owning object's creating
 	// link, copied from the message that created it. Messages from this
-	// proxy will send replies to the originating object.
+	// interface are replies to the originating object.
 	//
-	constexpr Reply (Msg::Link l) : Proxy::Reply (l) {}
+	constexpr Reply (Msg::Link l) : Interface::Reply (l) {}
 	//
 	// Here an expanded marshalling example is given with direct
 	// stream access. Most of the time you should just use send.
@@ -122,11 +126,11 @@ public:
 // the destination object for messages sent to it.
 //
 // The arguments are first the base class, here Msger. Second the list
-// of invokable interfaces, as their proxy names. Remember that these
-// are preprocessor sequences (PPing)(PSome)(POther), with no commas.
+// of invokable interfaces, as their interface names. Remember that these
+// are preprocessor sequences (IPing)(ISome)(IOther), with no commas.
 // The third argument is another preprocessor sequence specifying
 // interfaces that this Msger uses internally. These will usually be
-// reply interfaces, like (PPing::Reply).
+// reply interfaces, like (IPing::Reply).
 //
 // Alternatively there is the IMPLEMENT_INTERFACES_I/_D pair in case
 // you want to force interface methods inline, while defining their
@@ -134,7 +138,7 @@ public:
 // there will generate the appropriate virtual PingMsger::dispatch.
 //
 class PingMsger : public Msger {
-    IMPLEMENT_INTERFACES (Msger, (PPing),)
+    IMPLEMENT_INTERFACES (Msger, (IPing),)
 public:
     explicit		PingMsger (Msg::Link l)
 			    : Msger(l),_npings(0)
@@ -143,13 +147,15 @@ public:
 			    { LOG ("Destroy Ping%hu\n", msger_id()); }
     inline void		Ping_ping (uint32_t v) {
 			    LOG ("Ping%hu: %u, %u total\n", msger_id(), v, ++_npings);
-			    // Reply proxies should generally be created
+			    //
+			    // Reply interface objects should generally be created
 			    // when needed because the information in it
 			    // is already stored in Msger as creator_link.
 			    // This also allows correctly handling the case
 			    // of the creator being destroyed, when no further
 			    // messages should be sent to it.
-			    PPing::Reply(creator_link()).ping (v);
+			    //
+			    IPing::Reply (creator_link()).ping (v);
 			}
 private:
     uint32_t		_npings;

@@ -14,7 +14,7 @@
 // ipcomsrv process is handled automatically by App.
 
 class TestApp : public App {
-    IMPLEMENT_INTERFACES (App,,(PPing))
+    IMPLEMENT_INTERFACES (App,,(IPing))
 public:
     static auto& instance (void) { static TestApp s_app; return s_app; }
     void Ping_ping (uint32_t v) {
@@ -27,7 +27,7 @@ public:
 private:
     TestApp (void) : App(),_pinger (mrid_App) { _pinger.ping (1); }
 private:
-    PPing _pinger;
+    IPing _pinger;
 };
 
-CWICLO_APP (TestApp,,(PPing),)
+CWICLO_APP (TestApp,,(IPing),)

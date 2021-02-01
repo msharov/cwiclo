@@ -45,13 +45,13 @@ void Extern::queue_outgoing (Msg&& msg, extid_t extid)
     Timer_timer (_sockfd);
 }
 
-Extern::RelayProxy* Extern::relay_proxy_by_id (mrid_t id)
+Extern::PRelay* Extern::prelay_by_id (mrid_t id)
 {
     return find_if (_relays, [&](const auto& r)
 	    { return r.relay.dest() == id; });
 }
 
-Extern::RelayProxy* Extern::relay_proxy_by_extid (extid_t extid)
+Extern::PRelay* Extern::prelay_by_extid (extid_t extid)
 {
     return find_if (_relays, [&](const auto& r)
 	    { return r.extid == extid; });
@@ -59,7 +59,7 @@ Extern::RelayProxy* Extern::relay_proxy_by_extid (extid_t extid)
 
 extid_t Extern::register_relay (COMRelay* relay)
 {
-    auto rp = relay_proxy_by_id (relay->msger_id());
+    auto rp = prelay_by_id (relay->msger_id());
     if (!rp) {
 	rp = &_relays.emplace_back (msger_id(), relay->msger_id(), create_extid_from_relay_id (relay->msger_id()));
 	set_unused (false);
@@ -70,10 +70,10 @@ extid_t Extern::register_relay (COMRelay* relay)
 
 void Extern::unregister_relay (const COMRelay* relay)
 {
-    auto rp = relay_proxy_by_id (relay->msger_id());
+    auto rp = prelay_by_id (relay->msger_id());
     if (rp) {
 	_relays.erase (rp);
-	if (_relays.size() <= 1 && info().side == PExtern::SocketSide::Client && !info().exported)
+	if (_relays.size() <= 1 && info().side == IExtern::SocketSide::Client && !info().exported)
 	    set_unused();
     }
 }
@@ -164,7 +164,7 @@ void Extern::ExtMsg::debug_dump (void) const
 //}}}-------------------------------------------------------------------
 //{{{ Extern::Extern
 
-void Extern::Extern_open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide side)
+void Extern::Extern_open (fd_t fd, const iid_t* eifaces, IExtern::SocketSide side)
 {
     if (!attach_to_socket (fd))
 	return error ("invalid socket type");
@@ -174,7 +174,7 @@ void Extern::Extern_open (fd_t fd, const iid_t* eifaces, PExtern::SocketSide sid
     _einfo.side = side;
     enable_credentials_passing (true);
     // Initial handshake is an exchange of COM::export messages
-    queue_outgoing (PCOM::export_msg (eifaces), extid_COM);
+    queue_outgoing (ICOM::export_msg (eifaces), extid_COM);
 }
 
 void Extern::Extern_close (void)
@@ -210,7 +210,7 @@ bool Extern::attach_to_socket (fd_t fd)
 	// so the server side must do manual permissions checking.
 	//
 	sockaddr_un* sun = pointer_cast<sockaddr_un>(&ss);
-	if (_einfo.side == PExtern::SocketSide::Server && !sun->sun_path[0]) {
+	if (_einfo.side == IExtern::SocketSide::Server && !sun->sun_path[0]) {
 	    // Find existing path component and use its uid as filter
 	    auto pdirn = &sun->sun_path[1];
 	    DEBUG_PRINTF ("[X] Extern.%hu: using abstract socket %s\n", msger_id(), pdirn);
@@ -282,9 +282,9 @@ void Extern::Timer_timer (fd_t)
 {
     if (_sockfd >= 0)
 	read_incoming();
-    auto tcmd = PTimer::WatchCmd::Read;
+    auto tcmd = ITimer::WatchCmd::Read;
     if (_sockfd >= 0 && write_outgoing())
-	tcmd = PTimer::WatchCmd::ReadWrite;
+	tcmd = ITimer::WatchCmd::ReadWrite;
     if (_sockfd >= 0)
 	_timer.watch (tcmd, _sockfd);
 }
@@ -478,7 +478,7 @@ bool Extern::accept_incoming_message (void)
     }
     if (info().filter_uid
 	&& info().creds.uid != info().filter_uid
-	&& !PCOM::allowed_before_auth(method)) {
+	&& !ICOM::allowed_before_auth(method)) {
 	DEBUG_PRINTF ("[XE] Incoming message %s.%s from process %u with uid %u is disallowed by filter_uid %u\n", interface_of_method(method), method, info().creds.pid, info().creds.uid, info().filter_uid);
 	return false;
     }
@@ -490,8 +490,8 @@ bool Extern::accept_incoming_message (void)
     }
     _inmsg.trim_body (vsz);	// Local messages store unpadded size
 
-    // Lookup or create local relay proxy
-    auto rp = relay_proxy_by_extid (_inmsg.extid());
+    // Lookup or create local relay
+    auto rp = prelay_by_extid (_inmsg.extid());
     if (!rp) {
 	// Verify that the requested interface is on the exported list
 	if (!_einfo.is_exporting (interface_of_method (method))) {
@@ -508,7 +508,7 @@ bool Extern::accept_incoming_message (void)
 	//
 	// Create a COMRelay as the destination. It will then create the
 	// actual server Msger using the interface in the message.
-	rp->relay.create_dest_for (PCOM::interface());
+	rp->relay.create_dest_for (ICOM::interface());
     }
 
     // Create local message from ExtMsg and forward it to the COMRelay
@@ -531,7 +531,7 @@ COMRelay::COMRelay (Msg::Link l)
 // Messages coming from an extern will require creating a local Msger,
 // while messages going to the extern from l.src local caller.
 //
-,_localp (l.dest, _pExtern ? Proxy::allocate_id(l.dest) : l.src)
+,_localp (l.dest, _pExtern ? Interface::allocate_id(l.dest) : l.src)
 //
 // Extid will be determined when the connection interface is known
 ,_extid()
@@ -547,9 +547,9 @@ COMRelay::~COMRelay (void)
     //    COMRelay_COM_delete and the extern pointer is reset to prevent
     //    further messages to remote object. Here, no message is sent.
     // 3. The Extern object is destroyed. pExtern is reset in the dtor of
-    //    RelayProxy in the Extern object, calling COMRelay on_msger_destroyed.
+    //    PRelay in the Extern object, calling COMRelay on_msger_destroyed.
     if (_pExtern && _extid)
-	_pExtern->queue_outgoing (PCOM::delete_msg(), _extid);
+	_pExtern->queue_outgoing (ICOM::delete_msg(), _extid);
     COM_delete();
     _pExtern = nullptr;
     _extid = 0;
@@ -562,7 +562,7 @@ bool COMRelay::dispatch (Msg& msg)
 	return true;
 
     // COM messages are processed here
-    if (PCOM::dispatch (this, msg))
+    if (ICOM::dispatch (this, msg))
 	return true;
 
     // Messages to imported interfaces need to be routed to the Extern
@@ -614,7 +614,7 @@ bool COMRelay::on_error (mrid_t eid, const string& errmsg)
     //
     if (_pExtern && eid == _localp.dest()) {
 	DEBUG_PRINTF ("[X] COMRelay forwarding error to extern creator\n");
-	_pExtern->queue_outgoing (PCOM::error_msg (errmsg), _extid);
+	_pExtern->queue_outgoing (ICOM::error_msg (errmsg), _extid);
 	return true;	// handled on the remote end.
     }
     // errors occuring in the Extern object or elsewhere can not be handled

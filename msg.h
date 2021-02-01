@@ -102,8 +102,8 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 //{{{ Interface definition macros
 
 //{{{2 DECLARE_INTERFACE helper macros
-// Use these to define the i_Interface variable in a proxy
-// Example: DECLARE_INTERFACE (MyInterface, (Call1,"uix")(Call2,"x"))
+// Use these to define the i_Interface variable in an Interface
+// Example: DECLARE_INTERFACE (Interface, Caller, (Call1,"uix")(Call2,"x"))
 // Note that the method list is not comma-separated; it is a preprocessor
 // sequence with each element delimited by parentheses (a)(b)(c).
 
@@ -113,9 +113,9 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 	char	method_##mname##_signature [sizeof(sig)];
 
 #define DEFINE_INTERFACE_METHOD_VALUES(iface,mname,sig)	\
-    sizeof(I##iface::method_##mname##_size)+		\
-	sizeof(I##iface::method_##mname)+		\
-	sizeof(I##iface::method_##mname##_signature),	\
+    sizeof(D##iface::method_##mname##_size)+		\
+	sizeof(D##iface::method_##mname)+		\
+	sizeof(D##iface::method_##mname##_signature),	\
     #mname, sig,
 
 #define DECLARE_INTERFACE_METHOD_ACCESSORS(iface,mname,sig)\
@@ -129,7 +129,7 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 // speed up lookup of method by name.
 //
 #define DECLARE_INTERFACE_E(base,iface,methods,socket,prog)\
-    struct I##iface {			\
+    struct D##iface {			\
 	uint8_t	name_size;		\
 	char	name [sizeof(#iface)];	\
 	SEQ_FOR_EACH (methods, iface, DECLARE_INTERFACE_METHOD_VARS)\
@@ -139,12 +139,12 @@ methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, s
 	char	socket_name [sizeof(socket)];\
 	char	program_name [sizeof(prog)];\
     };					\
-    static constexpr const I##iface i_##iface = {\
+    static constexpr const D##iface i_##iface = {\
 	sizeof(#iface), #iface,		\
 	SEQ_FOR_EACH (methods, iface, DEFINE_INTERFACE_METHOD_VALUES)\
 	0,				\
-	uint8_t(offsetof(I##iface, name_offset_low)-offsetof(I##iface, name)),\
-	uint8_t((offsetof(I##iface, name_offset_low)-offsetof(I##iface, name))>>8),\
+	uint8_t(offsetof(D##iface, name_offset_low)-offsetof(D##iface, name)),\
+	uint8_t((offsetof(D##iface, name_offset_low)-offsetof(D##iface, name))>>8),\
 	socket, prog\
     };					\
     SEQ_FOR_EACH (methods, iface, DECLARE_INTERFACE_METHOD_ACCESSORS)\
@@ -233,11 +233,11 @@ private:
 };
 
 //}}}-------------------------------------------------------------------
-//{{{ ProxyB
+//{{{ IBase
 
 class Msger;
 
-class ProxyB {
+class IBase {
 public:
     using fd_t = Msg::fd_t;
     using pfn_factory_t = Msger* (*)(Msg::Link l);
@@ -246,10 +246,10 @@ public:
     constexpr auto	src (void) const	{ return link().src; }
     constexpr auto	dest (void) const	{ return link().dest; }
 protected:
-    constexpr		ProxyB (mrid_t from, mrid_t to) : _link {from,to} {}
-    constexpr		ProxyB (Msg::Link l)		: _link (Msg::Link::reverse(l)) {}
-			ProxyB (const ProxyB&) = delete;
-    void		operator= (const ProxyB&) = delete;
+    constexpr		IBase (mrid_t from, mrid_t to) : _link {from,to} {}
+    constexpr		IBase (Msg::Link l)		: _link (Msg::Link::reverse(l)) {}
+			IBase (const IBase&) = delete;
+    void		operator= (const IBase&) = delete;
     Msg&		create_msg (methodid_t imethod, streamsize sz) const;
     Msg&		create_msg (methodid_t imethod, streamsize sz, Msg::fdoffset_t fdo) const;
     Msg&		create_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0) const;
@@ -291,18 +291,18 @@ private:
 //{{{ Interface-msger binding macros
 //
 // IMPLEMENT_INTERFACES is used in a Msger to list implemented interfaces.
-// There are two lists; the first contains proxy class names for invokable
+// There are two lists; the first contains interface class names for invokable
 // interfaces - the ones whose messages can create the Msger object. These
 // are the services the Msger object provides. The second argument contains
-// the list of reply interface proxies; these specify interfaces that the
-// Msger uses itself, receiving replies on them from other Msger objects.
+// the list of reply interfaces; these specify interfaces that the Msger
+// uses itself, receiving replies on them from other Msger objects.
 //
 
 //{{{2 IMPLEMENT_INTERFACES helper macros
-#define GENERATE_CALL_N_INTERFACES(arg,proxy) arg proxy::n_interfaces()
-#define GENERATE_CALL_GET_INTERFACES(arg,proxy) arg = proxy::get_interfaces(arg);
-#define GENERATE_CALL_DISPATCH_I_INTERFACES(o,proxy) || proxy::dispatch(o,msg)
-#define GENERATE_CALL_DISPATCH_R_INTERFACES(o,proxy) || proxy::Reply::dispatch(o,msg)
+#define GENERATE_CALL_N_INTERFACES(arg,iface) arg iface::n_interfaces()
+#define GENERATE_CALL_GET_INTERFACES(arg,iface) arg = iface::get_interfaces(arg);
+#define GENERATE_CALL_DISPATCH_I_INTERFACES(o,iface) || iface::dispatch(o,msg)
+#define GENERATE_CALL_DISPATCH_R_INTERFACES(o,iface) || iface::Reply::dispatch(o,msg)
 #define IMPLEMENT_INTERFACES_I_M(base, invokable, reply)\
 public:\
     using base_class_t = base;\
@@ -348,7 +348,7 @@ public:
     template <typename M>
     [[nodiscard]] static Msger* factory (Msg::Link l)
 	{ return new M (l); }
-    using pfn_factory_t = ProxyB::pfn_factory_t;
+    using pfn_factory_t = IBase::pfn_factory_t;
     //}}}2--------------------------------------------------------------
 public:
     virtual		~Msger (void)			{ }
@@ -358,9 +358,8 @@ public:
     constexpr auto	flag (unsigned f) const		{ return get_bit (_flags,f); }
     static void		error (const char* fmt, ...) PRINTFARGS(1,2);
     static void		error_libc (const char* f);
-    virtual bool	dispatch (Msg&)	{ return false; }
-    virtual bool	on_error (mrid_t, const string&)
-			    { set_unused(); return false; }
+    virtual bool	dispatch (Msg&)			{ return false; }
+    virtual bool	on_error (mrid_t, const string&){ set_unused(); return false; }
     virtual void	on_msger_destroyed (mrid_t mid)
 			    { if (mid == creator_id()) { _link.src = msger_id(); set_unused(); } }
 protected:
@@ -380,27 +379,27 @@ private:
 };
 
 //}}}-------------------------------------------------------------------
-//{{{ Proxy
+//{{{ Interface
 
-class Proxy : public ProxyB {
+class Interface : public IBase {
 public:
-    explicit		Proxy (mrid_t from);
+    explicit		Interface (mrid_t from);
     void		create_dest_for (iid_t iid) const;
     void		create_dest_with (pfn_factory_t fac, iid_t iid = nullptr) const;
     template <typename T>
     void		create_dest_as (iid_t iid = nullptr) const
 			    { create_dest_with (&Msger::factory<T>, iid); }
     static mrid_t	allocate_id (mrid_t src);
-    void		allocate_id (void) { ProxyB::set_dest (allocate_id (src())); }
+    void		allocate_id (void) { IBase::set_dest (allocate_id (src())); }
     void		free_id (void);
 protected:
-    constexpr		Proxy (mrid_t from, mrid_t to) : ProxyB (from,to) {}
-    constexpr		Proxy (Msg::Link l) : ProxyB (l) {}
+    constexpr		Interface (mrid_t from, mrid_t to) : IBase (from,to) {}
+    constexpr		Interface (Msg::Link l) : IBase (l) {}
     constexpr auto	set_dest (mrid_t dest) = delete;
 protected:
-    class Reply : public ProxyB {
+    class Reply : public IBase {
     protected:
-	constexpr	Reply (Msg::Link l) : ProxyB (l) {}
+	constexpr	Reply (Msg::Link l) : IBase (l) {}
     };
 protected:
     static constexpr auto n_interfaces (void)		{ return 0; }
