@@ -233,11 +233,11 @@ private:
 };
 
 //}}}-------------------------------------------------------------------
-//{{{ IBase
+//{{{ IDispatch
 
 class Msger;
 
-class IBase {
+class IDispatch {
 public:
     using fd_t = Msg::fd_t;
     using pfn_factory_t = Msger* (*)(Msg::Link l);
@@ -246,10 +246,10 @@ public:
     constexpr auto	src (void) const	{ return link().src; }
     constexpr auto	dest (void) const	{ return link().dest; }
 protected:
-    constexpr		IBase (mrid_t from, mrid_t to) : _link {from,to} {}
-    constexpr		IBase (Msg::Link l)		: _link (Msg::Link::reverse(l)) {}
-			IBase (const IBase&) = delete;
-    void		operator= (const IBase&) = delete;
+    constexpr		IDispatch (mrid_t from, mrid_t to) : _link {from,to} {}
+    constexpr		IDispatch (Msg::Link l)		: _link (Msg::Link::reverse(l)) {}
+			IDispatch (const IDispatch&) = delete;
+    void		operator= (const IDispatch&) = delete;
     Msg&		create_msg (methodid_t imethod, streamsize sz) const;
     Msg&		create_msg (methodid_t imethod, streamsize sz, Msg::fdoffset_t fdo) const;
     Msg&		create_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0) const;
@@ -348,7 +348,7 @@ public:
     template <typename M>
     [[nodiscard]] static Msger* factory (Msg::Link l)
 	{ return new M (l); }
-    using pfn_factory_t = IBase::pfn_factory_t;
+    using pfn_factory_t = IDispatch::pfn_factory_t;
     //}}}2--------------------------------------------------------------
 public:
     virtual		~Msger (void)			{ }
@@ -381,7 +381,7 @@ private:
 //}}}-------------------------------------------------------------------
 //{{{ Interface
 
-class Interface : public IBase {
+class Interface : public IDispatch {
 public:
     explicit		Interface (mrid_t from);
     void		create_dest_for (iid_t iid) const;
@@ -390,16 +390,16 @@ public:
     void		create_dest_as (iid_t iid = nullptr) const
 			    { create_dest_with (&Msger::factory<T>, iid); }
     static mrid_t	allocate_id (mrid_t src);
-    void		allocate_id (void) { IBase::set_dest (allocate_id (src())); }
+    void		allocate_id (void) { IDispatch::set_dest (allocate_id (src())); }
     void		free_id (void);
 protected:
-    constexpr		Interface (mrid_t from, mrid_t to) : IBase (from,to) {}
-    constexpr		Interface (Msg::Link l) : IBase (l) {}
+    constexpr		Interface (mrid_t from, mrid_t to) : IDispatch (from,to) {}
+    constexpr		Interface (Msg::Link l) : IDispatch (l) {}
     constexpr auto	set_dest (mrid_t dest) = delete;
 protected:
-    class Reply : public IBase {
+    class Reply : public IDispatch {
     protected:
-	constexpr	Reply (Msg::Link l) : IBase (l) {}
+	constexpr	Reply (Msg::Link l) : IDispatch (l) {}
     };
 protected:
     static constexpr auto n_interfaces (void)		{ return 0; }

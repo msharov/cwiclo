@@ -83,12 +83,19 @@ static streamsize validate_sigelement (istream& is, const char*& sig)
 {
     auto sz = sigelement_size (*sig);
     assert ((sz || *sig == '(' || *sig == 'a' || *sig == 's') && "invalid character in method signature");
-    if (sz) {		// Zero size is returned for compound elements, which are structs, arrays, or strings.
-	++sig;		// single char element
+    if (sz) {
+	//
+	// Fixed size element
+	//
+	++sig;
 	if (is.remaining() < sz || !is.aligned(sz))
 	    return 0;	// invalid data in buf
 	is.skip (sz);
-    } else if (*sig == '(') {				// Structs. Scan forward until ')'.
+
+    } else if (*sig == '(') {
+	//
+	// Struct. Scan forward until ')'.
+	//
 	auto sal = sigelement_alignment (sig);
 	if (!validate_read_align (is, sz, sal))
 	    return 0;
@@ -100,29 +107,46 @@ static streamsize validate_sigelement (istream& is, const char*& sig)
 	++sig;
 	if (!validate_read_align (is, sz, sal))	// align after the struct
 	    return 0;
-    } else if (*sig == 'a' || *sig == 's') {		// Arrays and strings
+
+    } else if (*sig == 'a' || *sig == 's') {
+	//
+	// Arrays and strings
+	//
 	if (is.remaining() < 4 || !is.aligned(4))
 	    return 0;
 	uint32_t nel; is >> nel;	// number of elements in the array
 	sz += sizeof(nel);
+
 	size_t elsz = 1, elal = 4;	// strings are equivalent to "ac"
 	if (*sig++ == 'a') {		// arrays are followed by an element sig "a(uqq)"
 	    elsz = sigelement_size (*sig);
 	    elal = max (sigelement_alignment(sig), 4);
 	}
-	if (!validate_read_align (is, sz, elal))	// align the beginning of element block
+
+	// align the beginning of element block
+	if (!validate_read_align (is, sz, elal))
 	    return 0;
-	if (elsz) {			// optimization for the common case of fixed-element array
+
+	if (elsz) {
+	    //
+	    // optimization for the common case of fixed-size element array
+	    //
 	    auto allelsz = elsz*nel;
 	    if (is.remaining() < allelsz)
 		return 0;
 	    is.skip (allelsz);
 	    sz += allelsz;
-	} else for (auto i = 0u; i < nel; ++i, sz += elsz) {	// read each element
-	    auto elsig = sig;		// for each element, pass in the same element sig
-	    if (!(elsz = validate_sigelement (is, elsig)))
-		return 0;
+	} else {
+	    //
+	    // read elements individually
+	    //
+	    for (auto i = 0u; i < nel; ++i, sz += elsz) {
+		auto elsig = sig;		// for each element, pass in the same element sig
+		if (!(elsz = validate_sigelement (is, elsig)))
+		    return 0;
+	    }
 	}
+
 	if (sig[-1] == 'a')		// skip the array element sig for arrays; strings do not have one
 	    sig = skip_one_sigelement (sig);
 	else {				// for strings, verify zero-termination
@@ -130,7 +154,9 @@ static streamsize validate_sigelement (istream& is, const char*& sig)
 	    if (is.read<char>())
 		return 0;
 	}
-	if (!validate_read_align (is, sz, elal))	// align the end of element block, if element alignment < 4
+
+	// align the end of element block, if element alignment < 4
+	if (!validate_read_align (is, sz, elal))
 	    return 0;
     }
     return sz;
@@ -150,17 +176,17 @@ streamsize Msg::validate_signature (istream is, const char* sig) // static
 
 //----------------------------------------------------------------------
 
-Msg& IBase::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo) const
+Msg& IDispatch::create_msg (methodid_t mid, streamsize sz, Msg::fdoffset_t fdo) const
     { return AppL::instance().create_msg (link(), mid, sz, fdo); }
-Msg& IBase::create_msg (methodid_t mid, streamsize sz) const
+Msg& IDispatch::create_msg (methodid_t mid, streamsize sz) const
     { return create_msg (mid, sz, Msg::NoFdIncluded); }
-Msg& IBase::create_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid) const
+Msg& IDispatch::create_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo, extid_t extid) const
     { return AppL::instance().create_msg (link(), imethod, move(body), fdo, extid); }
 
-Msg* IBase::get_outgoing_msg (methodid_t imethod) const
+Msg* IDispatch::get_outgoing_msg (methodid_t imethod) const
     { return AppL::instance().has_outq_msg (imethod, link()); }
 
-Msg& IBase::recreate_msg (methodid_t imethod, streamsize sz) const
+Msg& IDispatch::recreate_msg (methodid_t imethod, streamsize sz) const
 {
     if (auto msg = get_outgoing_msg (imethod); msg) {
 	msg->resize_body (sz);
@@ -169,7 +195,7 @@ Msg& IBase::recreate_msg (methodid_t imethod, streamsize sz) const
     return create_msg (imethod, sz);
 }
 
-Msg& IBase::recreate_msg (methodid_t imethod, Msg::Body&& body) const
+Msg& IDispatch::recreate_msg (methodid_t imethod, Msg::Body&& body) const
 {
     if (auto msg = get_outgoing_msg (imethod); msg) {
 	msg->replace_body (move(body));
@@ -181,14 +207,14 @@ Msg& IBase::recreate_msg (methodid_t imethod, Msg::Body&& body) const
 //----------------------------------------------------------------------
 
 Interface::Interface (mrid_t from)
-: IBase (from, allocate_id (from))
+: IDispatch (from, allocate_id (from))
 {
 }
 
 mrid_t Interface::allocate_id (mrid_t src) // static
     { return AppL::instance().allocate_mrid (src); }
 void Interface::free_id (void)
-    { AppL::instance().free_mrid (IBase::set_dest (mrid_Broadcast)); }
+    { AppL::instance().free_mrid (IDispatch::set_dest (mrid_Broadcast)); }
 
 void Interface::create_dest_for (iid_t iid) const
 {
