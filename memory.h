@@ -34,6 +34,28 @@ private:
     size_type		_size;
 };
 
+//}}}-------------------------------------------------------------------
+//{{{ strong_ordering
+
+// For <=>
+class strong_ordering {
+    int	_v;
+public:
+    constexpr strong_ordering (int v) :_v(v) {}
+    constexpr operator int (void) const { return _v; }
+    constexpr bool operator== (int v) const { return _v == v; }
+    constexpr bool operator< (int v) const { return _v < v; }
+    constexpr bool operator== (const strong_ordering& v) const { return _v == v._v; }
+    constexpr bool operator< (const strong_ordering& v) const { return _v < v._v; }
+    static const strong_ordering less;
+    static const strong_ordering equal;
+    static const strong_ordering greater;
+};
+
+__inline constexpr const strong_ordering strong_ordering::less (-1);
+__inline constexpr const strong_ordering strong_ordering::equal (0);
+__inline constexpr const strong_ordering strong_ordering::greater (1);
+
 } // namespace std
 //}}}-------------------------------------------------------------------
 //{{{ new and delete
@@ -92,34 +114,43 @@ public:
     inline constexpr auto&	operator= (unique_ptr&& p)	{ swap (p); return *this; }
     inline constexpr auto&	operator* (void) const		{ return *get(); }
     inline constexpr auto	operator-> (void) const		{ return get(); }
-    inline constexpr bool	operator== (const pointer p) const	{ return _p == p; }
-    inline constexpr bool	operator== (const unique_ptr& p) const	{ return _p == p._p; }
-    inline constexpr bool	operator!= (const pointer p) const	{ return _p != p; }
-    inline constexpr bool	operator!= (const unique_ptr& p) const	{ return _p != p._p; }
-    inline constexpr bool	operator< (const pointer p) const	{ return _p < p; }
-    inline constexpr bool	operator< (const unique_ptr& p) const	{ return _p < p._p; }
-    inline constexpr bool	operator<= (const pointer p) const	{ return _p <= p; }
-    inline constexpr bool	operator<= (const unique_ptr& p) const	{ return _p <= p._p; }
-    inline constexpr bool	operator> (const pointer p) const	{ return _p > p; }
-    inline constexpr bool	operator> (const unique_ptr& p) const	{ return _p > p._p; }
-    inline constexpr bool	operator>= (const pointer p) const	{ return _p >= p; }
-    inline constexpr bool	operator>= (const unique_ptr& p) const	{ return _p >= p._p; }
+    inline constexpr auto	operator<=> (const unique_ptr& p) const = default;
+    inline constexpr auto	operator<=> (const pointer p) const	{ return _p <=> p; }
 private:
     pointer			_p;
 };
 
 template <typename T, typename... Args>
-inline auto make_unique (Args&&... args) { return unique_ptr<T> (new T (forward<Args>(args)...)); }
+inline constexpr auto make_unique (Args&&... args) { return unique_ptr<T> (new T (forward<Args>(args)...)); }
 
 //}}}-------------------------------------------------------------------
-//{{{ copy
+//{{{ rep_movs
 
-template <typename T> inline auto rep_movs (const T*& f, size_t n, T*& r)
-    { memmove (r, f, n*sizeof(T)); advance (r, n); advance (f, n); return r; }
+inline constexpr auto rep_movs (const void*& f, size_t n, void*& r) {
+    __builtin_memmove (r, f, n);
+    advance (r, n);
+    advance (f, n);
+    return r;
+}
+template <typename T>
+inline constexpr auto rep_movs (const T*& f, size_t n, T*& r) {
+    __builtin_memmove (r, f, n*sizeof(T));
+    advance (r, n);
+    advance (f, n);
+    return r;
+}
 #if __x86__
-#define CWICLO_REP_MOVS(T,instr)\
-template <> inline auto rep_movs (const T*& f, size_t n, T*& r)\
-    { __asm__ volatile (instr:"+S"(f),"+D"(r),"+c"(n)::"cc","memory"); return r; }
+#define CWICLO_REP_MOVS(T,instr)	\
+template <> inline constexpr auto rep_movs (const T*& f, size_t n, T*& r) {\
+    if (!is_constant_evaluated())	\
+	__asm__ volatile (instr:"+S"(f),"+D"(r),"+c"(n)::"cc","memory");\
+    else {				\
+	__builtin_memmove (r, f, n*sizeof(T));\
+	advance (r, n);			\
+	advance (f, n);			\
+    }					\
+    return r;				\
+}
 #if __x86_64__
 CWICLO_REP_MOVS (uint64_t, "rep movsq")
 CWICLO_REP_MOVS ( int64_t, "rep movsq")
@@ -133,8 +164,72 @@ CWICLO_REP_MOVS (  int8_t, "rep movsb")
 #undef CWICLO_REP_MOVS
 #endif
 
+//}}}-------------------------------------------------------------------
+//{{{ rep_movs_rev
+
+inline constexpr auto rep_movs_rev (const void*& f, size_t n, void*& r)
+    { return __builtin_memmove (pointer_cast<char>(r)-n, pointer_cast<char>(f)-n, n); }
+template <typename T>
+inline constexpr auto rep_movs_rev (const T*& f, size_t n, T*& r)
+    { return pointer_cast<T>(__builtin_memmove (r -= n, f -= n, n*sizeof(T))); }
+#if __x86__
+#define CWICLO_REP_MOVS(T,instr)\
+template <> inline constexpr auto rep_movs_rev (const T*& f, size_t n, T*& r) {\
+    if (!is_constant_evaluated()) {\
+	__asm__ volatile ("std\n\t" instr "\n\tcld":"+S"(f),"+D"(r),"+c"(n)::"cc","memory");\
+	return r;\
+    } else\
+	return pointer_cast<T>(__builtin_memmove (r -= n, f -= n, n*sizeof(T)));\
+}
+#if __x86_64__
+CWICLO_REP_MOVS (uint64_t, "rep movsq")
+CWICLO_REP_MOVS ( int64_t, "rep movsq")
+#endif
+CWICLO_REP_MOVS (uint32_t, "rep movsl")
+CWICLO_REP_MOVS ( int32_t, "rep movsl")
+CWICLO_REP_MOVS (uint16_t, "rep movsw")
+CWICLO_REP_MOVS ( int16_t, "rep movsw")
+CWICLO_REP_MOVS ( uint8_t, "rep movsb")
+CWICLO_REP_MOVS (  int8_t, "rep movsb")
+#undef CWICLO_REP_MOVS
+#endif
+
+//}}}-------------------------------------------------------------------
+//{{{ rep_stos
+
+template <typename T>
+constexpr auto rep_stos (T* f, size_t n, const T& v) {
+    for (auto l = next(f,n); f < l; advance(f))
+	*f = v;
+    return f;
+}
+#if __x86__
+#define CWICLO_REP_STOS(T,instr)\
+template <> inline constexpr auto rep_stos (T* f, size_t n, const T& v) {\
+    if (!is_constant_evaluated())\
+	__asm__ volatile (instr:"+D"(f),"+c"(n):"a"(v):"cc","memory");\
+    else for (auto l = next(f,n); f < l; advance(f))\
+	*f = v;\
+    return f;\
+}
+#if __x86_64__
+CWICLO_REP_STOS (uint64_t, "rep stosq")
+CWICLO_REP_STOS ( int64_t, "rep stosq")
+#endif
+CWICLO_REP_STOS (uint32_t, "rep stosl")
+CWICLO_REP_STOS ( int32_t, "rep stosl")
+CWICLO_REP_STOS (uint16_t, "rep stosw")
+CWICLO_REP_STOS ( int16_t, "rep stosw")
+CWICLO_REP_STOS ( uint8_t, "rep stosb")
+CWICLO_REP_STOS (  int8_t, "rep stosb")
+#undef CWICLO_REP_STOS
+#endif
+
+//}}}-------------------------------------------------------------------
+//{{{ copy
+
 template <typename II, typename OI>
-auto copy_n (II f, size_t n, OI r)
+constexpr auto copy_n (II f, size_t n, OI r)
 {
     #if __x86__
     using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
@@ -164,7 +259,7 @@ auto copy_n (II f, size_t n, OI r)
 }
 
 template <typename II, typename OI>
-auto copy (II f, II l, OI r)
+constexpr auto copy (II f, II l, OI r)
 {
     using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
@@ -176,21 +271,20 @@ auto copy (II f, II l, OI r)
 }
 
 template <typename C, typename OI>
-auto copy (const C& c, OI r)
+inline constexpr auto copy (const C& c, OI r)
     { return copy_n (begin(c), size(c), r); }
 
 template <typename II, typename OI>
-auto copy_backward_n (II f, size_t n, OI r)
+constexpr auto copy_backward_n (II f, size_t n, OI r)
 {
     #if __x86__
     using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
     if constexpr (is_pointer<II>::value && is_pointer<OI>::value && is_trivially_copyable<ivalue_type>::value && is_same<ivalue_type,ovalue_type>::value) {
-	__asm__ volatile ("std":::"cc");
 	#define CWICLO_CALL_REP_MOVS(type) do {\
 	    auto ef = pointer_cast<const type>(to_address(next(f,n)))-1;\
 	    auto er = pointer_cast<type>(to_address(next(r,n)))-1;\
-	    r = OI (rep_movs (ef, n*sizeof(ovalue_type)/sizeof(type), er)); } while (false)
+	    rep_movs_rev (ef, n*sizeof(ovalue_type)/sizeof(type), er); } while (false)
 	#if __x86_64__
 	if constexpr (!(sizeof(ovalue_type)%8))
 	    CWICLO_CALL_REP_MOVS (uint64_t);
@@ -203,7 +297,6 @@ auto copy_backward_n (II f, size_t n, OI r)
 	else
 	    CWICLO_CALL_REP_MOVS (uint8_t);
 	#undef CWICLO_CALL_REP_MOVS
-	__asm__ volatile ("cld":::"cc");
     } else
     #endif // !__x86__
     while (n--)
@@ -212,7 +305,7 @@ auto copy_backward_n (II f, size_t n, OI r)
 }
 
 template <typename II, typename OI>
-auto copy_backward (II f, II l, OI r)
+constexpr auto copy_backward (II f, II l, OI r)
 {
     using ivalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<II>::value_type>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<OI>::value_type>>;
@@ -224,33 +317,14 @@ auto copy_backward (II f, II l, OI r)
 }
 
 template <typename C, typename OI>
-auto copy_backward (const C& c, OI r)
+inline constexpr auto copy_backward (const C& c, OI r)
     { return copy_backward_n (begin(c), size(c), r); }
 
 //}}}-------------------------------------------------------------------
 //{{{ fill
 
-template <typename T> inline auto rep_stos (T* f, size_t n, const T& v)
-    { for (auto l = next(f,n); f < l; advance(f)) *f = v; return f; }
-#if __x86__
-#define CWICLO_REP_STOS(T,instr)\
-template <> inline auto rep_stos (T* f, size_t n, const T& v)\
-    { __asm__ volatile (instr:"+D"(f),"+c"(n):"a"(v):"cc","memory"); return f; }
-#if __x86_64__
-CWICLO_REP_STOS (uint64_t, "rep stosq")
-CWICLO_REP_STOS ( int64_t, "rep stosq")
-#endif
-CWICLO_REP_STOS (uint32_t, "rep stosl")
-CWICLO_REP_STOS ( int32_t, "rep stosl")
-CWICLO_REP_STOS (uint16_t, "rep stosw")
-CWICLO_REP_STOS ( int16_t, "rep stosw")
-CWICLO_REP_STOS ( uint8_t, "rep stosb")
-CWICLO_REP_STOS (  int8_t, "rep stosb")
-#undef CWICLO_REP_STOS
-#endif
-
 template <typename I, typename T>
-auto fill_n (I f, size_t n, const T& v)
+constexpr auto fill_n (I f, size_t n, const T& v)
 {
     using ivalue_type = make_unsigned_t<remove_const_t<T>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
@@ -270,7 +344,7 @@ auto fill_n (I f, size_t n, const T& v)
 }
 
 template <typename I, typename T>
-auto fill (I f, I l, const T& v)
+constexpr auto fill (I f, I l, const T& v)
 {
     using ivalue_type = make_unsigned_t<remove_const_t<T>>;
     using ovalue_type = make_unsigned_t<remove_const_t<typename iterator_traits<I>::value_type>>;
@@ -282,7 +356,7 @@ auto fill (I f, I l, const T& v)
 }
 
 template <typename C, typename T>
-auto fill (C& c, const T& v)
+inline constexpr auto fill (C& c, const T& v)
     { return fill_n (begin(c), size(c), v); }
 
 template <typename I>
@@ -315,7 +389,7 @@ inline constexpr auto zero_fill (C& c)
 //{{{ shift and rotate
 
 template <typename I>
-auto shift_left (I f, I l, size_t n)
+constexpr auto shift_left (I f, I l, size_t n)
 {
     auto m = next(f,n);
     assert (m >= f && m <= l);
@@ -323,11 +397,11 @@ auto shift_left (I f, I l, size_t n)
 }
 
 template <typename C, typename T>
-auto shift_left (C& c, size_t n)
+inline constexpr auto shift_left (C& c, size_t n)
     { return shift_left (begin(c), end(c), n); }
 
 template <typename I>
-auto shift_right (I f, I l, size_t n)
+constexpr auto shift_right (I f, I l, size_t n)
 {
     auto m = next(f,n);
     assert (m >= f && m <= l);
@@ -335,7 +409,7 @@ auto shift_right (I f, I l, size_t n)
 }
 
 template <typename C, typename T>
-auto shift_right (C& c, size_t n)
+inline constexpr auto shift_right (C& c, size_t n)
     { return shift_right (begin(c), end(c), n); }
 
 extern "C" void brotate (void* vf, void* vm, void* vl);
@@ -381,12 +455,12 @@ constexpr auto uninitialized_default_construct_n (I f, size_t n)
 
 /// Calls the destructor of \p p without calling delete.
 template <typename T>
-inline void destroy_at (T* p)
+inline constexpr void destroy_at (T* p)
     { p->~T(); }
 
 /// Calls the destructor on elements in range [f, l) without calling delete.
 template <typename I>
-void destroy (I f [[maybe_unused]], I l [[maybe_unused]])
+constexpr void destroy (I f [[maybe_unused]], I l [[maybe_unused]])
 {
     if constexpr (!is_trivially_destructible<typename iterator_traits<I>::value_type>::value) {
 	for (; f < l; advance(f))
@@ -400,7 +474,7 @@ void destroy (I f [[maybe_unused]], I l [[maybe_unused]])
 
 /// Calls the destructor on elements in range [f, f+n) without calling delete.
 template <typename I>
-inline void destroy_n (I f, size_t n)
+inline constexpr void destroy_n (I f, size_t n)
     { return destroy (f, next(f,n)); }
 
 //}}}-------------------------------------------------------------------

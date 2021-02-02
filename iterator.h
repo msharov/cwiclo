@@ -153,8 +153,7 @@ public:
     constexpr auto	operator+ (size_t n) const	{ return reverse_iterator (_i-n); }
     constexpr auto	operator- (size_t n) const	{ return reverse_iterator (_i+n); }
     constexpr auto	operator- (const reverse_iterator& i) const	{ return distance (i._i, _i); }
-    constexpr bool	operator< (const reverse_iterator& i) const	{ return i._i < _i; }
-    constexpr bool	operator== (const reverse_iterator& i) const	{ return _i == i._i; }
+    constexpr auto	operator<=> (const reverse_iterator& i) const = default;
 private:
     I			_i;
 };
@@ -188,11 +187,9 @@ public:
     constexpr auto&	operator-= (size_t n)		{ _i -= n; return *this; }
     constexpr auto	operator+ (size_t n) const	{ return move_iterator (_i-n); }
     constexpr auto	operator- (size_t n) const	{ return move_iterator (_i+n); }
-    constexpr bool	operator< (const I& i) const	{ return _i < i; }
-    constexpr bool	operator== (const I& i) const	{ return _i == i; }
+    inline constexpr auto operator<=> (const move_iterator& i) const = default;
+    inline constexpr auto operator<=> (const I& i) const { return _i <=> i; }
     constexpr auto	operator- (const move_iterator& i) const	{ return distance (_i, i._i); }
-    constexpr bool	operator< (const move_iterator& i) const	{ return _i < i._i; }
-    constexpr bool	operator== (const move_iterator& i) const	{ return _i == i._i; }
 private:
     I			_i;
 };

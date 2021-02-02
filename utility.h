@@ -116,6 +116,8 @@ template <typename T> constexpr uintptr_t pointer_value (T p)
     template <typename FO>			\
     struct has_member_function_##tname : public __has_member_function_##tname<FO>::type {}
 
+inline constexpr bool is_constant_evaluated (void) { return __builtin_is_constant_evaluated(); }
+
 //}}}-------------------------------------------------------------------
 //{{{ numeric limits
 
@@ -229,8 +231,8 @@ constexpr bool is_negative (const T& v) {
 }
 
 template <typename T>
-constexpr auto sign (T v)
-    { return (0 < v) - is_negative(v); }
+constexpr int sign (T v)
+    { return !v ? 0 : (is_negative(v) ? -1 : 1); }
 template <typename T>
 constexpr make_unsigned_t<T> absv (T v)
     { return is_negative(v) ? -v : v; }

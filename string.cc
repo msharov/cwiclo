@@ -70,14 +70,6 @@ int string::assignf (const char* fmt, ...)
     return rv;
 }
 
-int string::compare (const_iterator f1, const_iterator l1, const_iterator f2, const_iterator l2) // static
-{
-    assert (f1 <= l1 && (f2 <= l2 || !l2) && "Negative ranges result in memory allocation errors.");
-    const auto len1 = l1-f1, len2 = l2-f2;
-    auto rv = memcmp (f1, f2, min(len1,len2));
-    return rv ? rv : sign (len1 - len2);
-}
-
 string::iterator string::replace (const_iterator f, const_iterator l, value_type c, size_type n)
 {
     auto dsz = difference_type(n) - (l-f);
@@ -95,7 +87,7 @@ auto string::rfind (const_pointer s, const_iterator fi) const -> const_iterator
     const_iterator r = nullptr;
     if (!fi)
 	return r;
-    fi -= strlen(s);
+    fi -= zstr::length(s);
     for (auto h = begin(); (h = strstr(h,s)) && h < fi; ++h)
 	r = h;
     return r;

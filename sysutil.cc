@@ -16,33 +16,6 @@
 //----------------------------------------------------------------------
 namespace cwiclo {
 
-zstr::index_type zstr::nstrs (const_pointer p, difference_type n) // static
-{
-    index_type ns = 0;
-    for (auto i = in(p,n); i; ++i) ++ns;
-    return ns;
-}
-
-zstr::const_pointer zstr::at (index_type i, const_pointer p, difference_type n) // static
-{
-    assert (i < nstrs(p,n) && "zstr index out of range");
-    return *(in(p,n) += i);
-}
-
-zstr::index_type zstr::index (const_pointer k, const_pointer p, difference_type n, index_type nf) // static
-{
-    difference_type ksz = strlen(k)+1;
-    for (index_type i = 0; n; ++i) {
-	auto np = next (p,n);
-	if (np-p == ksz && compare (p, k, ksz))
-	    return i;
-	p = np;
-    }
-    return nf;
-}
-
-//----------------------------------------------------------------------
-
 string substitute_environment_vars (const string_view& s)
 {
     string r = s;
@@ -55,7 +28,7 @@ string substitute_environment_vars (const string_view& s)
 	    const char* ev = getenv (1+vars);
 	    if (!ev)
 		ev = "";
-	    auto evn = strlen (ev);
+	    auto evn = zstr::length (ev);
 	    i = evn + r.replace (vars, i, ev, evn);
 	    *i = termc;
 	    vars = nullptr;
@@ -241,7 +214,7 @@ int create_sockaddr_un (struct sockaddr_un* addr, const char* sockname)
 	    *psockpath++ = 0;
 	#endif
     }
-    auto pathlen = strlen (sockname);
+    auto pathlen = zstr::length (sockname);
     if (pathlen >= sockpathsz) {
 	errno = ENAMETOOLONG;
 	return -1;

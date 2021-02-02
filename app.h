@@ -41,7 +41,7 @@ private:
 	explicit	IListener (void)	: ITimer (mrid_App),_sockfd(-1),_sockname() {}
 			IListener (fd_t fd, const char* sockname)
 			    : ITimer (mrid_App),_sockfd(fd),_sockname()
-			    { if (auto snl = strlen(sockname); snl) _sockname.assign (sockname, snl); }
+			    { if (auto snl = zstr::length(sockname); snl) _sockname.assign (sockname, snl); }
 			~IListener (void);
 	auto		sockfd (void) const	{ return _sockfd; }
 	auto&		sockname (void) const	{ return _sockname; }

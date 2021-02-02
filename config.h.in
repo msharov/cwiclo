@@ -64,7 +64,5 @@
 namespace {
 template <typename T>
 constexpr auto __builtin_assume_aligned (T p, size_t, size_t) { return p; }
-inline static constexpr auto __builtin_strnlen (const char* p, size_t n)
-    { size_t l = 0; for (; *p && n; ++p,--n,++l){} return l; }
 }
 #endif

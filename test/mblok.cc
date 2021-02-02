@@ -28,7 +28,7 @@ void TestApp::write_memblock (const memblock& l) // static
 int TestApp::run (void)
 {
     char strTest[] = "abcdefghijklmnopqrstuvwxyz";
-    const auto strTestLen = __builtin_strlen (strTest);
+    const auto strTestLen = zstr::length (strTest);
     const auto cstrTest = strTest;
 
     memblock a, b;

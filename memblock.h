@@ -54,8 +54,7 @@ public:
     inline constexpr auto&	at (size_type i) const		{ assert (i < size()); return begin()[i]; }
     inline constexpr auto	p2i (const_pointer p) const	{ assert (begin() <= p && end() >= p); return begin() + (p - data()); }
     inline constexpr auto&	operator[] (size_type i) const		{ return at (i); }
-    inline bool			operator== (const cmemlink& v) const	{ return equal (v, begin()); }
-    inline bool			operator!= (const cmemlink& v) const	{ return !operator==(v); }
+    inline constexpr bool	operator== (const cmemlink& v) const	{ return equal (v, begin()); }
     inline constexpr void	link (pointer p, size_type n)		{ _d.data = p; _d.size = n; }
     inline constexpr void	link (const_pointer p, size_type n)	{ link (const_cast<pointer>(p), n); }
     inline constexpr void	link (void* p, size_type n)		{ link (static_cast<pointer>(p), n); }
@@ -64,8 +63,8 @@ public:
     inline constexpr void	resize (size_type sz)		{ _d.size = sz; }
     inline constexpr void	shrink (size_type sz)		{ assert (sz <= max(capacity(),size())); resize (sz); }
     inline constexpr void	clear (void)			{ shrink (0); }
-    void		link_read (istream& is, size_type elsize = sizeof(value_type));
-    inline void		read (istream& is)			{ link_read (is, sizeof(value_type)); }
+    inline constexpr void	link_read (istream& is, size_type elsize = sizeof(value_type));
+    inline constexpr void	read (istream& is);
     template <typename Stm>
     constexpr void	write (Stm& os) const;
     inline static constexpr cmemlink create_from_stream (istream& is);
@@ -112,8 +111,18 @@ public:
     inline constexpr void	link (void* p, size_type n)	{ link (static_cast<pointer>(p), n); }
     inline constexpr void	link (const memlink& v)		{ cmemlink::link (v); }
     inline constexpr void	swap (memlink& v)		{ cmemlink::swap (v); }
-    iterator			insert (const_iterator start, size_type n);
-    iterator			erase (const_iterator start, size_type n);
+    constexpr iterator		insert (const_iterator ii, size_type n) {
+				    assert (data() || !n);
+				    auto istart = p2i (ii);
+				    shift_right (istart, end(), n);
+				    return istart;
+				}
+    constexpr iterator		erase (const_iterator ie, size_type n) {
+				    assert (data() || !n);
+				    auto istart = p2i (ie);
+				    shift_left (istart, end(), n);
+				    return istart;
+				}
 protected:
     inline constexpr		memlink (pointer p, size_type n, size_type cap, bool z)	: cmemlink (p, n, cap, z) {}
     inline constexpr		memlink (const_pointer p, size_type n, size_type cap, bool z)	: cmemlink(p, n, cap, z) {}
@@ -236,10 +245,8 @@ public:
     inline constexpr auto&	operator= (memblaz&& v)		{ assign (move(v)); return *this; }
     inline constexpr auto&	operator= (memblock&& v)	{ assign (move(v)); return *this; }
     inline auto&		operator= (memlink&& v)		{ assign (move(v)); return *this; }
-    inline bool			operator== (const cmemlink& v) const	{ return v == *this; }
-    inline bool			operator== (const memblaz& v) const	{ return memblock::operator== (v); }
-    inline bool			operator!= (const cmemlink& v) const	{ return v != *this; }
-    inline bool			operator!= (const memblaz& v) const	{ return memblock::operator!= (v); }
+    inline constexpr bool	operator== (const cmemlink& v) const	{ return memblock::operator== (v); }
+    inline constexpr bool	operator== (const memblaz& v) const	{ return memblock::operator== (v); }
     inline constexpr const memblock&	mb (void) const			{ return *this; }
     void			copy_link (void)		{ resize (size()); }
     void			allocate (size_type sz)		{ assert (is_linked()); memblock::resize(sz); }

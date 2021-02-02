@@ -73,7 +73,7 @@ public:
     inline constexpr streamsize	alignsz (streamsize g) const __restrict__	{ return alignptr(g) - begin(); }
     inline constexpr bool	can_align (streamsize g) const __restrict__	{ return alignptr(g) <= end(); }
     inline constexpr bool	aligned (streamsize g) const __restrict__	{ return divisible_by(_p, g); }
-    inline void			read (void* __restrict__ p, streamsize sz) __restrict__ {
+    inline constexpr void	read (void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
 				    copy_n (begin(), sz, static_cast<pointer>(p));
 				    skip (sz);
@@ -107,16 +107,16 @@ public:
 				}
     template <typename T>
     #if __x86__			// x86 can do direct unaligned reads
-    inline void			readtu (T& v) __restrict__ {
+    inline constexpr void	readtu (T& v) __restrict__ {
 				    auto p = pointer_cast<T>(begin());
 				    skip (sizeof(T));
 				    v = *p;
 				}
     #else
-    inline void			readtu (T& v) __restrict__ { read (&v, sizeof(v)); }
+    inline constexpr void	readtu (T& v) __restrict__ { read (&v, sizeof(v)); }
     #endif
     template <typename T>
-    inline auto			readu (void) {
+    inline constexpr auto	readu (void) {
 				    T v;
 				    if constexpr (!type_stream_traits<T>::has_read && !type_stream_traits<T>::has_readu)
 					readtu<T>(v);
@@ -181,11 +181,11 @@ public:
     inline constexpr streamsize	alignsz (streamsize g) const __restrict__	{ return alignptr(g) - begin(); }
     inline constexpr bool	can_align (streamsize g) const __restrict__	{ return alignptr(g) <= end(); }
     inline constexpr bool	aligned (streamsize g) const __restrict__	{ return divisible_by (_p, g); }
-    inline void			write (const void* __restrict__ p, streamsize sz) __restrict__ {
+    inline constexpr void	write (const void* __restrict__ p, streamsize sz) __restrict__ {
 				    assert (remaining() >= sz);
 				    seek (copy_n (static_cast<const_pointer>(p), sz, begin()));
 				}
-    inline void			write_strz (const char* s) __restrict__	{ write (s, __builtin_strlen(s)+1); }
+    inline constexpr void	write_strz (const char* s) __restrict__	{ write (s, zstr::length(s)+1); }
     template <typename T>
     inline constexpr void	writet (const T& v) __restrict__ {
 				    assert (remaining() >= sizeof(T));
@@ -201,16 +201,16 @@ public:
 				}
     template <typename T>
     #if __x86__			// x86 can do direct unaligned writes
-    inline void			writetu (const T& v) __restrict__ {
+    inline constexpr void	writetu (const T& v) __restrict__ {
 				    assert (remaining() >= sizeof(T));
 				    *pointer_cast<T>(begin()) = v;
 				    skip (sizeof(T));
 				}
     #else
-    inline void			writetu (const T& v) __restrict__ { write (&v, sizeof(v)); }
+    inline constexpr void	writetu (const T& v) __restrict__ { write (&v, sizeof(v)); }
     #endif
     template <typename T>
-    inline void			writeu (const T& v) {
+    inline constexpr void	writeu (const T& v) {
 				    if constexpr (!type_stream_traits<T>::has_write && !type_stream_traits<T>::has_writeu)
 					writetu (v);
 				    else if constexpr (type_stream_traits<T>::has_write)
@@ -226,12 +226,12 @@ public:
     constexpr void		write_array (const T (&a)[N])	{ write_array (ARRAY_BLOCK(a)); }
     template <typename T, cmemlink::size_type N>
     inline constexpr auto&	operator<< (const T (&a)[N])	{ write_array(a); return *this; }
-    void			write_string (const char* s, uint32_t n) __restrict__
+    constexpr void		write_string (const char* s, uint32_t n) __restrict__
 				    { writet (uint32_t(n+1)); write (s, n); do { zero(1); } while (!aligned(4)); }
     template <cmemlink::size_type N>
-    inline void			write_string (const char (&s)[N]) __restrict__ { write_string (ARRAY_BLOCK(s)); }
+    inline constexpr void	write_string (const char (&s)[N]) __restrict__ { write_string (ARRAY_BLOCK(s)); }
     template <cmemlink::size_type N>
-    inline auto&		operator<< (const char (&s)[N]) __restrict__ { write_string(s); return *this; }
+    inline constexpr auto&	operator<< (const char (&s)[N]) __restrict__ { write_string(s); return *this; }
 private:
     inline constexpr const_pointer alignptr (streamsize g) const __restrict__
 				    { return assume_aligned (ceilg (_p, g), g); }
@@ -271,7 +271,7 @@ public:
     inline constexpr bool	can_align (streamsize) const	{ return true; }
     inline constexpr bool	aligned (streamsize g) const	{ return divisible_by (_sz, g); }
     inline constexpr void	write (const void*, streamsize sz) { skip (sz); }
-    inline constexpr void	write_strz (const char* s)	{ write (s, __builtin_strlen(s)+1); }
+    inline constexpr void	write_strz (const char* s)	{ write (s, zstr::length(s)+1); }
     template <typename T>
     inline constexpr void	writet (const T& v)	{ write (&v, sizeof(v)); }
     template <typename T>
@@ -387,18 +387,8 @@ public:
     constexpr auto&	operator= (const ptr& p)	{ reset (p.get()); return *this; }
     constexpr auto&	operator* (void) const		{ return *get(); }
     constexpr auto	operator-> (void) const		{ return get(); }
-    constexpr bool	operator== (const pointer p) const { return get() == p; }
-    constexpr bool	operator!= (const pointer p) const { return get() != p; }
-    constexpr bool	operator< (const pointer p) const  { return get() < p; }
-    constexpr bool	operator<= (const pointer p) const { return get() <= p; }
-    constexpr bool	operator> (const pointer p) const  { return get() > p; }
-    constexpr bool	operator>= (const pointer p) const { return get() >= p; }
-    constexpr bool	operator== (const ptr& p) const	{ return get() == p.get(); }
-    constexpr bool	operator!= (const ptr& p) const	{ return get() != p.get(); }
-    constexpr bool	operator< (const ptr& p) const	{ return get() < p.get(); }
-    constexpr bool	operator<= (const ptr& p) const	{ return get() <= p.get(); }
-    constexpr bool	operator> (const ptr& p) const	{ return get() > p.get(); }
-    constexpr bool	operator>= (const ptr& p) const	{ return get() >= p.get(); }
+    inline constexpr auto operator<=> (const ptr& p) const = default;
+    inline constexpr auto operator<=> (pointer p) const	{ return _p <=> p; }
     template <typename STM>
     constexpr void	write (STM& os) const		{ os << uint64_t(pointer_value (_p)); }
     constexpr void read (istream& is) {

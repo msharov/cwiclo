@@ -6,7 +6,7 @@ This work-in-progress is a C++ merge-rewrite of
 asynchronous COM framework with some vaguely standard-library-like
 classes implemented without exceptions and without needing libstdc++.
 
-Compilation requires C++17 support; use gcc 7 or clang 6.
+Compilation requires C++20 support; use gcc 10 or clang 11.
 
 ```sh
 ./configure && make check && make install

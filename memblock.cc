@@ -11,25 +11,6 @@
 
 namespace cwiclo {
 
-/// Reads the object from stream \p s
-void cmemlink::link_read (istream& is, size_type elsize)
-{
-    assert (is_linked() && "allocated memory in cmemlink; deallocate or unlink first");
-    size_type n; is >> n; n *= elsize;
-    auto nskip = ceilg (n, stream_alignof(n));
-    if (is.remaining() < nskip)
-	return;	// errors should have been reported by the message validator
-    auto p = is.ptr<value_type>();
-    is.skip (nskip);
-    if (zero_terminated()) {
-	if (!n)
-	    --p;	// point to the end of n, which is zero
-	else
-	    --n;	// clip the zero from size
-    }
-    link (p, n);
-}
-
 int cmemlink::write_file (const char* filename) const
 {
     int fd = open (filename, O_WRONLY| O_TRUNC| O_CREAT| O_CLOEXEC, S_IRWXU);
@@ -64,24 +45,6 @@ int cmemlink::write_file_atomic (const char* filename) const
     if (bw >= 0 && 0 > rename (tmpfilename, filename))
 	return -1;
     return bw;
-}
-
-//----------------------------------------------------------------------
-
-auto memlink::insert (const_iterator ii, size_type n) -> iterator
-{
-    assert (data() || !n);
-    auto istart = p2i (ii);
-    shift_right (istart, end(), n);
-    return istart;
-}
-
-auto memlink::erase (const_iterator ie, size_type n) -> iterator
-{
-    assert (data() || !n);
-    auto istart = p2i (ie);
-    shift_left (istart, end(), n);
-    return istart;
 }
 
 //----------------------------------------------------------------------

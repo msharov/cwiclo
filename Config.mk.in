@@ -30,5 +30,5 @@ else
     ldflags	:= -s -Wl,-O1,-gc-sections ${LDFLAGS}
 endif
 CXXFLAGS	:= -Wall -Wextra -Wredundant-decls -Wshadow
-cxxflags	+= -std=c++17 -fno-exceptions -fno-rtti \
+cxxflags	+= -std=c++20 -fno-exceptions -fno-rtti \
 		   -ffunction-sections -fdata-sections ${CXXFLAGS}

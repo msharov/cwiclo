@@ -66,7 +66,7 @@ static constexpr auto method_name_size (methodid_t mid)
 
 // Signatures immediately follow the method in the pack
 static constexpr const char* signature_of_method (methodid_t __restrict__ mid)
-    { return mid+__builtin_strlen(mid)+1; }
+    { return zstr::next(mid); }
 
 // Interface name and methods are packed together for easy lookup
 static constexpr auto interface_name_size (iid_t iid)
@@ -90,10 +90,7 @@ static constexpr auto interface_socket_name (iid_t iid)
     return i+2;
 }
 static constexpr auto interface_program_name (iid_t iid)
-{
-    auto socket_name = interface_socket_name (iid);
-    return socket_name+__builtin_strlen(socket_name)+1;
-}
+    { return zstr::next (interface_socket_name (iid)); }
 
 // When unmarshalling a message, convert method name to local pointer in the interface
 methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, size_t mnamesz);
@@ -171,7 +168,7 @@ public:
     public:
 	constexpr auto	to_int (void) const		{ union { Link l; uint32_t i; } c {*this}; return c.i; }
 	constexpr bool	operator== (const Link& l) const { return to_int() == l.to_int(); }
-	constexpr bool	operator!= (const Link& l) const { return !operator==(l); }
+	constexpr auto	operator<=> (const Link& l) const = default;
 	static constexpr auto	from_int (uint32_t i)	{ union { uint32_t i; Link l; } c {i}; return c.l; }
 	static constexpr auto	reverse (Link l)	{ return from_int (bit_ror (l.to_int(),16)); }
     };
