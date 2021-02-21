@@ -162,6 +162,7 @@ public:
     inline constexpr		ostream (const ostream& os) = default;
     template <typename T, streamsize N>
     inline constexpr		ostream (T (&a)[N])			: ostream(a, N*sizeof(T)) { static_assert (is_trivial<T>::value, "array ctor only works for trivial types"); }
+    inline constexpr auto	begin (void) __restrict__		{ return _p; }
     inline constexpr auto	begin (void) const __restrict__		{ return _p; }
     inline constexpr auto	end (void) const __restrict__		{ return _e; }
     inline constexpr streamsize	size (void) const __restrict__		{ return end()-begin(); }
@@ -258,10 +259,11 @@ public:
 public:
     inline constexpr		sstream (void)		: _sz() {}
     inline constexpr		sstream (const sstream& ss) = default;
+    inline constexpr iterator	begin (void)		{ return nullptr; }
+    inline constexpr const_iterator begin (void) const	{ return nullptr; }
+    inline constexpr const_iterator end (void) const	{ return nullptr; }
     template <typename T = char>
-    inline constexpr T*		ptr (void)		{ return nullptr; }
-    inline constexpr auto	begin (void)		{ return ptr(); }
-    inline constexpr auto	end (void)		{ return ptr(); }
+    inline constexpr auto	ptr (void)		{ assert (aligned (alignof(T))); return pointer_cast<T>(begin()); }
     inline constexpr auto	size (void) const	{ return _sz; }
     inline constexpr streamsize	remaining (void) const	{ return numeric_limits<size_type>::max(); }
     inline constexpr void	skip (streamsize sz)	{ _sz += sz; }
@@ -353,7 +355,7 @@ class skip {
     const streamsize	_n;
 public:
     constexpr explicit 	skip (streamsize n)		: _n(n) {}
-    constexpr void	read (istream& is) const	{ is.skip (_n); }
+    constexpr void	read (istream& is)		{ is.skip (_n); }
     constexpr void	write (ostream& os) const	{ os.skip (_n); }
     constexpr void	write (sstream& ss) const	{ ss.skip (_n); }
 };
@@ -363,7 +365,7 @@ class zero {
     const streamsize	_n;
 public:
     constexpr explicit 	zero (streamsize n)		: _n(n) {}
-    constexpr void	read (istream& is) const	{ is.skip (_n); }
+    constexpr void	read (istream& is)		{ is.skip (_n); }
     constexpr void	write (ostream& os) const	{ os.zero (_n); }
     constexpr void	write (sstream& ss) const	{ ss.zero (_n); }
 };
@@ -387,6 +389,8 @@ public:
     constexpr auto&	operator= (const ptr& p)	{ reset (p.get()); return *this; }
     constexpr auto&	operator* (void) const		{ return *get(); }
     constexpr auto	operator-> (void) const		{ return get(); }
+    inline constexpr bool operator== (const ptr& p) const = default;
+    inline constexpr bool operator== (pointer p) const	{ return _p == p; }
     inline constexpr auto operator<=> (const ptr& p) const = default;
     inline constexpr auto operator<=> (pointer p) const	{ return _p <=> p; }
     template <typename STM>

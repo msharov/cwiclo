@@ -45,8 +45,14 @@ public:
     constexpr operator int (void) const { return _v; }
     constexpr bool operator== (int v) const { return _v == v; }
     constexpr bool operator< (int v) const { return _v < v; }
+    constexpr bool operator<= (int v) const { return _v <= v; }
+    constexpr bool operator> (int v) const { return _v > v; }
+    constexpr bool operator>= (int v) const { return _v >= v; }
     constexpr bool operator== (const strong_ordering& v) const { return _v == v._v; }
     constexpr bool operator< (const strong_ordering& v) const { return _v < v._v; }
+    constexpr bool operator<= (const strong_ordering& v) const { return _v <= v._v; }
+    constexpr bool operator> (const strong_ordering& v) const { return _v > v._v; }
+    constexpr bool operator>= (const strong_ordering& v) const { return _v >= v._v; }
     static const strong_ordering less;
     static const strong_ordering equal;
     static const strong_ordering greater;
