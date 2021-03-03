@@ -25,9 +25,14 @@ public:
     static constexpr size_type length (const_pointer s, size_type n) NONNULL() {
 	#if __x86__
 	if (!is_constant_evaluated()) {
-	    auto os = s;
-	    __asm__("repnz scasb":"+D"(s),"+c"(n):"a"(0):"cc","memory");
-	    return s-os-1;
+	    auto ne = n;
+	    uint8_t e;
+	    #if __clang__
+		__asm__("repnz scasb\n\tsete\t%2":"+D"(s),"+c"(ne),"=q"(e):"a"('\0'):"cc","memory");
+	    #else
+		__asm__("repnz scasb":"+D"(s),"+c"(ne),"=@cce"(e):"a"('\0'):"cc","memory");
+	    #endif
+	    return n-(ne+e);
 	} else
 	#endif
 	{
@@ -38,15 +43,10 @@ public:
 	}
     }
     inline static constexpr size_type length (const_pointer s) NONNULL() {
-	#if __x86__
-	if (!is_constant_evaluated() && !compile_constant(__builtin_strlen(s))) {
-	    auto os = s;
-	    size_type n = numeric_limits<size_type>::max();
-	    __asm__("repnz scasb":"+D"(s),"+c"(n):"a"(0):"cc","memory");
-	    return s-os-1;
-	} else
-	#endif
+	if (is_constant_evaluated() || compile_constant(__builtin_strlen(s)))
 	    return __builtin_strlen(s);
+	else
+	    return length (s, numeric_limits<size_type>::max());
     }
 
     //}}}2--------------------------------------------------------------
@@ -55,16 +55,10 @@ public:
     inline static constexpr auto next (pointer s, size_type& n) NONNULL() {
 	#if __x86__
 	if (!is_constant_evaluated())
-	    __asm__("repnz scasb":"+D"(s),"+c"(n):"a"(0):"cc","memory");
+	    __asm__("repnz scasb":"+D"(s),"+c"(n):"a"('\0'):"cc","memory");
 	else
 	#endif
-	{
-	    auto l = length(s,n);
-	    if (l < n)
-		++l;
-	    s += l;
-	    n -= l;
-	}
+	    while (n-- && *s++) {}
 	return s;
     }
     inline static constexpr auto next (const_pointer s, size_type& n) NONNULL()
