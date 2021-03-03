@@ -160,6 +160,8 @@ public:
     };
 
     static constexpr auto in (const_pointer s, size_type n) { return cii(s,n); }
+    template <typename C>
+    static constexpr auto in (C& c) { return in (begin(c), size(c)); }
 
     //}}}2--------------------------------------------------------------
     //{{{2 nstrs

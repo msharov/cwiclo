@@ -111,5 +111,8 @@ const char* debug_socket_name (const struct sockaddr* addr);
 
 int create_sockaddr_un (struct sockaddr_un* addr, const char* sockname);
 int socket_enable_credentials_passing (int sockfd, bool enable);
+int connect_to_socket (const struct sockaddr* addr, socklen_t addrlen);
+int connect_to_local_socket (const char* path);
+int launch_pipe (const char* exe, const char* arg = nullptr);
 
 } // extern "C"

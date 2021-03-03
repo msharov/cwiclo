@@ -114,7 +114,7 @@ public:
 public:
     static auto&	instance (void)			{ return *s_pApp; }
     static void		install_signal_handlers (void);
-    inline void		process_args (argc_t argc, argv_t argv);
+    inline void		init (argc_t argc, argv_t argv);
     int			run (void);
     void		create_method_dest (methodid_t mid, Msg::Link l);
     void		create_dest_with (iid_t iid, Msger::pfn_factory_t fac, Msg::Link l);
@@ -201,15 +201,17 @@ private:
 
 //----------------------------------------------------------------------
 
-void AppL::process_args (argc_t argc [[maybe_unused]], argv_t argv [[maybe_unused]])
+void AppL::init (argc_t argc [[maybe_unused]], argv_t argv [[maybe_unused]])
 {
     #ifndef NDEBUG
 	// Debug tracing is very useful in asynchronous apps, since backtraces
 	// no longer have much meaning. A list of messages exchanged is the
 	// usual debugging tool, used much like a network packet sniffer.
+	optind = 1;
 	for (int opt; 0 < (opt = getopt (argc, argv, "d"));)
 	    if (opt == 'd')
 		set_flag (f_DebugMsgTrace);
+	optind = 1;
     #endif
 }
 
@@ -237,7 +239,7 @@ inline static int Tmain (typename A::argc_t argc, typename A::argv_t argv)
 {
     A::install_signal_handlers();
     auto& a = A::instance();
-    a.process_args (argc, argv);
+    a.init (argc, argv);
     return a.run();
 }
 

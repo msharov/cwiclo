@@ -102,9 +102,6 @@ public:
     void	open (fd_t fd, const iid_t* eifaces, SocketSide side = SocketSide::Server) const
 		    { send (m_open(), ios::ptr(eifaces), fd, side); }
     void	open (fd_t fd) const	{ open (fd, nullptr, SocketSide::Client); }
-    fd_t	connect (const struct sockaddr* addr, socklen_t addrlen) const;
-    fd_t	connect_local (const char* path) const;
-    fd_t	launch_pipe (const char* exe, const char* arg = nullptr) const;
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() == m_open()) {

@@ -5,6 +5,7 @@
 
 #include "algo.h"
 #include "sysutil.h"
+#include "appl.h"
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/un.h>
@@ -227,4 +228,70 @@ int socket_enable_credentials_passing (int sockfd, bool enable)
 {
     int sov = enable;
     return setsockopt (sockfd, SOL_SOCKET, SO_PASSCRED, &sov, sizeof(sov));
+}
+
+int connect_to_socket (const sockaddr* addr, socklen_t addrlen)
+{
+    DEBUG_PRINTF ("Connecting to socket %s\n", debug_socket_name(addr));
+    auto fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, 0);
+    if (fd < 0)
+	return fd;
+    if (0 > connect (fd, addr, addrlen) && errno != EINPROGRESS && errno != EINTR) {
+	DEBUG_PRINTF ("[E] connect failed: %s\n", strerror(errno));
+	close (exchange (fd, -1));
+    }
+    return fd;
+}
+
+int connect_to_local_socket (const char* sockname)
+{
+    int sfd = -1;
+    sockaddr_un addr;
+    do {
+	auto addrlen = create_sockaddr_un (&addr, socket_path_from_name(sockname).c_str());
+	if (addrlen < 0)
+	    return sfd;
+	sfd = connect_to_socket (pointer_cast<sockaddr>(&addr), addrlen);
+	if (sfd < 0 && sockname[0] == '@') {
+	    ++sockname;
+	    continue;	// If abstract socket connection fails, try the file socket
+	}
+    } while (false);
+    return sfd;
+}
+
+int launch_pipe (const char* exe, const char* arg)
+{
+    // Create socket pipe, will be connected to stdin in server
+    enum { socket_ClientSide, socket_ServerSide, socket_N };
+    int socks [socket_N];
+    if (0 > socketpair (PF_LOCAL, SOCK_STREAM| SOCK_NONBLOCK, 0, socks))
+	return -1;
+
+    if (auto fr = fork(); fr < 0) {
+	close (exchange (socks[socket_ClientSide], -1));
+	close (socks[socket_ServerSide]);
+	return socks[socket_ClientSide];
+    } else if (!fr) {
+	// Server side
+
+	// setup socket-activation-style fd passing
+	char pids [16];
+	setenv ("LISTEN_PID", uint_to_text(getpid(), pids), true);
+	setenv ("LISTEN_FDS", "1", true);
+	setenv ("LISTEN_FDNAMES", "connection", true);
+
+	const int fd = SD_LISTEN_FDS_START+0;
+	dup2 (socks[socket_ServerSide], fd);
+	closefrom (fd+1);
+
+	execlp (exe, exe, arg, nullptr);
+
+	// If exec failed, log the error and exit
+	printf ("Failed to launch pipe to '%s': %s", exe, strerror(errno));
+	exit (EXIT_FAILURE);
+    }
+    // Client side
+    close (socks[socket_ServerSide]);
+    return socks[socket_ClientSide];
 }
