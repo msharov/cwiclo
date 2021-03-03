@@ -82,7 +82,7 @@ void Extern::requeue_pending (void)
 {
     auto& app = App::instance();
     for (auto& msg : _pending) {
-	DEBUG_PRINTF ("[X] %hu.Extern returning %hu -> %hu.%s.%s message to main queue\n", msger_id(), msg.src(), msg.dest(), msg.interface(), msg.method());
+	debug_printf ("[X] %hu.Extern returning %hu -> %hu.%s.%s message to main queue\n", msger_id(), msg.src(), msg.dest(), msg.interface(), msg.method());
 	app.requeue_msg (move(msg));
     }
     _pending.clear();
@@ -145,7 +145,7 @@ methodid_t Extern::ExtMsg::parse_method (void)
     auto methodnamesz = methodend - methodname;
     auto iface = App::instance().extern_interface_by_name (ifacename, methodname-ifacename);
     if (!iface) {
-	DEBUG_PRINTF ("[XE] Extern message arrived for %s.%s, but the interface is not registered.\n\tDid you forget to place it in the CWICLO_APP imports or exports list?\n", ifacename, methodname);
+	debug_printf ("[XE] Extern message arrived for %s.%s, but the interface is not registered.\n\tDid you forget to place it in the CWICLO_APP imports or exports list?\n", ifacename, methodname);
 	return nullptr;
     }
     return interface_lookup_method (iface, methodname, methodnamesz);
@@ -153,11 +153,11 @@ methodid_t Extern::ExtMsg::parse_method (void)
 
 void Extern::ExtMsg::debug_dump (void) const
 {
-    if (DEBUG_MSG_TRACE) {
-	DEBUG_PRINTF ("[X] Incoming message for extid %u of size %u = {""{{\n", _h.extid, _h.sz);
+    if (debug_tracing_on()) {
+	debug_printf ("[X] Incoming message for extid %u of size %u = {""{{\n", _h.extid, _h.sz);
 	hexdump (header_ptr(), _h.hsz);
 	hexdump (_body);
-	DEBUG_PRINTF ("}""}}\n");
+	debug_printf ("}""}}\n");
     }
 }
 
@@ -213,13 +213,13 @@ bool Extern::attach_to_socket (fd_t fd)
 	if (_einfo.side == IExtern::SocketSide::Server && !sun->sun_path[0]) {
 	    // Find existing path component and use its uid as filter
 	    auto pdirn = &sun->sun_path[1];
-	    DEBUG_PRINTF ("[X] Extern.%hu: using abstract socket %s\n", msger_id(), pdirn);
+	    debug_printf ("[X] Extern.%hu: using abstract socket %s\n", msger_id(), pdirn);
 	    auto pdire = pointer_cast<char>(&ss)+l;
 	    while (--pdire > pdirn) {
 		struct stat st;
 		if (exchange (*pdire, 0) == '/' && 0 == stat (pdirn, &st) && S_ISDIR(st.st_mode)) {
 		    _einfo.filter_uid = st.st_uid;
-		    DEBUG_PRINTF ("[X] Extern.%hu: setting filter uid from %s to %u\n", msger_id(), pdirn, _einfo.filter_uid);
+		    debug_printf ("[X] Extern.%hu: setting filter uid from %s to %u\n", msger_id(), pdirn, _einfo.filter_uid);
 		    break;
 		}
 	    }
@@ -252,7 +252,7 @@ void Extern::COM_export (string elist)
     // Other side of the socket listing exported interfaces as a comma-separated list
     _einfo.is_connected = true;
     _einfo.imported.clear();
-    DEBUG_PRINTF ("[X] %hu.Extern receives import list:", msger_id());
+    debug_printf ("[X] %hu.Extern receives import list:", msger_id());
     foreach (ei, elist) {
 	auto eic = elist.find (',', ei);
 	if (!eic)
@@ -260,12 +260,12 @@ void Extern::COM_export (string elist)
 	*eic = 0;
 	auto iid = App::instance().extern_interface_by_name (ei, eic+1-ei);
 	if (iid) {	// _einfo.imported only contains interfaces supported by this App
-	    DEBUG_PRINTF (" %s", iid);
+	    debug_printf (" %s", iid);
 	    _einfo.imported.push_back (iid);
 	}
 	ei = eic;
     }
-    DEBUG_PRINTF ("\n");
+    debug_printf ("\n");
     requeue_pending();
 }
 
@@ -330,7 +330,7 @@ bool Extern::write_outgoing (void)
 	// And try writing it all
 	if (auto smr = sendmsg (_sockfd, &mh, MSG_NOSIGNAL); smr <= 0) {
 	    if (!smr || errno == ECONNRESET)	// smr == 0 when remote end closes. No error then, just need to close this end too.
-		DEBUG_PRINTF ("[X] %hu.Extern: wsocket %d closed by the other end\n", msger_id(), _sockfd);
+		debug_printf ("[X] %hu.Extern: wsocket %d closed by the other end\n", msger_id(), _sockfd);
 	    else if (errno == EINTR)
 		continue;
 	    else if (errno == EAGAIN)
@@ -340,7 +340,7 @@ bool Extern::write_outgoing (void)
 	    Extern_close();
 	    return false;
 	} else { // At this point sendmsg has succeeded and wrote some bytes
-	    DEBUG_PRINTF ("[X] Wrote %ld bytes to socket %d\n", smr, _sockfd);
+	    debug_printf ("[X] Wrote %ld bytes to socket %d\n", smr, _sockfd);
 	    _bwritten += smr;
 	}
 
@@ -388,7 +388,7 @@ void Extern::read_incoming (void)
 	// Receive some data
 	if (auto rmr = recvmsg (_sockfd, &mh, 0); rmr <= 0 || (mh.msg_flags & (MSG_CTRUNC|MSG_TRUNC))) {
 	    if (!rmr || errno == ECONNRESET)	// br == 0 when remote end closes. No error then, just need to close this end too.
-		DEBUG_PRINTF ("[X] %hu.Extern: rsocket %d closed by the other end\n", msger_id(), _sockfd);
+		debug_printf ("[X] %hu.Extern: rsocket %d closed by the other end\n", msger_id(), _sockfd);
 	    else if (errno == EINTR)
 		continue;
 	    else if (errno == EAGAIN)
@@ -397,7 +397,7 @@ void Extern::read_incoming (void)
 		error_libc ("recvmsg");
 	    return Extern_close();
 	} else {
-	    DEBUG_PRINTF ("[X] %hu.Extern: read %ld bytes from socket %d\n", msger_id(), rmr, _sockfd);
+	    debug_printf ("[X] %hu.Extern: read %ld bytes from socket %d\n", msger_id(), rmr, _sockfd);
 	    _bread += rmr;
 	}
 
@@ -409,19 +409,19 @@ void Extern::read_incoming (void)
 		else {
 		    istream (CMSG_DATA(cmsg), stream_sizeof(_einfo.creds)) >> _einfo.creds;
 		    enable_credentials_passing (false);	// Credentials only need to be received once
-		    DEBUG_PRINTF ("[X] Received credentials: pid=%u,uid=%u,gid=%u\n", _einfo.creds.pid, _einfo.creds.uid, _einfo.creds.gid);
+		    debug_printf ("[X] Received credentials: pid=%u,uid=%u,gid=%u\n", _einfo.creds.pid, _einfo.creds.uid, _einfo.creds.gid);
 		}
 	    } else if (cmsg->cmsg_type == SCM_RIGHTS) {
 		istream cis (CMSG_DATA(cmsg), cmsg->cmsg_len - CMSG_LEN(0));
 		while (cis.remaining() >= sizeof(int)) {
 		    if (_infd >= 0) {
-			DEBUG_PRINTF ("[XE] Closing extra fd %d\n", _infd);
+			debug_printf ("[XE] Closing extra fd %d\n", _infd);
 			close (_infd);
 			error ("multiple file descriptors in one message");
 		    }
 		    _infd = cis.read<int>();
 		}
-		DEBUG_PRINTF ("[X] Received fd %d\n", _infd);
+		debug_printf ("[X] Received fd %d\n", _infd);
 	    }
 	}
 
@@ -473,19 +473,19 @@ bool Extern::accept_incoming_message (void)
     // Validate the message using method signature
     auto method = _inmsg.parse_method();
     if (!method) {
-	DEBUG_PRINTF ("[XE] Incoming message has invalid header strings\n");
+	debug_printf ("[XE] Incoming message has invalid header strings\n");
 	return false;
     }
     if (info().filter_uid
 	&& info().creds.uid != info().filter_uid
 	&& !ICOM::allowed_before_auth(method)) {
-	DEBUG_PRINTF ("[XE] Incoming message %s.%s from process %u with uid %u is disallowed by filter_uid %u\n", interface_of_method(method), method, info().creds.pid, info().creds.uid, info().filter_uid);
+	debug_printf ("[XE] Incoming message %s.%s from process %u with uid %u is disallowed by filter_uid %u\n", interface_of_method(method), method, info().creds.pid, info().creds.uid, info().filter_uid);
 	return false;
     }
     auto msgis = _inmsg.read();
     auto vsz = Msg::validate_signature (msgis, signature_of_method (method));
     if (ceilg (vsz, Msg::Alignment::Body) != _inmsg.body_size()) {
-	DEBUG_PRINTF ("[XE] Incoming message body failed validation\n");
+	debug_printf ("[XE] Incoming message body failed validation\n");
 	return false;
     }
     _inmsg.trim_body (vsz);	// Local messages store unpadded size
@@ -495,15 +495,15 @@ bool Extern::accept_incoming_message (void)
     if (!rp) {
 	// Verify that the requested interface is on the exported list
 	if (!_einfo.is_exporting (interface_of_method (method))) {
-	    DEBUG_PRINTF ("[XE] Incoming message requests unexported interface %s\n", interface_of_method (method));
+	    debug_printf ("[XE] Incoming message requests unexported interface %s\n", interface_of_method (method));
 	    return false;
 	}
 	// Verify that the other side sets extid correctly
 	if (bool(_einfo.side) ^ (_inmsg.extid() < extid_ServerBase)) {
-	    DEBUG_PRINTF ("[XE] Extern connection peer allocates incorrect extids\n");
+	    debug_printf ("[XE] Extern connection peer allocates incorrect extids\n");
 	    return false;
 	}
-	DEBUG_PRINTF ("[X] Creating new extid link %hu with interface %s\n", _inmsg.extid(), interface_of_method (method));
+	debug_printf ("[X] Creating new extid link %hu with interface %s\n", _inmsg.extid(), interface_of_method (method));
 	rp = &_relays.emplace_back (msger_id(), _inmsg.extid());
 	//
 	// Create a COMRelay as the destination. It will then create the
@@ -577,7 +577,7 @@ bool COMRelay::dispatch (Msg& msg)
 	    // The connection has not been completed yet, so it is not known
 	    // whether the interface is imported through it. Queue it in the
 	    // Extern object. It will be returned here when connected.
-	    DEBUG_PRINTF ("[X] %hu.%s.%s message now pending at %hu.Extern\n", msger_id(), msg.interface(), msg.method(), _pExtern->msger_id());
+	    debug_printf ("[X] %hu.%s.%s message now pending at %hu.Extern\n", msger_id(), msg.interface(), msg.method(), _pExtern->msger_id());
 	    _pExtern->queue_pending (move(msg));
 	    _pExtern = nullptr;
 	    return true;
@@ -596,10 +596,10 @@ bool COMRelay::dispatch (Msg& msg)
 
     // Forward the message in the direction opposite which it was received
     if (msg.src() == _localp.dest()) {
-	DEBUG_PRINTF ("[X] %hu.%s.%s message queued for export at %hu.Extern\n", msger_id(), msg.interface(), msg.method(), _pExtern->msger_id());
+	debug_printf ("[X] %hu.%s.%s message queued for export at %hu.Extern\n", msger_id(), msg.interface(), msg.method(), _pExtern->msger_id());
 	_pExtern->queue_outgoing (move(msg), _extid);
     } else {
-	DEBUG_PRINTF ("[X] %hu.%s.%s message forwarded to %hu\n", msger_id(), msg.interface(), msg.method(), _localp.dest());
+	debug_printf ("[X] %hu.%s.%s message forwarded to %hu\n", msger_id(), msg.interface(), msg.method(), _localp.dest());
 	assert (msg.extid() == _extid && "Extern routed a message to the wrong relay");
 	_localp.forward_msg (move(msg));
     }
@@ -613,7 +613,7 @@ bool COMRelay::on_error (mrid_t eid, const string& errmsg)
     // will decide whether to delete itself, which will propagate here.
     //
     if (_pExtern && eid == _localp.dest()) {
-	DEBUG_PRINTF ("[X] COMRelay forwarding error to extern creator\n");
+	debug_printf ("[X] COMRelay forwarding error to extern creator\n");
 	_pExtern->queue_outgoing (ICOM::error_msg (errmsg), _extid);
 	return true;	// handled on the remote end.
     }

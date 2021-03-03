@@ -7,19 +7,9 @@
 #include "xcom.h"
 #include <sys/poll.h>
 
-//{{{ Debugging macros -------------------------------------------------
+//{{{ ITimer -----------------------------------------------------------
+
 namespace cwiclo {
-
-#ifndef NDEBUG
-    #define DEBUG_MSG_TRACE	AppL::instance().flag(AppL::f_DebugMsgTrace)
-    #define DEBUG_PRINTF(...)	do { if (DEBUG_MSG_TRACE) printf (__VA_ARGS__); fflush(stdout); } while (false)
-#else
-    #define DEBUG_MSG_TRACE	false
-    #define DEBUG_PRINTF(...)	do {} while (false)
-#endif
-
-//}}}-------------------------------------------------------------------
-//{{{ Timer interface
 
 class ITimer : public Interface {
     DECLARE_INTERFACE (Interface, Timer, (watch,"uix")(timer,"i"))
@@ -201,6 +191,26 @@ private:
 
 //----------------------------------------------------------------------
 
+static inline bool debug_tracing_on (void)
+{
+    #ifndef NDEBUG
+	return AppL::instance().flag (AppL::f_DebugMsgTrace);
+    #else
+	return false;
+    #endif
+}
+
+template <typename... Args>
+static inline void debug_printf (const Args&... args)
+{
+    if (debug_tracing_on()) {
+	printf (args...);
+	fflush (stdout);
+    }
+}
+
+//----------------------------------------------------------------------
+
 void AppL::init (argc_t argc [[maybe_unused]], argv_t argv [[maybe_unused]])
 {
     #ifndef NDEBUG
@@ -217,15 +227,13 @@ void AppL::init (argc_t argc [[maybe_unused]], argv_t argv [[maybe_unused]])
 
 void AppL::errorv (const char* fmt, va_list args)
 {
-#ifndef NDEBUG
     bool is_first = _errors.empty();
-#endif
     _errors.appendv (fmt, args);
-#ifndef NDEBUG
-    DEBUG_PRINTF ("[E] Error: %s\n", _errors.c_str());
-    if (is_first)
-	print_backtrace();
-#endif
+    if (debug_tracing_on()) {
+	debug_printf ("[E] Error: %s\n", _errors.c_str());
+	if (is_first)
+	    print_backtrace();
+    }
 }
 
 //}}}-------------------------------------------------------------------

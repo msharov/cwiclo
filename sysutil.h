@@ -105,10 +105,7 @@ unsigned sd_listen_fds (void);
 int sd_listen_fd_by_name (const char* name);
 #endif
 
-#ifndef NDEBUG
 const char* debug_socket_name (const struct sockaddr* addr);
-#endif
-
 int create_sockaddr_un (struct sockaddr_un* addr, const char* sockname);
 int socket_enable_credentials_passing (int sockfd, bool enable);
 int connect_to_socket (const struct sockaddr* addr, socklen_t addrlen);

@@ -85,7 +85,7 @@ void App::create_listen_socket (const char* sockfile, const char* sockname)
     auto addrlen = create_sockaddr_un (&addr, sockpath.c_str());
     if (addrlen < 0)
 	return error ("socket name '%s' is too long", sockpath.c_str());
-    DEBUG_PRINTF ("[A] Creating server socket %s\n", debug_socket_name(pointer_cast<sockaddr>(&addr)));
+    debug_printf ("[A] Creating server socket %s\n", debug_socket_name(pointer_cast<sockaddr>(&addr)));
     auto fd = socket (PF_LOCAL, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, 0);
     if (fd < 0)
 	return error_libc ("socket");
@@ -105,7 +105,7 @@ void App::create_listen_socket (const char* sockfile, const char* sockname)
 
 void App::accept_socket (fd_t fd, const char* sockname [[maybe_unused]])
 {
-    DEBUG_PRINTF ("[A] Connection accepted from %s on fd %d\n", sockname, fd);
+    debug_printf ("[A] Connection accepted from %s on fd %d\n", sockname, fd);
     if (_isock.empty())
 	set_flag (f_Quitting, false);
     _isock.emplace_back (msger_id()).open (fd, exports());
@@ -122,10 +122,10 @@ void App::Timer_timer (fd_t fd)
     for (int cfd; 0 <= (cfd = ::accept (esock->sockfd(), nullptr, nullptr));)
 	accept_socket (cfd, esock->sockname());
     if (errno == EAGAIN) {
-	DEBUG_PRINTF ("[A] Listening on socket %s[%d]\n", esock->sockname(), esock->sockfd());
+	debug_printf ("[A] Listening on socket %s[%d]\n", esock->sockname(), esock->sockfd());
 	esock->wait_read();
     } else {
-	DEBUG_PRINTF ("[A] accept on %s[%d] failed: %s\n", esock->sockname(), esock->sockfd(), strerror(errno));
+	debug_printf ("[A] accept on %s[%d] failed: %s\n", esock->sockname(), esock->sockfd(), strerror(errno));
 	error_libc ("accept");
     }
 }
@@ -139,7 +139,7 @@ bool App::on_error (mrid_t eid, const string& errmsg)
     if (isock) {
 	// Error in accepted socket.
 	// Handle by logging the error and removing record in ObjectDestroyed.
-	DEBUG_PRINTF ("[A] Client connection %hu error: %s\n", eid, errmsg.c_str());
+	debug_printf ("[A] Client connection %hu error: %s\n", eid, errmsg.c_str());
 	return true;
     }
     // All other errors are fatal.
@@ -148,7 +148,7 @@ bool App::on_error (mrid_t eid, const string& errmsg)
 
 void App::on_msger_destroyed (mrid_t mid)
 {
-    DEBUG_PRINTF ("[A] Client connection %hu dropped\n", mid);
+    debug_printf ("[A] Client connection %hu dropped\n", mid);
     remove_if (_isock, [&](const auto& e) { return e.dest() == mid; });
     if (_isock.empty() && !flag (f_ListenWhenEmpty))
 	quit();

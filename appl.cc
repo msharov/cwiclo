@@ -86,13 +86,11 @@ void AppL::fatal_signal_handler (int sig) // static
 {
     static atomic_flag doubleSignal = ATOMIC_FLAG_INIT;
     if (!doubleSignal.test_and_set (memory_order::relaxed)) {
-	#ifdef NDEBUG
+	if (!debug_tracing_on())
 	    alarm (1);
-	#endif
 	psignal (sig, "[S] Error");
-	#ifndef NDEBUG
+	if (debug_tracing_on())
 	    print_backtrace();
-	#endif
 	exit (qc_ShellSignalQuitOffset+sig);
     }
     _Exit (qc_ShellSignalQuitOffset+sig);
@@ -103,9 +101,8 @@ void AppL::msg_signal_handler (int sig) // static
     set_bit (s_received_signals, sig);
     if (get_bit (sigset_Quit, sig)) {
 	AppL::instance().quit();
-	#ifdef NDEBUG
+	if (!debug_tracing_on())
 	    alarm (1);
-	#endif
     }
 }
 
@@ -115,7 +112,7 @@ bool AppL::forward_error (mrid_t oid, mrid_t eoid)
     if (!m)
 	return false;
     if (m->on_error (eoid, errors())) {
-	DEBUG_PRINTF ("[E] Error handled.\n");
+	debug_printf ("[E] Error handled.\n");
 	_errors.clear();	// error handled; clear message
 	return true;
     }
@@ -155,11 +152,11 @@ void AppL::free_mrid (mrid_t id)
 	return;
     auto m = _msgers[id];
     if (!m && id == _msgers.size()-1) {
-	DEBUG_PRINTF ("[M] mrid %hu deallocated\n", id);
+	debug_printf ("[M] mrid %hu deallocated\n", id);
 	_msgers.pop_back();
 	_creators.pop_back();
     } else if (auto crid = _creators[id]; crid != id) {
-	DEBUG_PRINTF ("[M] mrid %hu released\n", id);
+	debug_printf ("[M] mrid %hu released\n", id);
 	_creators[id] = id;
 	if (m) { // act as if the creator was destroyed
 	    assert (m->creator_id() == crid);
@@ -173,7 +170,7 @@ mrid_t AppL::register_singleton_msger (Msger* m)
     auto id = allocate_mrid (mrid_App);
     if (id <= mrid_Last) {
 	_msgers[id] = m;
-	DEBUG_PRINTF ("[M] Created Msger %hu singleton\n", id);
+	debug_printf ("[M] Created Msger %hu singleton\n", id);
     }
     return id;
 }
@@ -181,18 +178,16 @@ mrid_t AppL::register_singleton_msger (Msger* m)
 Msger* AppL::create_msger_with (Msg::Link l, iid_t iid [[maybe_unused]], Msger::pfn_factory_t fac) // static
 {
     Msger* r = fac ? (*fac)(l) : nullptr;
-    #ifndef NDEBUG	// Log failure to create in debug mode
-	if (!r && (!iid || !iid[0])) {
-	    if (!fac) {
-		DEBUG_PRINTF ("[E] No factory registered for interface %s\n", iid ? iid : "(iid_null)");
-		assert (!"Unable to find factory for the given interface. You must add a Msger to CWICLO_APP for every interface you use.");
-	    } else {
-		DEBUG_PRINTF ("[E] Failed to create Msger for interface %s\n", iid ? iid : "(iid_null)");
-		assert (!"Failed to create Msger for the given destination. Msger constructors are not allowed to fail or throw.");
-	    }
-	} else
-	    DEBUG_PRINTF ("[M] Created Msger %hu as %s\n", l.dest, iid);
-    #endif
+    if (!r && (!iid || !iid[0])) {
+	if (!fac) {
+	    debug_printf ("[E] No factory registered for interface %s\n", iid ? iid : "(iid_null)");
+	    assert (!"Unable to find factory for the given interface. You must add a Msger to CWICLO_APP for every interface you use.");
+	} else {
+	    debug_printf ("[E] Failed to create Msger for interface %s\n", iid ? iid : "(iid_null)");
+	    assert (!"Failed to create Msger for the given destination. Msger constructors are not allowed to fail or throw.");
+	}
+    } else
+	debug_printf ("[M] Created Msger %hu as %s\n", l.dest, iid);
     return r;
 }
 
@@ -214,7 +209,7 @@ void AppL::create_method_dest (methodid_t mid, Msg::Link l)
 	if (_creators[l.dest] == l.src)
 	    _msgers[l.dest] = create_msger (l, interface_of_method(mid));
 	else // messages for a deleted Msger can arrive if the sender was not yet aware of the deletion, in another process, for example, where the notification had not arrived. Condition logged, but is not usually an error.
-	    DEBUG_PRINTF ("Warning: dead destination Msger %hu can only be resurrected by creator %hu, not %hu.\n", l.dest, _creators[l.dest], l.src);
+	    debug_printf ("Warning: dead destination Msger %hu can only be resurrected by creator %hu, not %hu.\n", l.dest, _creators[l.dest], l.src);
     }
 }
 
@@ -232,7 +227,7 @@ void AppL::delete_msger (mrid_t mid)
     auto crid = _creators[mid];
     if (m && !m->flag (f_Static)) {
 	delete m;
-	DEBUG_PRINTF ("[M] Msger %hu deleted\n", mid);
+	debug_printf ("[M] Msger %hu deleted\n", mid);
     }
 
     // Notify Msgers created by this one of its destruction
@@ -283,17 +278,17 @@ void AppL::process_input_queue (void)
 {
     for (auto& msg : _inq) {
 	// Dump the message if tracing
-	if (DEBUG_MSG_TRACE) {
-	    DEBUG_PRINTF ("Msg: %hu -> %hu.%s.%s [%u] = {""{{\n", msg.src(), msg.dest(), msg.interface(), msg.method(), msg.size());
+	if (debug_tracing_on()) {
+	    debug_printf ("Msg: %hu -> %hu.%s.%s [%u] = {""{{\n", msg.src(), msg.dest(), msg.interface(), msg.method(), msg.size());
 	    hexdump (msg.read());
-	    DEBUG_PRINTF ("}""}}\n");
+	    debug_printf ("}""}}\n");
 	}
 
 	// Create the dispatch range. Broadcast messages go to all, the rest go to one.
 	auto mg = 0u, mgend = _msgers.size();
 	if (msg.dest() != mrid_Broadcast) {
 	    if (!valid_msger_id (msg.dest())) {
-		DEBUG_PRINTF ("[E] Invalid message destination %hu. Ignoring message.\n", msg.dest());
+		debug_printf ("[E] Invalid message destination %hu. Ignoring message.\n", msg.dest());
 		continue; // Error was reported in allocate_mrid
 	    }
 	    mg = msg.dest();
@@ -307,7 +302,7 @@ void AppL::process_input_queue (void)
 	    auto accepted = msger->dispatch (msg);
 
 	    if (!accepted && msg.dest() != mrid_Broadcast)
-		DEBUG_PRINTF ("[E] Message delivered, but not accepted by the destination Msger.\nDid you forget to add the interface to IMPLEMENT_INTERFACES?\n");
+		debug_printf ("[E] Message delivered, but not accepted by the destination Msger.\nDid you forget to add the interface to IMPLEMENT_INTERFACES?\n");
 
 	    // Check for errors generated during this dispatch
 	    if (!errors().empty() && !forward_error (mg, mg))
@@ -321,7 +316,7 @@ void AppL::run_timers (void)
     auto ntimers = has_timers();
     if (!ntimers || flag (f_Quitting)) {
 	if (_outq.empty()) {
-	    DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
+	    debug_printf ("Warning: ran out of packets. Quitting.\n");
 	    quit();	// running out of packets is usually not what you want, but not exactly an error
 	}
 	return;
@@ -333,22 +328,22 @@ void AppL::run_timers (void)
     auto nfds = get_poll_timer_list (fds, ntimers, timeout);
     if (!nfds && !timeout) {
 	if (_outq.empty()) {
-	    DEBUG_PRINTF ("Warning: ran out of packets. Quitting.\n");
+	    debug_printf ("Warning: ran out of packets. Quitting.\n");
 	    quit();	// running out of packets is usually not what you want, but not exactly an error
 	}
 	return;
     }
 
     // And wait
-    if (DEBUG_MSG_TRACE) {
-	DEBUG_PRINTF ("----------------------------------------------------------------------\n");
+    if (debug_tracing_on()) {
+	debug_printf ("----------------------------------------------------------------------\n");
 	if (timeout > 0)
-	    DEBUG_PRINTF ("[I] Waiting for %d ms ", timeout);
+	    debug_printf ("[I] Waiting for %d ms ", timeout);
 	else if (timeout < 0)
-	    DEBUG_PRINTF ("[I] Waiting indefinitely ");
+	    debug_printf ("[I] Waiting indefinitely ");
 	else if (!timeout)
-	    DEBUG_PRINTF ("[I] Checking ");
-	DEBUG_PRINTF ("%u file descriptors from %u timers\n", nfds, ntimers);
+	    debug_printf ("[I] Checking ");
+	debug_printf ("%u file descriptors from %u timers\n", nfds, ntimers);
     }
 
     // And poll
@@ -435,15 +430,15 @@ void AppL::check_poll_timers (const pollfd* fds)
 	    fdon = hasfd && (cfd->revents & (POLLERR| int(t->cmd())));
 
 	// Log the firing if tracing
-	if (DEBUG_MSG_TRACE) {
+	if (debug_tracing_on()) {
 	    if (expired)
-		DEBUG_PRINTF("[T]\tTimer %lu fired at %lu\n", t->next_fire(), now);
+		debug_printf("[T]\tTimer %lu fired at %lu\n", t->next_fire(), now);
 	    if (fdon) {
-		DEBUG_PRINTF("[T]\tFile descriptor %d ", cfd->fd);
-		if (cfd->revents & POLLIN)	DEBUG_PRINTF("can be read\n");
-		if (cfd->revents & POLLOUT)	DEBUG_PRINTF("can be written\n");
-		if (cfd->revents & POLLPRI)	DEBUG_PRINTF("has extra data\n");
-		if (cfd->revents & POLLERR)	DEBUG_PRINTF("has errors\n");
+		debug_printf("[T]\tFile descriptor %d ", cfd->fd);
+		if (cfd->revents & POLLIN)	debug_printf("can be read\n");
+		if (cfd->revents & POLLOUT)	debug_printf("can be written\n");
+		if (cfd->revents & POLLPRI)	debug_printf("has extra data\n");
+		if (cfd->revents & POLLERR)	debug_printf("has errors\n");
 	    }
 	}
 

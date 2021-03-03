@@ -18,7 +18,7 @@ class TestApp : public App {
 public:
     static auto& instance (void) { static TestApp s_app; return s_app; }
     void Ping_ping (uint32_t v) {
-	LOG ("Ping %u reply received in app\n", v);
+	log ("Ping %u reply received in app\n", v);
 	if (++v < 5)
 	    _pinger.ping (v);
 	else

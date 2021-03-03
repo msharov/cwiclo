@@ -9,7 +9,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/un.h>
-#if __has_include(<arpa/inet.h>) && !defined(NDEBUG)
+#if __has_include(<arpa/inet.h>)
     #include <arpa/inet.h>
 #endif
 #include <time.h>
@@ -182,7 +182,6 @@ int sd_listen_fd_by_name (const char* name)
 
 #endif // UC_VERSION
 
-#ifndef NDEBUG
 const char* debug_socket_name (const struct sockaddr* addr)
 {
     static char s_snbuf [256];
@@ -201,7 +200,6 @@ const char* debug_socket_name (const struct sockaddr* addr)
 	snprintf (ARRAY_BLOCK(s_snbuf), "SF%u", addr->sa_family);
     return s_snbuf;
 }
-#endif
 
 int create_sockaddr_un (struct sockaddr_un* addr, const char* sockname)
 {
@@ -232,12 +230,12 @@ int socket_enable_credentials_passing (int sockfd, bool enable)
 
 int connect_to_socket (const sockaddr* addr, socklen_t addrlen)
 {
-    DEBUG_PRINTF ("Connecting to socket %s\n", debug_socket_name(addr));
+    debug_printf ("Connecting to socket %s\n", debug_socket_name(addr));
     auto fd = socket (addr->sa_family, SOCK_STREAM| SOCK_NONBLOCK| SOCK_CLOEXEC, 0);
     if (fd < 0)
 	return fd;
     if (0 > connect (fd, addr, addrlen) && errno != EINPROGRESS && errno != EINTR) {
-	DEBUG_PRINTF ("[E] connect failed: %s\n", strerror(errno));
+	debug_printf ("[E] connect failed: %s\n", strerror(errno));
 	close (exchange (fd, -1));
     }
     return fd;

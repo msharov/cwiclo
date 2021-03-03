@@ -24,7 +24,7 @@ public:
     // Note the naming convention.
     //
     void Ping_ping (uint32_t v) {
-	LOG ("Ping %u reply received in app\n", v);
+	log ("Ping %u reply received in app\n", v);
 	if (++v < 5)
 	    _pinger.ping (v);
 	else

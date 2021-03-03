@@ -114,7 +114,13 @@ public:
     };
 };
 
-#define LOG(...)	do {printf(__VA_ARGS__);fflush(stdout);} while(false)
+// An auto-flush printf for the automated tests
+template <typename... Args>
+static inline void log (const Args&... args)
+{
+    printf (args...);
+    fflush (stdout);
+}
 
 //----------------------------------------------------------------------
 // Finally, a server object must be defined that will implement the
@@ -142,11 +148,11 @@ class PingMsger : public Msger {
 public:
     explicit		PingMsger (Msg::Link l)
 			    : Msger(l),_npings(0)
-			    { LOG ("Created Ping%hu\n", msger_id()); }
+			    { log ("Created Ping%hu\n", msger_id()); }
 			~PingMsger (void) override
-			    { LOG ("Destroy Ping%hu\n", msger_id()); }
+			    { log ("Destroy Ping%hu\n", msger_id()); }
     inline void		Ping_ping (uint32_t v) {
-			    LOG ("Ping%hu: %u, %u total\n", msger_id(), v, ++_npings);
+			    log ("Ping%hu: %u, %u total\n", msger_id(), v, ++_npings);
 			    //
 			    // Reply interface objects should generally be created
 			    // when needed because the information in it
