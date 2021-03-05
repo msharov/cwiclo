@@ -23,6 +23,9 @@ public:
     //{{{2 length ------------------------------------------------------
 
     static constexpr size_type length (const_pointer s, size_type n) NONNULL() {
+	if (compile_constant(__builtin_strlen(s)) && compile_constant(n))
+	    return min (n, __builtin_strlen(s));
+	else
 	#if __x86__
 	if (!is_constant_evaluated()) {
 	    auto ne = n;

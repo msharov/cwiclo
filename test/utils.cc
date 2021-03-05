@@ -118,5 +118,8 @@ int TestApp::run (void)
     printf ("mzstr[\"four\"] = %u\n", zstr::index("four",mzstr,mzstrn));
     printf ("mzstr[\"five\"] = %u\n", zstr::index("five",mzstr,mzstrn));
     printf ("mzstr[\"eight\"] = %u\n", zstr::index("eight",mzstr,mzstrn));
+    printf ("zstr::length(mzstr,0) = %u\n", zstr::length(mzstr,0));
+    printf ("zstr::length(mzstr,2) = %u\n", zstr::length(mzstr,2));
+    printf ("zstr::length(mzstr,9) = %u\n", zstr::length(mzstr,9));
     return EXIT_SUCCESS;
 }

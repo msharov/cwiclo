@@ -83,3 +83,6 @@ mzstr["one"] = 0
 mzstr["four"] = 3
 mzstr["five"] = 4
 mzstr["eight"] = 5
+zstr::length(mzstr,0) = 0
+zstr::length(mzstr,2) = 2
+zstr::length(mzstr,9) = 3
