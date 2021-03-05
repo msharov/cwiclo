@@ -389,6 +389,8 @@ public:
     static mrid_t	allocate_id (mrid_t src);
     void		allocate_id (void) { IDispatch::set_dest (allocate_id (src())); }
     void		free_id (void);
+    template <typename O>
+    inline static constexpr bool dispatch (O*, const Msg&) { return false; }
 protected:
     constexpr		Interface (mrid_t from, mrid_t to) : IDispatch (from,to) {}
     constexpr		Interface (Msg::Link l) : IDispatch (l) {}
@@ -397,6 +399,9 @@ protected:
     class Reply : public IDispatch {
     protected:
 	constexpr	Reply (Msg::Link l) : IDispatch (l) {}
+    public:
+	template <typename O>
+	inline static constexpr bool dispatch (O*, const Msg&) { return false; }
     };
 protected:
     static constexpr auto n_interfaces (void)		{ return 0; }

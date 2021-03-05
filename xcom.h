@@ -59,7 +59,7 @@ public:
 	else if (msg.method() == m_delete())
 	    o->COM_delete ();
 	else
-	    return false;
+	    return Interface::dispatch (o, msg);
 	return true;
     }
     using Reply = ICOM;
@@ -113,7 +113,7 @@ public:
 	} else if (msg.method() == m_close())
 	    o->Extern_close();
 	else
-	    return false;
+	    return Interface::dispatch (o, msg);
 	return true;
     }
 };

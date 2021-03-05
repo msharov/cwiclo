@@ -40,7 +40,7 @@ public:
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_watch())
-	    return false;
+	    return Interface::dispatch (o, msg);
 	auto is = msg.read();
 	auto cmd = is.read<WatchCmd>();
 	auto fd = is.read<fd_t>();
@@ -57,7 +57,7 @@ public:
 	template <typename O>
 	inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	    if (msg.method() != m_timer())
-		return false;
+		return Interface::Reply::dispatch (o, msg);
 	    o->Timer_timer (msg.read().read<fd_t>());
 	    return true;
 	}
@@ -84,7 +84,7 @@ public:
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
 	if (msg.method() != m_signal())
-	    return false;
+	    return Interface::dispatch (o, msg);
 	o->Signal_signal (msg.read().read<Info>());
 	return true;
     }

@@ -66,8 +66,9 @@ public:
     //
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {
+	// Call the base interface if message method is unknown
 	if (msg.method() != m_ping())
-	    return false;	// protocol errors are handled by caller
+	    return Interface::dispatch (o, msg);
 	//
 	// Each method unmarshals the arguments and calls the handling object
 	// Name the handlers Interface_method by convention
@@ -108,7 +109,7 @@ public:
 		auto v = is.read<uint32_t>();
 		o->Ping_ping (v);
 	    } else
-		return false;
+		return Interface::Reply::dispatch (o, msg);
 	    return true;
 	}
     };
