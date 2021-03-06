@@ -23,7 +23,7 @@ void AppL::Timer::Timer_watch (ITimer::WatchCmd cmd, fd_t fd, mstime_t timeoutms
     _cmd = cmd;
     set_unused (_cmd == ITimer::WatchCmd::Stop);
     _fd = fd;
-    _nextfire = timeoutms + (timeoutms <= ITimer::TimerMax ? ITimer::now() : ITimer::TimerNone);
+    _nextfire = timeoutms + (timeoutms <= ITimer::TimerMax ? chrono::system_clock::now() : ITimer::TimerNone);
 }
 
 IMPLEMENT_INTERFACES_D (AppL::Timer)
@@ -414,7 +414,7 @@ unsigned AppL::get_poll_timer_list (pollfd* pfd, unsigned pfdsz, int& timeout) c
     else if (nearest == ITimer::TimerMax)	// wait indefinitely
 	timeout = -!!npfd;	// if no fds, then don't wait at all
     else // get current time and compute timeout to nearest
-	timeout = max (nearest - ITimer::now(), 0);
+	timeout = max (nearest - chrono::system_clock::now(), 0);
     return npfd;
 }
 
@@ -422,7 +422,7 @@ void AppL::check_poll_timers (const pollfd* fds)
 {
     // Poll errors are checked for each fd with POLLERR. Other errors are ignored.
     // poll will exit when there are fds available or when the timer expires
-    auto now = ITimer::now();
+    auto now = chrono::system_clock::now();
     const auto* cfd = fds;
     for (auto t : _timers) {
 	bool expired = t->next_fire() <= now,

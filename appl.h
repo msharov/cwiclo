@@ -35,7 +35,6 @@ public:
     void	wait_read (fd_t fd, mstime_t t=TimerNone) const	{ watch (WatchCmd::Read, fd, t); }
     void	wait_write (fd_t fd, mstime_t t=TimerNone)const	{ watch (WatchCmd::Write, fd, t); }
     void	wait_rdWr (fd_t fd, mstime_t t=TimerNone) const	{ watch (WatchCmd::ReadWrite, fd, t); }
-    static mstime_t now (void) { return now_milliseconds(); }
 
     template <typename O>
     inline static constexpr bool dispatch (O* o, const Msg& msg) {

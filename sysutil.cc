@@ -14,87 +14,8 @@
 #endif
 #include <time.h>
 
-//----------------------------------------------------------------------
+//{{{ File descriptor and path utilities -------------------------------
 namespace cwiclo {
-
-string substitute_environment_vars (const string_view& s)
-{
-    string r = s;
-    string::iterator vars = nullptr;
-    bool inquote = false;
-    char lc = 0;
-    for (auto i = r.begin();; ++i) {
-	if (vars && (i >= r.end() || !(*i == '_' || (*i >= 'a' && *i <= 'z') || (*i >= 'A' && *i <= 'Z')))) {
-	    auto termc = exchange (*i, 0);
-	    const char* ev = getenv (1+vars);
-	    if (!ev)
-		ev = "";
-	    auto evn = zstr::length (ev);
-	    i = evn + r.replace (vars, i, ev, evn);
-	    *i = termc;
-	    vars = nullptr;
-	}
-	if (i >= r.end())
-	    return r;
-	if (*i == '\'' && lc != '\\')
-	    inquote = !inquote;
-	else if (!inquote && *i == '$' && lc != '\\')
-	    vars = i;
-	lc = *i;
-    }
-}
-
-string socket_path_from_name (const string_view& name)
-{
-    string r = substitute_environment_vars (name);
-    auto i = r.begin();
-
-    // Abstract sockets
-    if (*i == '@') {
-	#ifdef __linux__
-	    ++i;
-	#else // not supported on BSD; fallback to path
-	    i = r.erase (i);
-	#endif
-    }
-
-    // Absolute path name
-    char pathtype = *i;
-    if (pathtype == '/')
-	return r;
-
-    // System socket in /run
-    #ifdef __linux__
-	auto rundir = "/run";
-    #else // unless on BSD, where there is no /run
-	auto rundir = "/var/run";
-    #endif
-
-    // User socket in standard location, from $XDG_RUNTIME_DIR
-    if (pathtype == '~') {
-	if (auto urdir = getenv ("XDG_RUNTIME_DIR"); urdir)
-	    rundir = urdir;
-	*i = '/';
-    } else
-	i = r.insert (i, '/');
-    r.insert (i, rundir);
-    return r;
-}
-
-//----------------------------------------------------------------------
-
-} // namespace cwiclo
-using namespace cwiclo;
-
-//----------------------------------------------------------------------
-
-uint64_t now_milliseconds (void)
-{
-    struct timespec t;
-    if (0 > clock_gettime (CLOCK_REALTIME, &t))
-	return 0;
-    return t.tv_nsec/1000000 + t.tv_sec*1000;
-}
 
 #ifdef __linux__ // closefrom is in libc on bsd
 void closefrom (int fd)
@@ -152,6 +73,46 @@ int rmpath (const char* path)
     return 0;
 }
 
+#endif
+
+string substitute_environment_vars (const string_view& s)
+{
+    string r = s;
+    string::iterator vars = nullptr;
+    bool inquote = false;
+    char lc = 0;
+    for (auto i = r.begin();; ++i) {
+	if (vars && (i >= r.end() || !(*i == '_' || (*i >= 'a' && *i <= 'z') || (*i >= 'A' && *i <= 'Z')))) {
+	    auto termc = exchange (*i, 0);
+	    const char* ev = getenv (1+vars);
+	    if (!ev)
+		ev = "";
+	    auto evn = zstr::length (ev);
+	    i = evn + r.replace (vars, i, ev, evn);
+	    *i = termc;
+	    vars = nullptr;
+	}
+	if (i >= r.end())
+	    return r;
+	if (*i == '\'' && lc != '\\')
+	    inquote = !inquote;
+	else if (!inquote && *i == '$' && lc != '\\')
+	    vars = i;
+	lc = *i;
+    }
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ Socket utilities
+
+int socket_enable_credentials_passing (int sockfd, bool enable)
+{
+    int sov = enable;
+    return setsockopt (sockfd, SOL_SOCKET, SO_PASSCRED, &sov, sizeof(sov));
+}
+
+#ifndef UC_VERSION
+
 unsigned sd_listen_fds (void)
 {
     const char* e = getenv("LISTEN_PID");
@@ -182,25 +143,6 @@ int sd_listen_fd_by_name (const char* name)
 
 #endif // UC_VERSION
 
-const char* debug_socket_name (const struct sockaddr* addr)
-{
-    static char s_snbuf [256];
-    if (addr->sa_family == PF_LOCAL) {
-	auto a = pointer_cast<sockaddr_un>(addr);
-	snprintf (ARRAY_BLOCK(s_snbuf), "%c%s", a->sun_path[0] ? a->sun_path[0] : '@', &a->sun_path[1]);
-    } else if (addr->sa_family == PF_INET) {
-	auto a = pointer_cast<sockaddr_in>(addr);
-	char addrbuf [64];
-	snprintf (ARRAY_BLOCK(s_snbuf), "%s:%hu", inet_ntop (PF_INET, &a->sin_addr, ARRAY_BLOCK(addrbuf)), a->sin_port);
-    } else if (addr->sa_family == PF_INET6) {
-	auto a = pointer_cast<sockaddr_in6>(addr);
-	char addrbuf [64];
-	snprintf (ARRAY_BLOCK(s_snbuf), "%s:%hu", inet_ntop (PF_INET6, &a->sin6_addr, ARRAY_BLOCK(addrbuf)), a->sin6_port);
-    } else
-	snprintf (ARRAY_BLOCK(s_snbuf), "SF%u", addr->sa_family);
-    return s_snbuf;
-}
-
 int create_sockaddr_un (struct sockaddr_un* addr, const char* sockname)
 {
     addr->sun_family = PF_LOCAL;
@@ -220,12 +162,6 @@ int create_sockaddr_un (struct sockaddr_un* addr, const char* sockname)
     }
     copy_n (sockname, pathlen+1, psockpath);
     return psockpath+pathlen-pointer_cast<char>(addr);
-}
-
-int socket_enable_credentials_passing (int sockfd, bool enable)
-{
-    int sov = enable;
-    return setsockopt (sockfd, SOL_SOCKET, SO_PASSCRED, &sov, sizeof(sov));
 }
 
 int connect_to_socket (const sockaddr* addr, socklen_t addrlen)
@@ -293,3 +229,76 @@ int launch_pipe (const char* exe, const char* arg)
     close (socks[socket_ServerSide]);
     return socks[socket_ClientSide];
 }
+
+string socket_path_from_name (const string_view& name)
+{
+    string r = substitute_environment_vars (name);
+    auto i = r.begin();
+
+    // Abstract sockets
+    if (*i == '@') {
+	#ifdef __linux__
+	    ++i;
+	#else // not supported on BSD; fallback to path
+	    i = r.erase (i);
+	#endif
+    }
+
+    // Absolute path name
+    char pathtype = *i;
+    if (pathtype == '/')
+	return r;
+
+    // System socket in /run
+    #ifdef __linux__
+	auto rundir = "/run";
+    #else // unless on BSD, where there is no /run
+	auto rundir = "/var/run";
+    #endif
+
+    // User socket in standard location, from $XDG_RUNTIME_DIR
+    if (pathtype == '~') {
+	if (auto urdir = getenv ("XDG_RUNTIME_DIR"); urdir)
+	    rundir = urdir;
+	*i = '/';
+    } else
+	i = r.insert (i, '/');
+    r.insert (i, rundir);
+    return r;
+}
+
+const char* debug_socket_name (const struct sockaddr* addr)
+{
+    static char s_snbuf [256];
+    if (addr->sa_family == PF_LOCAL) {
+	auto a = pointer_cast<sockaddr_un>(addr);
+	snprintf (ARRAY_BLOCK(s_snbuf), "%c%s", a->sun_path[0] ? a->sun_path[0] : '@', &a->sun_path[1]);
+    } else if (addr->sa_family == PF_INET) {
+	auto a = pointer_cast<sockaddr_in>(addr);
+	char addrbuf [64];
+	snprintf (ARRAY_BLOCK(s_snbuf), "%s:%hu", inet_ntop (PF_INET, &a->sin_addr, ARRAY_BLOCK(addrbuf)), a->sin_port);
+    } else if (addr->sa_family == PF_INET6) {
+	auto a = pointer_cast<sockaddr_in6>(addr);
+	char addrbuf [64];
+	snprintf (ARRAY_BLOCK(s_snbuf), "%s:%hu", inet_ntop (PF_INET6, &a->sin6_addr, ARRAY_BLOCK(addrbuf)), a->sin6_port);
+    } else
+	snprintf (ARRAY_BLOCK(s_snbuf), "SF%u", addr->sa_family);
+    return s_snbuf;
+}
+
+//}}}-------------------------------------------------------------------
+//{{{ chrono
+
+namespace chrono {
+
+auto system_clock::now (void) -> rep
+{
+    struct timespec t;
+    if (0 > clock_gettime (CLOCK_REALTIME, &t))
+	return 0;
+    return t.tv_nsec/1000000 + t.tv_sec*1000;
+}
+
+} // namespace chrono
+} // namespace cwiclo
+//}}}-------------------------------------------------------------------
