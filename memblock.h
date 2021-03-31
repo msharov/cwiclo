@@ -146,13 +146,14 @@ public:
     inline constexpr		memblock (memblock&& v)		: memlink(move(v)) {}
     inline			~memblock (void)		{ deallocate(); }
 				using memlink::capacity;
+    inline constexpr void	swap (memblock& v)		{ memlink::swap (v); }
     inline constexpr void	manage (pointer p, size_type n, size_type c)	{ link (p, n); set_capacity(c); }
     inline constexpr void	manage (void* p, size_type n, size_type c)	{ manage (static_cast<pointer>(p), n, c); }
     inline constexpr void	manage (pointer p, size_type n)	{ manage (p, n, n); }
     inline constexpr void	manage (void* p, size_type n)	{ manage (p, n, n); }
     void			assign (const_pointer p, size_type n);
     inline void			assign (const cmemlink& v)	{ assign (v.data(), v.size()); }
-    inline void			assign (memlink&& v)		{ deallocate(); swap (v); }
+    inline void			assign (memlink&& v)		{ deallocate(); memlink::swap (v); }
     inline constexpr void	assign (memblock&& v)		{ swap (v); }
     inline auto&		operator= (const cmemlink& v)	{ assign (v); return *this; }
     inline auto&		operator= (const memblock& v)	{ assign (v); return *this; }
@@ -231,12 +232,13 @@ public:
     inline constexpr		memblaz (memblock&& v)		: memblock (move(v)) {}
     inline constexpr		memblaz (memblaz&& v)		: memblock (move(v)) {}
 				~memblaz (void);
+    inline constexpr void	swap (memblaz& v)		{ memblock::swap (v); }
     void			assign (const_pointer p, size_type n);
     inline void			assign (const cmemlink& v)	{ assign (v.data(), v.size()); }
     inline void			assign (const memblaz& v)	{ assign (v.data(), v.size()); }
     inline constexpr void	assign (memblaz&& v)		{ swap (v); }
-    inline constexpr void	assign (memblock&& v)		{ wipe(); swap (v); }
-    inline void			assign (memlink&& v)		{ deallocate(); swap (v); }
+    inline constexpr void	assign (memblock&& v)		{ wipe(); memblock::swap (v); }
+    inline void			assign (memlink&& v)		{ deallocate(); memlink::swap (v); }
     inline constexpr void	wipe (void)			{ zero_fill_n (data(), capacity()); }
     constexpr auto&		operator[] (size_type i)	{ return at (i); }
     constexpr auto&		operator[] (size_type i) const	{ return at (i); }
