@@ -271,7 +271,6 @@ void AppL::message_loop_once (void)
 
     process_input_queue();
     delete_unused_msgers();
-    forward_received_signals();
 }
 
 void AppL::process_input_queue (void)
@@ -313,6 +312,18 @@ void AppL::process_input_queue (void)
 
 void AppL::run_timers (void)
 {
+    // All message signals must be blocked between forward_received_signals and ppoll
+    sigset_t msgsigs = {}, origsigs = {};
+    for (auto i = 0u; i < NSIG; ++i)
+	if (get_bit (sigset_Msg, i))
+	    sigaddset (&msgsigs, i);
+    sigprocmask (SIG_BLOCK, &msgsigs, &origsigs);
+    auto unblocksigs = make_scope_exit ([&]{ sigprocmask (SIG_SETMASK, &origsigs, NULL); });
+
+    // Convert received signals to messages
+    forward_received_signals();
+
+    // See if there are any timers to wait on
     auto ntimers = has_timers();
     if (!ntimers || flag (f_Quitting)) {
 	if (_outq.empty()) {
@@ -347,7 +358,9 @@ void AppL::run_timers (void)
     }
 
     // And poll
-    poll (fds, nfds, timeout);
+    uint64_t timeout_ns = timeout * 1000000;
+    const timespec ts = { long(timeout_ns / 1000000000), long(timeout_ns % 1000000000) };
+    ppoll (fds, nfds, &ts, &origsigs);
 
     // Then, check timers for expiration
     check_poll_timers (fds);
