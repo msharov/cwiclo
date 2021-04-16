@@ -92,6 +92,9 @@ static constexpr auto interface_socket_name (iid_t iid)
 static constexpr auto interface_program_name (iid_t iid)
     { return zstr::next (interface_socket_name (iid)); }
 
+// Lookup an interface by name in a null-terminated list
+iid_t interface_lookup (const iid_t* __restrict__ il, const char* __restrict__ is, size_t islen);
+
 // When unmarshalling a message, convert method name to local pointer in the interface
 methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, size_t mnamesz);
 

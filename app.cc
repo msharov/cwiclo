@@ -157,19 +157,11 @@ void App::on_msger_destroyed (mrid_t mid)
 //}}}-------------------------------------------------------------------
 //{{{ Extern lookups
 
-iid_t App::listed_interface_by_name (const iid_t* il, const char* is, size_t islen) // static
-{
-    for (auto i = il; *i; ++i)
-	if (equal_n (*i, interface_name_size(*i), is, islen))
-	    return *i;
-    return nullptr;
-}
-
 iid_t App::extern_interface_by_name (const char* is, size_t islen) const
 {
-    auto iid = listed_interface_by_name (imports(), is, islen);
+    auto iid = interface_lookup (imports(), is, islen);
     if (!iid)
-	iid = listed_interface_by_name (exports(), is, islen);
+	iid = interface_lookup (exports(), is, islen);
     return iid;
 }
 

@@ -9,7 +9,15 @@
 
 namespace cwiclo {
 
-methodid_t interface_lookup_method (iid_t iid, const char* __restrict__ mname, size_t mnamesz)
+iid_t interface_lookup (const iid_t* __restrict__ il, const char* __restrict__ is, size_t islen)
+{
+    for (auto i = il; *i; ++i)
+	if (equal_n (*i, interface_name_size(*i), is, islen))
+	    return *i;
+    return nullptr;
+}
+
+methodid_t interface_lookup_method (iid_t __restrict__ iid, const char* __restrict__ mname, size_t mnamesz)
 {
     methodid_t __restrict__ mid = interface_first_method (iid);
     for (uint8_t nextm; (nextm = method_next_offset (mid)); mid += nextm)

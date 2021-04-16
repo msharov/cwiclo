@@ -33,7 +33,6 @@ protected:
     void		add_listen_socket (fd_t fd, const char* sockname = "", const char* sockfile = "");
     void		create_listen_socket (const char* path, const char* sockname = "");
     virtual void	accept_socket (fd_t fd, const char* sockname);
-    static iid_t	listed_interface_by_name (const iid_t* il, const char* is, size_t islen);
 private:
     //{{{ IListener
     class IListener : public ITimer {
