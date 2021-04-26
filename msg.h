@@ -247,7 +247,7 @@ public:
     constexpr auto	dest (void) const	{ return link().dest; }
 protected:
     constexpr		IDispatch (mrid_t from, mrid_t to) : _link {from,to} {}
-    constexpr		IDispatch (Msg::Link l)		: _link (Msg::Link::reverse(l)) {}
+    constexpr		IDispatch (Msg::Link l)	: _link (Msg::Link::reverse(l)) {}
 			IDispatch (const IDispatch&) = delete;
     void		operator= (const IDispatch&) = delete;
     Msg&		create_msg (methodid_t imethod, streamsize sz) const;
@@ -257,14 +257,16 @@ protected:
 			    { return create_msg (imethod, reinterpret_cast<Msg::Body&&>(body), fdo, extid); }
     Msg&		recreate_msg (methodid_t imethod, streamsize sz) const;
     Msg&		recreate_msg (methodid_t imethod, Msg::Body&& body) const;
+    void		commit_msg (const Msg& msg [[maybe_unused]]) const
+			    { assert (msg.size() == msg.verify() && "Message body does not match method signature"); }
+    void		commit_msg (const Msg& msg [[maybe_unused]], const ostream& os [[maybe_unused]]) const
+			    { assert (!os.remaining() && "Message body not completely written"); commit_msg (msg); }
     void		forward_msg (Msg&& msg) const
-			    { create_msg (msg.method(), msg.move_body(), msg.fd_offset(), msg.extid()); }
-    void		commit_msg (Msg& msg [[maybe_unused]], ostream& os [[maybe_unused]]) const
-			    { assert (!os.remaining() && msg.size() == msg.verify() && "Message body does not match method signature"); }
+			    { commit_msg (create_msg (msg.method(), msg.move_body(), msg.fd_offset(), msg.extid())); }
     bool		has_outgoing_msg (methodid_t imethod) const
 			    { return get_outgoing_msg (imethod); }
     inline void		send (methodid_t imethod) const
-			    { create_msg (imethod, 0); }
+			    { commit_msg (create_msg (imethod, 0)); }
     template <typename... Args>
     inline void		send (methodid_t imethod, const Args&... args) const {
 			    auto& msg = create_msg (imethod, variadic_stream_sizeof(args...));
