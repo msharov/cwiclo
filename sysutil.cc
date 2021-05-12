@@ -222,7 +222,7 @@ int launch_pipe (const char* exe, const char* arg)
 	execlp (exe, exe, arg, nullptr);
 
 	// If exec failed, log the error and exit
-	printf ("Failed to launch pipe to '%s': %s", exe, strerror(errno));
+	printf ("Failed to launch pipe to '%s': %s\n", exe, strerror(errno));
 	exit (EXIT_FAILURE);
     }
     // Client side
