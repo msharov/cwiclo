@@ -36,7 +36,6 @@ public:
     inline constexpr		cmemlink (const cmemlink& v)	: _d{v._d}{}
     inline constexpr		cmemlink (cmemlink&& v)		: _d (exchange (v._d, block_type{})) {}
     inline constexpr void	swap (cmemlink& v)		{ ::cwiclo::swap (_d, v._d); }
-    inline constexpr void	unlink (void)			{ auto zt = zero_terminated(); _d = block_type{}; _d.zerot = zt; }
     inline constexpr auto&	operator= (const cmemlink& v)	{ link (v); return *this; }
     inline constexpr auto&	operator= (cmemlink&& v)	{ swap (v); return *this; }
     inline constexpr auto	max_size (void) const		{ return numeric_limits<size_type>::max()/2-1; }
@@ -60,6 +59,7 @@ public:
     inline constexpr void	link (void* p, size_type n)		{ link (static_cast<pointer>(p), n); }
     inline constexpr void	link (const void* p, size_type n)	{ link (static_cast<const_pointer>(p), n); }
     inline constexpr void	link (const cmemlink& v)	{ link (v.begin(), v.size()); }
+    inline constexpr void	unlink (void)			{ _d.data = nullptr; _d.size = 0; _d.capacity = 0; }
     inline constexpr void	resize (size_type sz)		{ _d.size = sz; }
     inline constexpr void	shrink (size_type sz)		{ assert (sz <= max(capacity(),size())); resize (sz); }
     inline constexpr void	clear (void)			{ shrink (0); }

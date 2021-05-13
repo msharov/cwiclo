@@ -33,6 +33,10 @@ public:
     constexpr auto	wiat (size_type i) const			{ return wbegin()+i; }
     constexpr size_type	length (void) const				{ return wend()-wbegin(); }
     constexpr size_type	capacity (void) const				{ return memblock::capacity()-1; }
+    constexpr void	link (pointer p, size_type n)			{ memblock::link (p, n); }
+    constexpr void	link (pointer p)				{ link (p, zstr::length(p)); }
+    constexpr void	link (memlink& v)				{ link (v.begin(), v.size()); }
+    constexpr void	unlink (void)					{ memblock::unlink(); set_zero_terminated(); }
     inline void		push_back (char c)				{ resize(size()+1); back() = c; }
     auto		insert (const_iterator ip, value_type c, size_type n = 1)	{ auto fi = memblock::insert (ip, n); fill_n (fi, n, c); return fi; }
     inline auto		insert (const_iterator ip, const_pointer s, size_type n)	{ return memblock::insert (ip, s, n); }
@@ -175,6 +179,11 @@ public:
     inline constexpr auto&	operator= (const string_view& s){ cmemlink::operator= (s); return *this; }
     inline constexpr auto&	operator= (const string& s)	{ cmemlink::operator= (s); return *this; }
     inline constexpr auto&	operator= (string_view&& s)	{ swap (s); return *this; }
+
+    inline constexpr void	link (const_pointer p, size_type n)	{ cmemlink::link (p, n); }
+    inline constexpr void	link (const_pointer p)			{ link (p, zstr::length(p)); }
+    inline constexpr void	link (const cmemlink& v)	{ link (v.begin(), v.size()); }
+    inline constexpr void	unlink (void)			{ cmemlink::unlink(); set_zero_terminated(); }
 
     inline constexpr auto&	str (void) const		{ return static_cast<const string&>(static_cast<const cmemlink&>(*this)); }
     inline constexpr		operator const string& (void) const	{ return str(); }
