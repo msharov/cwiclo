@@ -36,7 +36,7 @@ int TestApp::run (void)
     a.static_link (str);
     if (a.begin() + 5 != &str[5])
 	printf ("begin() + 5 failed on memlink\n");
-    if (!equal (str, a.begin()))
+    if (!equal (begin(str), end(str), a.begin()))
 	printf ("memlinks are not equal\n");
     write_memlink (a);
     memlink cb;

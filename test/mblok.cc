@@ -37,7 +37,7 @@ int TestApp::run (void)
 	printf ("begin() failed on memblock\n");
     if (a.begin() + 5 != &strTest[5])
 	printf ("begin() + 5 failed on memblock\n");
-    if (!equal (a, strTest))
+    if (!equal_n (begin(a), size(a), strTest))
 	printf ("compare failed on memblock\n");
     write_memblock (a);
     b.link (cstrTest, strTestLen);

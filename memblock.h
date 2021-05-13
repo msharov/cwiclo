@@ -53,7 +53,7 @@ public:
     inline constexpr auto&	at (size_type i) const		{ assert (i < size()); return begin()[i]; }
     inline constexpr auto	p2i (const_pointer p) const	{ assert (begin() <= p && end() >= p); return begin() + (p - data()); }
     inline constexpr auto&	operator[] (size_type i) const		{ return at (i); }
-    inline constexpr bool	operator== (const cmemlink& v) const	{ return equal (v, begin()); }
+    inline constexpr bool	operator== (const cmemlink& v) const	{ return equal (*this, v); }
     inline constexpr void	link (pointer p, size_type n)		{ _d.data = p; _d.size = n; }
     inline constexpr void	link (const_pointer p, size_type n)	{ link (const_cast<pointer>(p), n); }
     inline constexpr void	link (void* p, size_type n)		{ link (static_cast<pointer>(p), n); }

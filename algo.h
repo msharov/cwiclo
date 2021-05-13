@@ -475,9 +475,9 @@ template <typename I1, typename I2>
 inline constexpr bool equal (I1 i1f, I1 i1l, I2 i2f, I2 i2l)
     { return equal_n (i1f, i1l-i1f, i2f, i2l-i2f); }
 
-template <typename C, typename I>
-inline constexpr bool equal (const C& c, I i)
-    { return equal_n (begin(c), size(c), i); }
+template <typename C1, typename C2>
+inline constexpr bool equal (const C1& c1, const C2& c2)
+    { return equal_n (begin(c1), size(c1), begin(c2), size(c2)); }
 
 template <typename I1, typename I2>
 inline constexpr bool lexicographical_compare (I1 f1, I1 l1, I2 f2, I2 l2)
