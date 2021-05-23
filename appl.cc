@@ -360,7 +360,8 @@ void AppL::run_timers (void)
     // And poll
     uint64_t timeout_ns = timeout * 1000000;
     const timespec ts = { long(timeout_ns / 1000000000), long(timeout_ns % 1000000000) };
-    ppoll (fds, nfds, &ts, &origsigs);
+    if (0 > ppoll (fds, nfds, &ts, &origsigs) && errno != EINTR)
+	error_libc ("ppoll");
 
     // Then, check timers for expiration
     check_poll_timers (fds);
@@ -440,7 +441,7 @@ void AppL::check_poll_timers (const pollfd* fds)
     for (auto t : _timers) {
 	bool expired = t->next_fire() <= now,
 	    hasfd = (t->fd() >= 0 && t->cmd() != ITimer::WatchCmd::Stop),
-	    fdon = hasfd && (cfd->revents & (POLLERR| int(t->cmd())));
+	    fdon = hasfd && cfd->revents;
 
 	// Log the firing if tracing
 	if (debug_tracing_on()) {
