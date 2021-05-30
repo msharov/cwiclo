@@ -140,8 +140,8 @@ public:
     inline			memblock (const void* p, size_type n)	: memblock(static_cast<const_pointer>(p),n) {}
     inline constexpr		memblock (const_pointer p, size_type n, size_type cap, bool z) : memlink(p,n,cap,z) { assert (!cap && "can't manage a const pointer"); }
     inline constexpr		memblock (pointer p, size_type n, size_type cap, bool z) : memlink(p,n,cap,z) {}
-    inline			memblock (const cmemlink& v)	: memlink(v) { copy_link(); }
-    inline			memblock (const memblock& v)	: memlink(v) { copy_link(); }
+    inline			memblock (const cmemlink& v)	: memblock (v.data(), v.size()) {}
+    inline			memblock (const memblock& v)	: memblock (v.data(), v.size()) {}
     inline constexpr		memblock (memlink&& v)		: memlink(move(v)) {}
     inline constexpr		memblock (memblock&& v)		: memlink(move(v)) {}
     inline			~memblock (void)		{ deallocate(); }
