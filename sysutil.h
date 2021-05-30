@@ -125,6 +125,11 @@ int rmpath (const char* path) NONNULL();
 string substitute_environment_vars (const string_view& s);
 
 //}}}-------------------------------------------------------------------
+//{{{ Miscellaneous
+
+void srandrand (void);
+
+//}}}-------------------------------------------------------------------
 //{{{ chrono
 namespace chrono {
 

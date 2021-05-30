@@ -103,6 +103,22 @@ string substitute_environment_vars (const string_view& s)
 }
 
 //}}}-------------------------------------------------------------------
+//{{{ Miscellaneous
+
+// Randomly initializes the random number generator
+void srandrand (void)
+{
+    struct timespec now;
+    clock_gettime (CLOCK_REALTIME, &now);
+    uint32_t seed = now.tv_sec;
+    seed ^= getppid();
+    seed = bit_ror (seed, 16);
+    seed ^= getpid();
+    seed ^= now.tv_nsec;
+    srand (seed);
+}
+
+//}}}-------------------------------------------------------------------
 //{{{ Socket utilities
 
 int socket_enable_credentials_passing (int sockfd, bool enable)
