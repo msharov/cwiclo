@@ -73,6 +73,7 @@ private:
 	constexpr		ExtMsg (void)		: _body(),_h{},_hbuf{}{}
 				ExtMsg (Msg&& msg, extid_t extid);
 				ExtMsg (const ExtMsg&) = delete;
+				~ExtMsg (void)			{ _body.wipe(); }
 	void			operator= (const ExtMsg&) = delete;
 	constexpr auto&		header (void) const		{ return _h; }
 	constexpr auto		extid (void) const		{ return _h.extid; }

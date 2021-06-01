@@ -175,7 +175,7 @@ public:
 	static constexpr auto	from_int (uint32_t i)	{ union { uint32_t i; Link l; } c {i}; return c.l; }
 	static constexpr auto	reverse (Link l)	{ return from_int (bit_ror (l.to_int(),16)); }
     };
-    using Body		= memblaz;
+    using Body		= memblock;
     using value_type	= Body::value_type;
     using iterator	= Body::iterator;
     using const_iterator = Body::const_iterator;
@@ -208,6 +208,7 @@ public:
     constexpr auto	extid (void) const	{ return _extid; }
     constexpr auto	fd_offset (void) const	{ return _fdoffset; }
     constexpr auto&&	move_body (void)	{ return move(_body); }
+    constexpr void	wipe_body (void)	{ _body.wipe(); }
     void		resize_body (streamsize sz) { _body.resize (sz); }
     void		replace_body (Body&& b)	{ _body = move(b); }
     inline constexpr auto read (void) const	{ return istream (data(),size()); }
@@ -217,8 +218,6 @@ public:
     inline constexpr	Msg (const Link& l, methodid_t mid)
 			    :_method (mid),_link (l),_extid(0),_fdoffset (NoFdIncluded),_body() {}
     inline constexpr	Msg (const Link& l, methodid_t mid, Body&& body, fdoffset_t fdo = NoFdIncluded, extid_t extid = 0)
-			    :_method (mid),_link (l),_extid (extid),_fdoffset (fdo),_body (move (body)) {}
-    inline constexpr	Msg (const Link& l, methodid_t mid, memblock&& body, fdoffset_t fdo = NoFdIncluded, extid_t extid = 0)
 			    :_method (mid),_link (l),_extid (extid),_fdoffset (fdo),_body (move (body)) {}
     inline constexpr	Msg (Msg&& msg)
 			    : Msg (msg.link(), msg.method(), msg.move_body(), msg.fd_offset(), msg.extid()) {}
@@ -253,8 +252,6 @@ protected:
     Msg&		create_msg (methodid_t imethod, streamsize sz) const;
     Msg&		create_msg (methodid_t imethod, streamsize sz, Msg::fdoffset_t fdo) const;
     Msg&		create_msg (methodid_t imethod, Msg::Body&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0) const;
-    Msg&		create_msg (methodid_t imethod, memblock&& body, Msg::fdoffset_t fdo = Msg::NoFdIncluded, extid_t extid = 0) const
-			    { return create_msg (imethod, reinterpret_cast<Msg::Body&&>(body), fdo, extid); }
     Msg&		recreate_msg (methodid_t imethod, streamsize sz) const;
     Msg&		recreate_msg (methodid_t imethod, Msg::Body&& body) const;
     void		commit_msg (const Msg& msg [[maybe_unused]]) const
