@@ -159,6 +159,7 @@ public:
     inline auto&		operator= (const memblock& v)	{ assign (v); return *this; }
     inline auto&		operator= (memlink&& v)		{ assign (move(v)); return *this; }
     inline constexpr auto&	operator= (memblock&& v)	{ assign (move(v)); return *this; }
+    inline constexpr void	wipe (void)			{ zero_fill_n (data(), capacity()); }
     void			reserve (size_type sz);
     void			resize (size_type sz);
     void			copy_link (void)		{ resize (size()); }
@@ -216,6 +217,7 @@ public:
     using memblock::manage;
     using memblock::shrink;
     using memblock::clear;
+    using memblock::wipe;
     using memblock::erase;
     using memblock::write;
     using memblock::stream_alignment;
@@ -239,7 +241,6 @@ public:
     inline constexpr void	assign (memblaz&& v)		{ swap (v); }
     inline constexpr void	assign (memblock&& v)		{ wipe(); memblock::swap (v); }
     inline void			assign (memlink&& v)		{ deallocate(); memlink::swap (v); }
-    inline constexpr void	wipe (void)			{ zero_fill_n (data(), capacity()); }
     constexpr auto&		operator[] (size_type i)	{ return at (i); }
     constexpr auto&		operator[] (size_type i) const	{ return at (i); }
     inline auto&		operator= (const cmemlink& v)	{ assign (v); return *this; }
@@ -251,7 +252,6 @@ public:
     inline constexpr bool	operator== (const memblaz& v) const	{ return memblock::operator== (v); }
     inline constexpr const memblock&	mb (void) const			{ return *this; }
     void			copy_link (void)		{ resize (size()); }
-    void			allocate (size_type sz)		{ assert (is_linked()); memblock::resize(sz); }
     void			reserve (size_type sz);
     void			resize (size_type sz);
     iterator			insert (const_iterator start, size_type n);

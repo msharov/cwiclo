@@ -82,7 +82,7 @@ private:
 	constexpr streamsize	size (void) const		{ return body_size() + header_size(); }
 	constexpr bool		has_fd (void) const		{ return fd_offset() != Msg::NoFdIncluded; }
 	constexpr void		set_header (const Header& h)	{ _h = h; }
-	void			allocate_body (streamsize sz)	{ _body.allocate (sz); }
+	void			allocate_body (streamsize sz)	{ _body.resize (sz); }
 	constexpr void		trim_body (streamsize sz)	{ _body.shrink (sz); }
 	constexpr auto&&	move_body (void)		{ return move(_body); }
 	constexpr void		set_passed_fd (fd_t fd)		{ assert (has_fd()); ostream(_body.iat(_h.fdoffset), sizeof(fd)) << fd; }
