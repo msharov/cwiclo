@@ -98,6 +98,7 @@ string socket_path_from_name (const string_view& name);
 int create_sockaddr_un (struct sockaddr_un* addr, const char* sockname);
 int connect_to_socket (const struct sockaddr* addr, socklen_t addrlen);
 int connect_to_local_socket (const char* path);
+uid_t uid_filter_for_local_socket (int fd);
 int launch_pipe (const char* exe, const char* arg = nullptr);
 const char* debug_socket_name (const struct sockaddr* addr);
 

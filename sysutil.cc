@@ -210,6 +210,35 @@ int connect_to_local_socket (const char* sockname)
     return sfd;
 }
 
+// Abstract sockets live outside the filesystem,
+// so the server side must do manual permissions checking.
+//
+uid_t uid_filter_for_local_socket (int fd)
+{
+    sockaddr_storage ss;
+    socklen_t l = sizeof(ss);
+    if (getsockname (fd, pointer_cast<sockaddr>(&ss), &l) < 0)
+	return 0;
+    if (ss.ss_family != PF_LOCAL)
+	return 0;
+
+    sockaddr_un* sun = pointer_cast<sockaddr_un>(&ss);
+    if (!sun->sun_path[0]) {
+	// Find existing path component and use its uid as filter
+	auto pdirn = &sun->sun_path[1];
+	debug_printf ("Using abstract socket %s\n", pdirn);
+	auto pdire = pointer_cast<char>(&ss)+l;
+	while (--pdire > pdirn) {
+	    struct stat st;
+	    if (exchange (*pdire, 0) == '/' && 0 == stat (pdirn, &st) && S_ISDIR(st.st_mode)) {
+		debug_printf ("Setting uid filter to %d, owner of %s\n", st.st_uid, pdirn);
+		return st.st_uid;
+	    }
+	}
+    }
+    return 0;
+}
+
 int launch_pipe (const char* exe, const char* arg)
 {
     // Create socket pipe, will be connected to stdin in server

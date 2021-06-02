@@ -4,8 +4,6 @@
 // This file is free software, distributed under the ISC License.
 
 #include "xtern.h"
-#include <sys/stat.h>
-#include <sys/un.h>
 
 //{{{ Extern -----------------------------------------------------------
 namespace cwiclo {
@@ -166,13 +164,19 @@ void Extern::ExtMsg::debug_dump (void) const
 
 void Extern::Extern_open (fd_t fd, const iid_t* eifaces, IExtern::SocketSide side)
 {
-    if (!attach_to_socket (fd))
-	return error ("invalid socket type");
     _sockfd = fd;
     _einfo.extern_id = msger_id();
     _einfo.exported = eifaces;
     _einfo.side = side;
-    enable_credentials_passing (true);
+    _einfo.filter_uid = 0;
+
+    if (_einfo.side == IExtern::SocketSide::Server)
+	_einfo.filter_uid = uid_filter_for_local_socket (_sockfd);
+    if (0 != socket_enable_credentials_passing (_sockfd, true))
+	return error_libc ("SO_PASSCRED");
+    if (0 != make_fd_nonblocking (_sockfd))
+	return error_libc ("O_NONBLOCK");
+
     // Initial handshake is an exchange of COM::export messages
     queue_outgoing (ICOM::export_msg (eifaces), extid_COM);
 }
@@ -186,56 +190,6 @@ void Extern::Extern_close (void)
 	close (exchange (_infd, -1));
     if (_sockfd >= 0)
 	close (exchange (_sockfd, -1));
-}
-
-bool Extern::attach_to_socket (fd_t fd)
-{
-    // The incoming socket must be a stream socket
-    int v;
-    socklen_t l = sizeof(v);
-    if (getsockopt (fd, SOL_SOCKET, SO_TYPE, &v, &l) < 0 || v != SOCK_STREAM)
-	return false;
-
-    // And it must match the family (PF_LOCAL or PF_INET)
-    sockaddr_storage ss;
-    l = sizeof(ss);
-    if (getsockname (fd, pointer_cast<sockaddr>(&ss), &l) < 0)
-	return false;
-    _einfo.is_local_socket = false;
-    _einfo.filter_uid = 0;
-    if (ss.ss_family == PF_LOCAL) {
-	_einfo.is_local_socket = true;
-	//
-	// Abstract sockets live outside the filesystem,
-	// so the server side must do manual permissions checking.
-	//
-	sockaddr_un* sun = pointer_cast<sockaddr_un>(&ss);
-	if (_einfo.side == IExtern::SocketSide::Server && !sun->sun_path[0]) {
-	    // Find existing path component and use its uid as filter
-	    auto pdirn = &sun->sun_path[1];
-	    debug_printf ("[X] Extern.%hu: using abstract socket %s\n", msger_id(), pdirn);
-	    auto pdire = pointer_cast<char>(&ss)+l;
-	    while (--pdire > pdirn) {
-		struct stat st;
-		if (exchange (*pdire, 0) == '/' && 0 == stat (pdirn, &st) && S_ISDIR(st.st_mode)) {
-		    _einfo.filter_uid = st.st_uid;
-		    debug_printf ("[X] Extern.%hu: setting filter uid from %s to %u\n", msger_id(), pdirn, _einfo.filter_uid);
-		    break;
-		}
-	    }
-	}
-    } else if (ss.ss_family != PF_INET)
-	return false;
-
-    // If matches, need to set the fd nonblocking for the poll loop to work
-    return !make_fd_nonblocking (fd);
-}
-
-void Extern::enable_credentials_passing (bool enable)
-{
-    if (_sockfd >= 0 && _einfo.is_local_socket)
-	if (0 > socket_enable_credentials_passing (_sockfd, enable))
-	    return error_libc ("setsockopt(SO_PASSCRED)");
 }
 
 //}}}-------------------------------------------------------------------
@@ -408,7 +362,7 @@ void Extern::read_incoming (void)
 		    error ("invalid socket credentials");
 		else {
 		    istream (CMSG_DATA(cmsg), stream_sizeof(_einfo.creds)) >> _einfo.creds;
-		    enable_credentials_passing (false);	// Credentials only need to be received once
+		    socket_enable_credentials_passing (_sockfd, false);	// Credentials only need to be received once
 		    debug_printf ("[X] Received credentials: pid=%u,uid=%u,gid=%u\n", _einfo.creds.pid, _einfo.creds.uid, _einfo.creds.gid);
 		}
 	    } else if (cmsg->cmsg_type == SCM_RIGHTS) {

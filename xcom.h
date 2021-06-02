@@ -35,13 +35,13 @@ public:
 			    }
 			    return elstr;
 			}
-    static Msg		error_msg (const string& errmsg) {
+    static Msg		error_msg (const string_view& errmsg) {
 			    Msg msg (Msg::Link{}, ICOM::m_error(), stream_sizeof(errmsg), Msg::NoFdIncluded);
 			    msg.write() << errmsg;
 			    return msg;
 			}
     static constexpr bool allowed_before_auth (methodid_t mid) { return mid == m_export(); }
-    static Msg		export_msg (const string& elstr) {
+    static Msg		export_msg (const string_view& elstr) {
 			    Msg msg (Msg::Link{}, ICOM::m_export(), stream_sizeof(elstr), Msg::NoFdIncluded);
 			    msg.write() << elstr;
 			    return msg;
@@ -82,7 +82,6 @@ public:
 	uid_t		filter_uid;
 	mrid_t		extern_id;
 	SocketSide	side;
-	bool		is_local_socket;
 	bool		is_connected;
     public:
 	constexpr auto is_importing (iid_t iid) const

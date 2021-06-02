@@ -127,8 +127,6 @@ private:
     bool		write_outgoing (void);
     void		read_incoming (void);
     inline bool		accept_incoming_message (void);
-    inline bool		attach_to_socket (fd_t fd);
-    void		enable_credentials_passing (bool enable);
 private:
     fd_t		_sockfd;
     ITimer		_timer;
