@@ -369,6 +369,8 @@ protected:
     void		operator= (const Msger&) = delete;
     constexpr void	set_flag (unsigned f, bool v = true)	{ set_bit (_flags,f,v); }
     constexpr void	set_unused (bool v = true)	{ set_flag (f_Unused, v); }
+    template <typename I>
+    constexpr auto	reply (void) const		{ return typename I::Reply (creator_link()); }
 protected:
     static constexpr auto n_interfaces (void)		{ return 0; }
     static constexpr auto get_interfaces (iid_t* i)	{ return i; }

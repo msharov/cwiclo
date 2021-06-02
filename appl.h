@@ -154,7 +154,7 @@ public:
 			~Timer (void) override;
 	inline void	Timer_watch (ITimer::WatchCmd cmd, fd_t fd, mstime_t timeoutms);
 	constexpr void	stop (void)		{ set_flag (f_Unused); _cmd = ITimer::WatchCmd::Stop; _fd = -1; _nextfire = ITimer::TimerNone; }
-	void		fire (void)		{ ITimer::Reply(creator_link()).timer (_fd); stop(); }
+	void		fire (void)		{ reply<ITimer>().timer (_fd); stop(); }
 	auto		fd (void) const		{ return _fd; }
 	auto		cmd (void) const	{ return _cmd; }
 	auto		next_fire (void) const	{ return _nextfire; }

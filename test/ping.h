@@ -162,7 +162,7 @@ public:
 			    // of the creator being destroyed, when no further
 			    // messages should be sent to it.
 			    //
-			    IPing::Reply (creator_link()).ping (v);
+			    reply<IPing>().ping (v);
 			}
 private:
     uint32_t		_npings;
