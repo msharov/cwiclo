@@ -167,23 +167,24 @@ public:
 
 class string_view : public cmemlink {
 public:
-    inline constexpr	string_view (void)		: cmemlink () { set_zero_terminated(); }
-    inline constexpr	string_view (const string_view& s)		: cmemlink (s) {}
+    inline constexpr	string_view (void)			: cmemlink () { set_zero_terminated(); }
+    inline constexpr	string_view (const string_view& s)	: cmemlink (s) {}
     inline constexpr	string_view (const_pointer s, size_type len)	: cmemlink (s, len, true) {}
     inline constexpr	string_view (const_pointer s1, const_pointer s2): string_view (s1, s2-s1) {}
-    inline constexpr	string_view (const_pointer s)	: string_view (s, zstr::length(s)) {}
-    inline constexpr	string_view (string_view&& s)	: cmemlink (move(s)) {}
-    inline constexpr	string_view (const string& s)	: cmemlink (s) {}
-
-    inline constexpr void	swap (string_view& s)		{ cmemlink::swap (s); }
-    inline constexpr auto&	operator= (const string_view& s){ cmemlink::operator= (s); return *this; }
-    inline constexpr auto&	operator= (const string& s)	{ cmemlink::operator= (s); return *this; }
-    inline constexpr auto&	operator= (string_view&& s)	{ swap (s); return *this; }
+    inline constexpr	string_view (const_pointer s)		: string_view (s, zstr::length(s)) {}
+    inline constexpr	string_view (string_view&& s)		: cmemlink (move(s)) {}
+    inline constexpr	string_view (const string& s)		: cmemlink (s) {}
 
     inline constexpr void	link (const_pointer p, size_type n)	{ cmemlink::link (p, n); }
-    inline constexpr void	link (const_pointer p)			{ link (p, zstr::length(p)); }
+    inline constexpr void	link (const_pointer p)		{ link (p, zstr::length(p)); }
     inline constexpr void	link (const cmemlink& v)	{ link (v.begin(), v.size()); }
     inline constexpr void	unlink (void)			{ cmemlink::unlink(); set_zero_terminated(); }
+
+    inline constexpr void	swap (string_view& s)		{ cmemlink::swap (s); }
+    inline constexpr auto&	operator= (const_pointer s)	{ link (s); return *this; }
+    inline constexpr auto&	operator= (const string& s)	{ link (s); return *this; }
+    inline constexpr auto&	operator= (const cmemlink& s)	{ link (s); return *this; }
+    inline constexpr auto&	operator= (string_view&& s)	{ swap (s); return *this; }
 
     inline constexpr auto&	str (void) const		{ return static_cast<const string&>(static_cast<const cmemlink&>(*this)); }
     inline constexpr		operator const string& (void) const	{ return str(); }
