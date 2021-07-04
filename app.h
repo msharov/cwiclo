@@ -26,14 +26,6 @@ public:
     Extern*		extern_by_id (mrid_t eid) const;
     Extern*		create_extern_dest_for (iid_t iid);
 protected:
-			App (void)	: base_class_t(),_isock(),_esock(),_socknames() {}
-			friend class ITimer::Reply;
-    void		Timer_timer (fd_t fd);
-    bool		accept_socket_activation (void);
-    void		add_listen_socket (fd_t fd, const char* sockname = "", const char* sockfile = "");
-    void		create_listen_socket (const char* path, const char* sockname = "");
-    virtual void	accept_socket (fd_t fd, const char* sockname);
-private:
     //{{{ IListener
     class IListener : public ITimer {
     public:
@@ -50,6 +42,15 @@ private:
 	string		_sockfile;
     };
     //}}}
+protected:
+			App (void)	: base_class_t(),_isock(),_esock(),_socknames() {}
+			friend class ITimer::Reply;
+    void		Timer_timer (fd_t fd);
+    bool		accept_socket_activation (void);
+    void		add_listen_socket (fd_t fd, const char* sockname = "", const char* sockfile = "");
+    void		create_listen_socket (const char* path, const char* sockname = "");
+    auto&		listen_sockets (void) const { return _esock; }
+    virtual void	accept_socket (fd_t fd, const char* sockname);
 private:
     vector<IExtern>	_isock;
     vector<IListener>	_esock;
