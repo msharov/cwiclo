@@ -210,6 +210,23 @@ int connect_to_local_socket (const char* sockname)
     return sfd;
 }
 
+string local_socket_path (int fd)
+{
+    string name;
+    sockaddr_storage ss;
+    socklen_t l = sizeof(ss);
+    if (getsockname (fd, pointer_cast<sockaddr>(&ss), &l) < 0)
+	return name;
+    if (ss.ss_family != PF_LOCAL)
+	return name;
+    auto sun = pointer_cast<sockaddr_un>(&ss);
+    if (!sun->sun_path[0])
+	sun->sun_path[0] = '@';
+    sun->sun_path [size(sun->sun_path)-1] = 0;
+    name = begin (sun->sun_path);
+    return name;
+}
+
 // Abstract sockets live outside the filesystem,
 // so the server side must do manual permissions checking.
 //
@@ -222,7 +239,7 @@ uid_t uid_filter_for_local_socket (int fd)
     if (ss.ss_family != PF_LOCAL)
 	return 0;
 
-    sockaddr_un* sun = pointer_cast<sockaddr_un>(&ss);
+    auto sun = pointer_cast<sockaddr_un>(&ss);
     if (!sun->sun_path[0]) {
 	// Find existing path component and use its uid as filter
 	auto pdirn = &sun->sun_path[1];
