@@ -213,7 +213,7 @@ int connect_to_local_socket (const char* sockname)
 string local_socket_path (int fd)
 {
     string name;
-    sockaddr_storage ss;
+    sockaddr_storage ss = {};
     socklen_t l = sizeof(ss);
     if (getsockname (fd, pointer_cast<sockaddr>(&ss), &l) < 0)
 	return name;
@@ -222,8 +222,7 @@ string local_socket_path (int fd)
     auto sun = pointer_cast<sockaddr_un>(&ss);
     if (!sun->sun_path[0])
 	sun->sun_path[0] = '@';
-    sun->sun_path [size(sun->sun_path)-1] = 0;
-    name = begin (sun->sun_path);
+    name.assign (sun->sun_path, l-offsetof(sockaddr_un, sun_path));
     return name;
 }
 
@@ -232,7 +231,7 @@ string local_socket_path (int fd)
 //
 uid_t uid_filter_for_local_socket (int fd)
 {
-    sockaddr_storage ss;
+    sockaddr_storage ss = {};
     socklen_t l = sizeof(ss);
     if (getsockname (fd, pointer_cast<sockaddr>(&ss), &l) < 0)
 	return 0;

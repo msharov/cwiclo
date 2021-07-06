@@ -29,7 +29,7 @@ void AppL::Timer::Timer_watch (ITimer::WatchCmd cmd, fd_t fd, mstime_t timeoutms
 IMPLEMENT_INTERFACES_D (AppL::Timer)
 
 //}}}-------------------------------------------------------------------
-//{{{ App
+//{{{ AppL
 
 AppL*	AppL::s_pApp		= nullptr;	// static
 int	AppL::s_exit_code	= EXIT_SUCCESS;	// static
